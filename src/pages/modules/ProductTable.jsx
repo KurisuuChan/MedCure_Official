@@ -25,11 +25,11 @@ const ProductTable = ({
   };
 
   return (
-    <div className="overflow-x-auto border border-gray-200 rounded-lg">
-      <table className="min-w-full">
+    <div className="w-full overflow-x-auto border border-gray-200 rounded-lg">
+      <table className="min-w-[800px] w-full">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-6 py-3 w-12 text-left">
+            <th className="px-4 sm:px-6 py-3 w-12 text-left">
               <input
                 type="checkbox"
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -40,28 +40,28 @@ const ProductTable = ({
                 }
               />
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Medicine ID
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Name
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Category
             </th>
-            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Quantity
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Expire Date
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Product Type
             </th>
-            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Status
             </th>
-            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <th className="px-4 sm:px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
               Action
             </th>
           </tr>

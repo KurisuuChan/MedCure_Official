@@ -25,8 +25,9 @@ const ProductFilters = ({
   };
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4">
+      {/* Search Input */}
+      <div className="relative w-full sm:w-auto">
         <Search
           className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
           size={20}
@@ -34,21 +35,24 @@ const ProductFilters = ({
         <input
           type="text"
           placeholder="Search products..."
-          className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full sm:w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
-      <div className="relative">
+
+      {/* Filters */}
+      <div className="relative w-full sm:w-auto">
         <button
           onClick={() => setIsFilterOpen(!isFilterOpen)}
-          className="flex items-center gap-2 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100"
         >
           <Filter size={16} />
           <span>Filters</span>
         </button>
+
         {isFilterOpen && (
-          <div className="absolute top-full mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-10 p-4">
+          <div className="absolute left-0 sm:left-auto top-full mt-2 w-full sm:w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-10 p-4">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-semibold text-gray-800">Filter By</h4>
               <button

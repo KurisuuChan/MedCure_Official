@@ -38,7 +38,7 @@ const ProductTableRow = ({
         isSelected ? "bg-blue-50" : "hover:bg-gray-50"
       }`}
     >
-      <td className="px-6 py-4">
+      <td className="px-4 sm:px-6 py-4">
         <input
           type="checkbox"
           className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -46,26 +46,28 @@ const ProductTableRow = ({
           onChange={() => onSelectItem(product.id)}
         />
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+      <td className="px-4 sm:px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
         {product.medicineId}
       </td>
-      <td className="px-6 py-4 font-medium text-gray-900">{product.name}</td>
-      <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+      <td className="px-4 sm:px-6 py-4 font-medium text-gray-900">
+        {product.name}
+      </td>
+      <td className="px-4 sm:px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
         {product.category}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600 text-center">
+      <td className="px-4 sm:px-6 py-4 text-sm text-gray-600 text-center">
         {product.quantity}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+      <td className="px-4 sm:px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
         {product.expireDate}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
+      <td className="px-4 sm:px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
         {product.productType}
       </td>
-      <td className="px-6 py-4 text-center">
+      <td className="px-4 sm:px-6 py-4 text-center">
         {getStatusBadge(product.status)}
       </td>
-      <td className="px-6 py-4 text-sm text-center">
+      <td className="px-4 sm:px-6 py-4 text-sm text-center">
         <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => onViewProduct(product)}

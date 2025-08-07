@@ -8,6 +8,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+// Contact Card Component
 const ContactCard = ({ contact }) => (
   <div className="bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-lg hover:border-blue-500 transition-all duration-300">
     <div className="flex items-start justify-between">
@@ -56,6 +57,7 @@ ContactCard.propTypes = {
   }).isRequired,
 };
 
+// Pagination Component
 const Pagination = () => {
   const pages = [1, 2, 3, 4, 5, "...", 38, 39, 40];
   const currentPage = 1;
@@ -83,10 +85,10 @@ const Pagination = () => {
   );
 };
 
+// Main Contacts Component
 const Contacts = () => {
   const [activeTab, setActiveTab] = useState("Suppliers");
 
-  // Sample data based on the screenshot
   const suppliers = [
     {
       avatar: "https://i.pravatar.cc/150?u=darlene",
@@ -139,7 +141,9 @@ const Contacts = () => {
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        {/* Tabs */}
         <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-full">
           <button
             onClick={() => setActiveTab("Suppliers")}
@@ -163,32 +167,33 @@ const Contacts = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="relative">
+        {/* Search and Add Button */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
             <input
               type="text"
-              id="contacts-search"
-              name="contacts-search"
               placeholder="Search by anything"
-              className="w-64 pl-4 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-4 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button className="absolute right-1 top-1/2 -translate-y-1/2 bg-green-500 text-white p-1.5 rounded-full hover:bg-green-600">
               <Search size={16} />
             </button>
           </div>
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-blue-700 shadow">
+          <button className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-medium hover:bg-blue-700 shadow w-full sm:w-auto">
             <Plus size={18} />
             {addButtonText}
           </button>
         </div>
       </div>
 
+      {/* Contact Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {dataToShow.map((contact) => (
           <ContactCard key={contact.email} contact={contact} />
         ))}
       </div>
 
+      {/* Pagination */}
       <div className="mt-8 flex justify-center">
         <Pagination />
       </div>
