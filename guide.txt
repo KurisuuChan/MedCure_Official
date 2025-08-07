@@ -1,10 +1,5 @@
-## 📦 DATABASE TABLES
-
----
-
-### 🏥 `products` — Stores information about medicines and products
-
-```sql
+-- Products Table
+-- Stores information about the medicines and other products in your inventory.
 CREATE TABLE products (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   name TEXT NOT NULL,
@@ -17,134 +12,94 @@ CREATE TABLE products (
   status TEXT DEFAULT 'Available',
   medicineId TEXT
 );
-```
 
----
-
-### 💳 `sales` — Records each sale transaction
-
-```sql
+-- Sales Table
+-- Records each sale transaction.
 CREATE TABLE sales (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   total_amount NUMERIC NOT NULL,
   discount_applied BOOLEAN DEFAULT FALSE
 );
-```
 
----
-
-### 🧾 `sale_items` — Links products to sales (many-to-many)
-
-```sql
+-- Sale Items Table
+-- Links products to sales, allowing for a many-to-many relationship.
 CREATE TABLE sale_items (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  sale_id BIGINT NOT NULL,
-  product_id BIGINT NOT NULL,
+  sale_id BIGINT,
+  product_id BIGINT,
   quantity INTEGER NOT NULL,
   price_at_sale NUMERIC NOT NULL,
-  CONSTRAINT fk_sale FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE,
-  CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+  CONSTRAINT fk_sale FOREIGN KEY(sale_id) REFERENCES sales(id),
+  CONSTRAINT fk_product FOREIGN KEY(product_id) REFERENCES products(id)
 );
-```
 
----
-
-### 🎨 `branding` — Stores pharmacy branding (logo, name, etc.)
-
-```sql
+-- Branding Table
+-- Stores information about your pharmacy's branding, such as the logo and name.
 CREATE TABLE branding (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   name TEXT,
   logo_url TEXT
 );
-```
 
----
-
-### 👤 `avatars` — Stores user avatars
-
-```sql
+-- Avatars Table
+-- For storing user avatars.
 CREATE TABLE avatars (
   id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   fileName TEXT,
   url TEXT
 );
-```
 
----
 
-## 🛡️ SUPABASE STORAGE POLICIES
 
----
 
-### 📁 `logos` Bucket
 
-#### ✅ Allow authenticated users to upload logos
 
-```sql
+
+
+
+LOGO
+
+****************************************************************
 CREATE POLICY "Allow authenticated users to upload logos"
-ON storage.objects
-FOR INSERT
+ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'logos');
-```
+****************************************************************
 
----
 
-### 🧑‍🖼️ `avatars` Bucket
 
-#### 1. ✅ Allow public read access to avatars
 
-```sql
+
+AVATARS
+
+*********************************************************************************************
+-- 1. Policy to allow public read access to all avatars
 CREATE POLICY "Allow public read on avatars"
-ON storage.objects
-FOR SELECT
-USING (bucket_id = 'avatars');
-```
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'avatars' );
 
-#### 2. ✅ Allow users to upload their own avatar
-
-```sql
+-- 2. Policy to allow users to upload their own avatar
+-- This checks if the user's ID matches the folder name they are uploading to.
 CREATE POLICY "Allow insert for own avatar"
-ON storage.objects
-FOR INSERT
+ON storage.objects FOR INSERT
 TO authenticated
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid() = (storage.foldername(name))[1]::uuid
-);
-```
+WITH CHECK ( bucket_id = 'avatars' AND auth.uid() = (storage.foldername(name))[1]::uuid );
 
-#### 3. ✅ Allow users to update their own avatar
-
-```sql
+-- 3. Policy to allow users to update their own avatar
 CREATE POLICY "Allow update for own avatar"
-ON storage.objects
-FOR UPDATE
+ON storage.objects FOR UPDATE
 TO authenticated
-USING (auth.uid() = owner)
-WITH CHECK (bucket_id = 'avatars');
-```
+USING ( auth.uid() = owner )
+WITH CHECK ( bucket_id = 'avatars' );
 
-#### 4. ✅ Allow users to delete their own avatar
-
-```sql
+-- 4. Policy to allow users to delete their own avatar
 CREATE POLICY "Allow delete for own avatar"
-ON storage.objects
-FOR DELETE
+ON storage.objects FOR DELETE
 TO authenticated
-USING (auth.uid() = owner);
-```
+USING ( auth.uid() = owner );
 
----
+*********************************************************************************************
 
-## 📌 Notes:
 
-* Ensure your **buckets** are named correctly in Supabase: `logos` and `avatars`.
-* The `(storage.foldername(name))[1]::uuid` assumes you're storing files in folders named after the user's UUID, like `user-id/avatar.png`.
-* For `owner`, Supabase expects you to set the `owner` column via **RLS metadata** or triggers if you're not manually setting it.
-
----
-
-If you need help automating avatar upload logic or integrating this with React or Supabase client libraries, let me know!
+PUT THE PERMISSIONS
