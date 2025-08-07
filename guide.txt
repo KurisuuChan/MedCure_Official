@@ -98,3 +98,8 @@ CREATE POLICY "Allow delete for own avatar"
 ON storage.objects FOR DELETE
 TO authenticated
 USING ( auth.uid() = owner );
+
+*********************************************************************************************
+
+
+PUT THE PERMISSIONS
