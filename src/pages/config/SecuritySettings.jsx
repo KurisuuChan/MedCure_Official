@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 
 const SecuritySettings = () => {
   const [newPassword, setNewPassword] = useState("");
@@ -24,9 +24,7 @@ const SecuritySettings = () => {
     }
 
     setLoading(true);
-    const { error: updateError } = await supabase.auth.updateUser({
-      password: newPassword,
-    });
+    const { error: updateError } = await api.updateUser({ password: newPassword });
 
     if (updateError) {
       setError(updateError.message);

@@ -4,14 +4,24 @@ import Toast from "@/components/Toast";
 import { NotificationContext } from "@/context/AppContext";
 
 export const NotificationProvider = ({ children }) => {
-  const [notification, setNotification] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [current, setCurrent] = useState(null);
 
   const addNotification = useCallback((message, type = "success") => {
-    setNotification({ message, type, id: Date.now() });
-  }, []);
+    const newItem = { message, type, id: Date.now() };
+    setQueue((prev) => [...prev, newItem]);
+    if (!current) {
+      setCurrent(newItem);
+    }
+  }, [current]);
 
   const removeNotification = useCallback(() => {
-    setNotification(null);
+    setQueue((prev) => {
+      const [, ...rest] = prev;
+      const next = rest.length > 0 ? rest[0] : null;
+      setCurrent(next);
+      return rest;
+    });
   }, []);
 
   const contextValue = useMemo(() => ({ addNotification }), [addNotification]);
@@ -19,10 +29,10 @@ export const NotificationProvider = ({ children }) => {
   return (
     <NotificationContext.Provider value={contextValue}>
       {children}
-      {notification && (
+      {current && (
         <Toast
-          message={notification.message}
-          type={notification.type}
+          message={current.message}
+          type={current.type}
           onClose={removeNotification}
         />
       )}

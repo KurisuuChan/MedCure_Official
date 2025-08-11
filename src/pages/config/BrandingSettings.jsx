@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 
 const BrandingSettings = ({ onUpdate }) => {
   const [logoName, setLogoName] = useState("");
@@ -10,11 +10,7 @@ const BrandingSettings = ({ onUpdate }) => {
 
   useEffect(() => {
     const fetchBranding = async () => {
-      const { data, error } = await supabase
-        .from("branding")
-        .select("*")
-        .eq("id", 1)
-        .single();
+      const { data, error } = await api.getBranding();
 
       if (data) {
         setLogoName(data.name);
@@ -33,9 +29,7 @@ const BrandingSettings = ({ onUpdate }) => {
 
     setUploading(true);
     const fileName = `public/${Date.now()}`;
-    const { error: uploadError } = await supabase.storage
-      .from("logos")
-      .upload(fileName, file);
+    const { error: uploadError } = await api.uploadFile("logos", fileName, file);
 
     if (uploadError) {
       alert("Error uploading logo: " + uploadError.message);
@@ -43,7 +37,7 @@ const BrandingSettings = ({ onUpdate }) => {
       return;
     }
 
-    const { data } = supabase.storage.from("logos").getPublicUrl(fileName);
+    const { data } = api.getPublicUrl("logos", fileName);
 
     setLogoUrl(data.publicUrl);
     setUploading(false);
@@ -51,10 +45,7 @@ const BrandingSettings = ({ onUpdate }) => {
 
   const handleSaveChanges = async (e) => {
     e.preventDefault();
-    const { error } = await supabase
-      .from("branding")
-      .update({ name: logoName, logo_url: logoUrl })
-      .eq("id", 1);
+    const { error } = await api.updateBranding({ name: logoName, logo_url: logoUrl });
 
     if (error) {
       alert("Error updating branding: " + error.message);

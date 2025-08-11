@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
 import { UploadCloud, FileText, X } from "lucide-react";
 import { useNotification } from "@/hooks/useNotification";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
   const [file, setFile] = useState(null);
@@ -102,16 +103,17 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           throw insertError;
         }
 
-        // Set flag in local storage for notification
-        localStorage.setItem(
-          "csvImported",
-          JSON.stringify({
-            count: productsToInsert.length,
-            timestamp: new Date().toISOString(),
-          })
-        );
-        // Dispatch a custom event to notify the header
-        window.dispatchEvent(new Event("storage"));
+        // Add a system notification to the header feed
+        addSystemNotification({
+          id: `csv-${Date.now()}`,
+          iconType: "upload",
+          iconBg: "bg-green-100",
+          title: "CSV Import Successful",
+          category: "System",
+          description: `${productsToInsert.length} products were successfully imported.`,
+          createdAt: new Date().toISOString(),
+          path: "/management",
+        });
 
         addNotification(
           `${productsToInsert.length} products imported successfully!`,

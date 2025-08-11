@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
 import { useNotification } from "@/hooks/useNotification";
@@ -15,6 +15,7 @@ import ManagementHeader from "./modules/ManagementHeader";
 import ProductFilters from "./modules/ProductFilters";
 import ProductTable from "./modules/ProductTable";
 import { WifiOff, RefreshCw } from "lucide-react";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 const Management = () => {
   const [products, setProducts] = useState([]);
@@ -98,10 +99,7 @@ const Management = () => {
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("products")
-      .select()
-      .neq("status", "Archived");
+    const { data, error } = await api.getProducts();
     if (error) {
       console.error("Error fetching products:", error);
       setError(error);
@@ -117,10 +115,7 @@ const Management = () => {
 
   const handleArchiveSelected = async () => {
     if (selectedItems.length === 0) return;
-    const { error } = await supabase
-      .from("products")
-      .update({ status: "Archived" })
-      .in("id", selectedItems);
+    const { error } = await api.archiveProducts(selectedItems);
 
     if (error) {
       console.error("Error archiving products:", error);
@@ -130,6 +125,16 @@ const Management = () => {
         `${selectedItems.length} product(s) successfully archived.`,
         "success"
       );
+      addSystemNotification({
+        id: `archive-${Date.now()}`,
+        iconType: "archive",
+        iconBg: "bg-purple-100",
+        title: "Products Archived",
+        category: "System",
+        description: `${selectedItems.length} product(s) were archived.`,
+        createdAt: new Date().toISOString(),
+        path: "/archived",
+      });
       fetchProducts();
       setSelectedItems([]);
     }

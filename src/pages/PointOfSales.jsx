@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 import {
   Search,
   Plus,
@@ -27,11 +27,7 @@ const PointOfSales = ({ branding }) => {
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("status", "Available")
-      .gt("quantity", 0);
+    const { data, error } = await api.getAvailableProducts();
 
     if (error) {
       console.error("Error fetching products:", error);
@@ -102,11 +98,7 @@ const PointOfSales = ({ branding }) => {
     setLoading(true);
 
     try {
-      const { data: saleData, error: saleError } = await supabase
-        .from("sales")
-        .insert({ total_amount: total, discount_applied: isDiscounted })
-        .select()
-        .single();
+      const { data: saleData, error: saleError } = await api.addSale({ total_amount: total, discount_applied: isDiscounted });
 
       if (saleError) throw saleError;
 
@@ -117,23 +109,14 @@ const PointOfSales = ({ branding }) => {
         price_at_sale: item.price,
       }));
 
-      const { error: saleItemsError } = await supabase
-        .from("sale_items")
-        .insert(saleItemsToInsert);
+      const { error: saleItemsError } = await api.addSaleItems(saleItemsToInsert);
       if (saleItemsError) throw saleItemsError;
 
       for (const item of cart) {
-        const { data: product, error: fetchError } = await supabase
-          .from("products")
-          .select("quantity")
-          .eq("id", item.id)
-          .single();
+        const { data: product, error: fetchError } = await api.getProductById(item.id);
         if (fetchError) throw fetchError;
         const newQuantity = product.quantity - item.quantity;
-        const { error: updateError } = await supabase
-          .from("products")
-          .update({ quantity: newQuantity })
-          .eq("id", item.id);
+        const { error: updateError } = await api.updateProduct(item.id, { quantity: newQuantity });
         if (updateError) throw updateError;
       }
 

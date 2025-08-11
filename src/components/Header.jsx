@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
@@ -12,47 +12,46 @@ import {
   X,
   PackageX,
   UploadCloud,
+  Archive,
+  RotateCcw,
+  Trash2,
+  Tag,
 } from "lucide-react";
+import {
+  getStoredJson,
+  setStoredJson,
+  getReadNotificationIds,
+  setReadNotificationIds,
+  getDismissedNotificationIds,
+  setDismissedNotificationIds,
+  getLowStockTimestamps,
+  setLowStockTimestamps,
+  getNotificationSettings,
+  getSystemNotifications,
+  removeSystemNotification,
+} from "@/utils/notificationStorage";
 
-// Helper functions for local storage moved outside the component
-const getStoredJson = (key) => {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : null;
-  } catch (e) {
-    console.error(`Failed to parse ${key} from localStorage`, e);
-    return null;
-  }
-};
-
-const setStoredJson = (key, value) => {
-  localStorage.setItem(key, JSON.stringify(value));
-};
-
-const getReadNotificationIds = () => getStoredJson("readNotificationIds") || [];
-const setReadNotificationIds = (ids) =>
-  setStoredJson("readNotificationIds", ids);
-
-const getDismissedNotificationIds = () =>
-  getStoredJson("dismissedNotificationIds") || [];
-const setDismissedNotificationIds = (ids) =>
-  setStoredJson("dismissedNotificationIds", ids);
-
-const getLowStockTimestamps = () => getStoredJson("lowStockTimestamps") || {};
-const setLowStockTimestamps = (timestamps) =>
-  setStoredJson("lowStockTimestamps", timestamps);
 
 // Moved TabButton outside of the Header component
-const TabButton = ({ category, activeCategory, setActiveCategory }) => (
+const TabButton = ({ category, activeCategory, setActiveCategory, count = 0 }) => (
   <button
     onClick={() => setActiveCategory(category)}
-    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+    className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-2 ${
       activeCategory === category
-        ? "bg-white text-gray-800 shadow-sm font-semibold"
-        : "text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+        ? "bg-blue-600 text-white shadow"
+        : "text-gray-600 bg-gray-100 hover:bg-gray-200"
     }`}
   >
-    {category}
+    <span>{category}</span>
+    {count > 0 && (
+      <span
+        className={`text-[10px] rounded-full px-1.5 py-0.5 ${
+          activeCategory === category ? "bg-white/20" : "bg-gray-200 text-gray-700"
+        }`}
+      >
+        {count}
+      </span>
+    )}
   </button>
 );
 
@@ -61,6 +60,7 @@ TabButton.propTypes = {
   category: PropTypes.string.isRequired,
   activeCategory: PropTypes.string.isRequired,
   setActiveCategory: PropTypes.func.isRequired,
+  count: PropTypes.number,
 };
 
 const Header = ({ handleLogout, user }) => {
@@ -107,39 +107,75 @@ const Header = ({ handleLogout, user }) => {
     const readIds = getReadNotificationIds();
     const dismissedIds = getDismissedNotificationIds();
     const lowStockTimestamps = getLowStockTimestamps();
+    const settings = getNotificationSettings();
     let newTimestamps = { ...lowStockTimestamps };
     let timestampsUpdated = false;
 
-    const lowStockThreshold = 10;
+    const lowStockThreshold = Number(settings.lowStockThreshold) || 0;
     const today = new Date();
     let generatedNotifications = [];
 
-    // Check for CSV import notification
-    const csvImportData = getStoredJson("csvImported");
-    if (csvImportData) {
+    // Include stored system notifications (e.g., import success or other ops)
+    const systemNotifications = getSystemNotifications();
+    systemNotifications.forEach((s) => {
+      let iconEl = null;
+      switch (s.iconType) {
+        case "upload":
+          iconEl = <UploadCloud className="text-green-500" />;
+          break;
+        case "archive":
+          iconEl = <Archive className="text-purple-500" />;
+          break;
+        case "unarchive":
+          iconEl = <RotateCcw className="text-green-600" />;
+          break;
+        case "delete":
+          iconEl = <Trash2 className="text-red-500" />;
+          break;
+        case "price":
+          iconEl = <Tag className="text-blue-600" />;
+          break;
+        default:
+          iconEl = <Bell className="text-gray-500" />;
+      }
       generatedNotifications.push({
-        id: `csv-${csvImportData.timestamp}`,
-        icon: <UploadCloud className="text-green-500" />,
-        iconBg: "bg-green-100",
-        title: "CSV Import Successful",
-        category: "System",
-        description: `${csvImportData.count} products were successfully imported.`,
-        read: readIds.includes(`csv-${csvImportData.timestamp}`),
-        path: "/management",
-        createdAt: new Date(csvImportData.timestamp),
+        id: s.id,
+        icon: iconEl,
+        iconBg: s.iconBg || "bg-gray-100",
+        title: s.title,
+        category: s.category || "System",
+        description: s.description,
+        read: readIds.includes(s.id),
+        path: s.path || "/",
+        createdAt: new Date(s.createdAt),
       });
-      // Do not remove it immediately, allow it to persist until dismissed or read
-    }
+    });
 
     products.forEach((product) => {
-      const lowStockId = `low-${product.id}`;
-      if (product.quantity <= lowStockThreshold && product.quantity > 0) {
-        let timestamp = newTimestamps[lowStockId];
-        if (!timestamp) {
-          timestamp = new Date().toISOString();
-          newTimestamps[lowStockId] = timestamp;
+      const baseLowStockId = `low-${product.id}`;
+
+      // Clear stored low-stock episode if stock recovered
+      if (product.quantity > lowStockThreshold && newTimestamps[baseLowStockId]) {
+        delete newTimestamps[baseLowStockId];
+        timestampsUpdated = true;
+      }
+
+      if (product.quantity === 0) {
+        if (newTimestamps[baseLowStockId]) {
+          delete newTimestamps[baseLowStockId];
           timestampsUpdated = true;
         }
+      }
+
+      if (product.quantity <= lowStockThreshold && product.quantity > 0) {
+        let timestamp = newTimestamps[baseLowStockId];
+        if (!timestamp) {
+          timestamp = new Date().toISOString();
+          newTimestamps[baseLowStockId] = timestamp;
+          timestampsUpdated = true;
+        }
+
+        const lowStockId = `${baseLowStockId}-${timestamp}`;
 
         generatedNotifications.push({
           id: lowStockId,
@@ -184,6 +220,26 @@ const Header = ({ handleLogout, user }) => {
           createdAt: expiryDate,
         });
       }
+
+      // Expiring soon (configurable)
+      if (settings.enableExpiringSoon && product.expireDate) {
+        const diffMs = expiryDate - today;
+        const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays <= Number(settings.expiringSoonDays)) {
+          const expSoonId = `exp-soon-${product.id}`;
+          generatedNotifications.push({
+            id: expSoonId,
+            icon: <AlertTriangle className="text-orange-500" />,
+            iconBg: "bg-orange-100",
+            title: "Expiring Soon",
+            category: "Expiring Soon",
+            description: `${product.name} expires in ${diffDays} day(s).`,
+            read: readIds.includes(expSoonId),
+            path: `/management?highlight=${product.id}`,
+            createdAt: expiryDate,
+          });
+        }
+      }
     });
 
     if (timestampsUpdated) {
@@ -215,7 +271,6 @@ const Header = ({ handleLogout, user }) => {
 
     // Listen for local storage changes (for CSV import)
     const handleStorageChange = () => {
-      // Re-fetch notifications whenever a relevant local storage item changes
       fetchNotifications();
     };
     window.addEventListener("storage", handleStorageChange);
@@ -228,18 +283,55 @@ const Header = ({ handleLogout, user }) => {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const categories = [
+    "All",
+    "Low Stock",
+    "No Stock",
+    "Expired",
+    "Expiring Soon",
+    "System",
+  ];
+
+  const categoryCounts = useMemo(() => {
+    return notifications.reduce(
+      (acc, n) => {
+        acc["All"] += 1;
+        acc[n.category] = (acc[n.category] || 0) + 1;
+        return acc;
+      },
+      { All: 0 }
+    );
+  }, [notifications]);
+
+  const getAccentClass = (category) => {
+    switch (category) {
+      case "Low Stock":
+        return "border-l-4 border-yellow-400";
+      case "No Stock":
+        return "border-l-4 border-red-500";
+      case "Expired":
+        return "border-l-4 border-red-500";
+      case "Expiring Soon":
+        return "border-l-4 border-orange-400";
+      case "System":
+        return "border-l-4 border-gray-300";
+      default:
+        return "border-l-4 border-blue-400";
+    }
+  };
+
   const handleMarkAsRead = (notificationId) => {
     const readIds = getReadNotificationIds();
     if (!readIds.includes(notificationId)) {
       setReadNotificationIds([...readIds, notificationId]);
     }
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
+    const updated = notifications.map((n) =>
+      n.id === notificationId ? { ...n, read: true } : n
     );
-    // If it's a CSV import notification, mark it as read and dismiss it permanently
-    if (notificationId.startsWith("csv-")) {
+    setNotifications(updated);
+    // Auto-dismiss system notifications after marking as read
+    const n = updated.find((x) => x.id === notificationId);
+    if (n && n.category === "System") {
       handleDismiss(null, notificationId);
     }
   };
@@ -250,27 +342,26 @@ const Header = ({ handleLogout, user }) => {
     const newReadIds = [...new Set([...readIds, ...allNotificationIds])];
     setReadNotificationIds(newReadIds);
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
-    // Dismiss all system notifications
-    const systemNotifications = notifications.filter(
+    // Dismiss all system notifications and remove from storage
+    const systemNotificationsOnly = notifications.filter(
       (n) => n.category === "System"
     );
     const dismissedIds = getDismissedNotificationIds();
-    setDismissedNotificationIds([
-      ...dismissedIds,
-      ...systemNotifications.map((n) => n.id),
-    ]);
+    const toDismiss = systemNotificationsOnly.map((n) => n.id);
+    setDismissedNotificationIds([...new Set([...dismissedIds, ...toDismiss])]);
+    toDismiss.forEach((id) => removeSystemNotification(id));
   };
 
   const handleDismiss = (e, notificationId) => {
     e?.preventDefault();
     e?.stopPropagation();
     const dismissedIds = getDismissedNotificationIds();
-    setDismissedNotificationIds([...dismissedIds, notificationId]);
-    setNotifications(notifications.filter((n) => n.id !== notificationId));
-    // Also remove the CSV item from local storage if it's dismissed
-    if (notificationId.startsWith("csv-")) {
-      localStorage.removeItem("csvImported");
+    setDismissedNotificationIds([...new Set([...dismissedIds, notificationId])]);
+    const target = notifications.find((n) => n.id === notificationId);
+    if (target && target.category === "System") {
+      removeSystemNotification(notificationId);
     }
+    setNotifications(notifications.filter((n) => n.id !== notificationId));
   };
 
   const displayName = user?.user_metadata?.full_name || "Administrator";
@@ -293,7 +384,9 @@ const Header = ({ handleLogout, user }) => {
               to={notification.path || "#"}
               key={notification.id}
               onClick={() => handleMarkAsRead(notification.id)}
-              className={`flex items-start gap-3 p-4 transition-colors relative group border-b border-gray-100 ${
+              className={`flex items-start gap-3 p-4 transition-colors relative group border-b border-gray-100 ${getAccentClass(
+                notification.category
+              )} ${
                 !notification.read
                   ? "bg-blue-50 hover:bg-blue-100"
                   : "hover:bg-gray-50"
@@ -358,52 +451,37 @@ const Header = ({ handleLogout, user }) => {
             >
               <Bell className="w-6 h-6" />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold border-2 border-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 mt-3 w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-30">
-                <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <div className="absolute right-0 mt-3 w-[28rem] bg-white rounded-2xl shadow-2xl border border-gray-100 z-30 overflow-hidden">
+                <div className="flex justify-between items-center px-5 py-3 border-b border-gray-200 sticky top-0 bg-white">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllAsRead}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Mark all as read
-                    </button>
-                  )}
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-sm text-blue-600 hover:underline disabled:text-gray-300"
+                    disabled={unreadCount === 0}
+                  >
+                    Mark all as read
+                  </button>
                 </div>
-                <div className="p-2 bg-gray-50 border-b border-gray-200">
-                  <div className="flex items-center gap-1">
-                    <TabButton
-                      category="All"
-                      activeCategory={activeCategory}
-                      setActiveCategory={setActiveCategory}
-                    />
-                    <TabButton
-                      category="Low Stock"
-                      activeCategory={activeCategory}
-                      setActiveCategory={setActiveCategory}
-                    />
-                    <TabButton
-                      category="No Stock"
-                      activeCategory={activeCategory}
-                      setActiveCategory={setActiveCategory}
-                    />
-                    <TabButton
-                      category="Expired"
-                      activeCategory={activeCategory}
-                      setActiveCategory={setActiveCategory}
-                    />
-                    <TabButton
-                      category="System"
-                      activeCategory={activeCategory}
-                      setActiveCategory={setActiveCategory}
-                    />
+                <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 sticky top-[45px] z-10">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {categories.map((cat) => (
+                      <TabButton
+                        key={cat}
+                        category={cat}
+                        activeCategory={activeCategory}
+                        setActiveCategory={setActiveCategory}
+                        count={categoryCounts[cat] || 0}
+                      />
+                    ))}
                   </div>
                 </div>
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-[28rem] overflow-y-auto">
                   {renderNotificationContent()}
                 </div>
               </div>

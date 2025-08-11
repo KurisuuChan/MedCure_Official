@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { supabase } from "../supabase/client";
 import { X, Edit } from "lucide-react";
 import { useNotification } from "@/hooks/useNotification";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 const productCategories = [
   "Pain Relief",
@@ -39,6 +40,7 @@ const EditProductModal = ({ isOpen, onClose, product, onProductUpdated }) => {
     setError("");
 
     const { id, ...updateData } = formData;
+    const originalPrice = product?.price;
 
     const { error: updateError } = await supabase
       .from("products")
@@ -51,6 +53,23 @@ const EditProductModal = ({ isOpen, onClose, product, onProductUpdated }) => {
       addNotification("Failed to update product.", "error");
     } else {
       addNotification("Product updated successfully!", "success");
+      // If price changed, add a system notification for the header feed
+      if (
+        typeof originalPrice !== "undefined" &&
+        typeof updateData.price !== "undefined" &&
+        Number(originalPrice) !== Number(updateData.price)
+      ) {
+        addSystemNotification({
+          id: `price-${id}-${Date.now()}`,
+          iconType: "price",
+          iconBg: "bg-blue-100",
+          title: "Price Updated",
+          category: "System",
+          description: `Price changed from ${originalPrice} to ${updateData.price} for ${updateData.name || product.name}.`,
+          createdAt: new Date().toISOString(),
+          path: "/management",
+        });
+      }
       onProductUpdated();
       onClose();
     }
