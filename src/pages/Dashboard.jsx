@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Archive,
   Pill,
@@ -86,6 +86,12 @@ const Dashboard = () => {
     };
   };
 
+  const maxSaleValue = useMemo(() => {
+    const maxValue = Math.max(...monthlyProgressData.map((d) => d.value), 1);
+    // Round up to the nearest nice number (e.g., 1000, 5000)
+    return Math.ceil(maxValue / 1000) * 1000;
+  }, [monthlyProgressData]);
+
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
@@ -152,6 +158,7 @@ const Dashboard = () => {
         if (bestSellersError) throw bestSellersError;
 
         const productSales = bestSellersData.reduce((acc, item) => {
+          if (!item.products) return acc;
           const name = item.products.name;
           acc[name] = (acc[name] || 0) + item.quantity;
           return acc;
@@ -246,30 +253,37 @@ const Dashboard = () => {
               This Year <ChevronDown size={16} className="ml-1" />
             </button>
           </div>
-          <div className="h-72 flex items-end justify-between space-x-2 text-center">
-            {monthlyProgressData.map((item) => (
-              <div
-                key={item.month}
-                className="flex-1 flex flex-col items-center h-full justify-end group"
-              >
+          <div className="flex">
+            <div className="flex flex-col justify-between text-xs text-gray-400 pr-4">
+              <span>{`₱${maxSaleValue}`}</span>
+              <span>{`₱${maxSaleValue / 2}`}</span>
+              <span>₱0</span>
+            </div>
+            <div className="w-full h-72 flex items-end justify-between space-x-2 text-center border-l border-b border-gray-200 pl-2">
+              {monthlyProgressData.map((item) => (
                 <div
-                  className={`w-3/4 rounded-t-md transition-colors duration-300 ${
-                    item.isCurrent
-                      ? "bg-gradient-to-t from-indigo-500 to-indigo-400"
-                      : "bg-gray-200"
-                  } group-hover:bg-gradient-to-t group-hover:from-sky-500 group-hover:to-sky-400`}
-                  style={{
-                    height: `${
-                      (item.value /
-                        (Math.max(...monthlyProgressData.map((d) => d.value)) ||
-                          1)) *
-                      100
-                    }%`,
-                  }}
-                ></div>
-                <span className="text-xs text-gray-500 mt-2">{item.month}</span>
-              </div>
-            ))}
+                  key={item.month}
+                  className="relative flex-1 flex flex-col items-center h-full justify-end group"
+                >
+                  <div className="absolute -top-8 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded-md">
+                    {`₱${item.value.toFixed(2)}`}
+                  </div>
+                  <div
+                    className={`w-3/4 rounded-t-md transition-all duration-300 ease-in-out ${
+                      item.isCurrent
+                        ? "bg-gradient-to-t from-indigo-500 to-indigo-400"
+                        : "bg-gray-200"
+                    } group-hover:bg-gradient-to-t group-hover:from-sky-500 group-hover:to-sky-400`}
+                    style={{
+                      height: `${(item.value / maxSaleValue) * 100}%`,
+                    }}
+                  ></div>
+                  <span className="text-xs text-gray-500 mt-2">
+                    {item.month}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -322,7 +336,7 @@ const Dashboard = () => {
                 {recentSales.map((item) => (
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="py-4 px-4 text-sm text-gray-800 font-medium">
-                      {item.products.name}
+                      {item.products?.name || "N/A"}
                     </td>
                     <td className="py-4 px-4 text-center text-sm text-gray-500">
                       {item.quantity}
