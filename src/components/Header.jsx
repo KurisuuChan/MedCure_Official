@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
@@ -32,62 +32,77 @@ const Header = ({ handleLogout, user }) => {
     localStorage.setItem("readNotificationIds", JSON.stringify(ids));
   };
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoading(true);
-      const { data: products, error } = await supabase
-        .from("products")
-        .select("id, name, quantity, expireDate, status")
-        .in("status", ["Available", "Unavailable"]);
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    const { data: products, error } = await supabase
+      .from("products")
+      .select("id, name, quantity, expireDate, status")
+      .in("status", ["Available", "Unavailable"]);
 
-      if (error) {
-        console.error("Error fetching products for notifications:", error);
-        setLoading(false);
-        return;
+    if (error) {
+      console.error("Error fetching products for notifications:", error);
+      setLoading(false);
+      return;
+    }
+
+    const readIds = getReadNotificationIds();
+    const lowStockThreshold = 10;
+    const today = new Date();
+    const generatedNotifications = [];
+
+    products.forEach((product) => {
+      const lowStockId = `low-${product.id}`;
+      if (product.quantity <= lowStockThreshold && product.quantity > 0) {
+        generatedNotifications.push({
+          id: lowStockId,
+          icon: <AlertTriangle className="text-yellow-500" />,
+          iconBg: "bg-yellow-100",
+          title: "Low Stock Warning",
+          description: `${product.name} has only ${product.quantity} items left.`,
+          time: "Recently",
+          read: readIds.includes(lowStockId),
+          path: `/management?highlight=${product.id}`,
+        });
       }
 
-      const readIds = getReadNotificationIds();
-      const lowStockThreshold = 10;
-      const today = new Date();
-      const generatedNotifications = [];
+      const expiredId = `expired-${product.id}`;
+      const expiryDate = new Date(product.expireDate);
+      if (expiryDate < today) {
+        generatedNotifications.push({
+          id: expiredId,
+          icon: <AlertTriangle className="text-red-500" />,
+          iconBg: "bg-red-100",
+          title: "Expired Medicine Alert",
+          description: `${product.name} (ID: ${product.id}) has expired.`,
+          time: "Recently",
+          read: readIds.includes(expiredId),
+          path: `/management?highlight=${product.id}`,
+        });
+      }
+    });
 
-      products.forEach((product) => {
-        const lowStockId = `low-${product.id}`;
-        if (product.quantity <= lowStockThreshold && product.quantity > 0) {
-          generatedNotifications.push({
-            id: lowStockId,
-            icon: <AlertTriangle className="text-yellow-500" />,
-            iconBg: "bg-yellow-100",
-            title: "Low Stock Warning",
-            description: `${product.name} has only ${product.quantity} items left.`,
-            time: "Recently",
-            read: readIds.includes(lowStockId),
-            path: `/management?highlight=${product.id}`,
-          });
-        }
-
-        const expiredId = `expired-${product.id}`;
-        const expiryDate = new Date(product.expireDate);
-        if (expiryDate < today) {
-          generatedNotifications.push({
-            id: expiredId,
-            icon: <AlertTriangle className="text-red-500" />,
-            iconBg: "bg-red-100",
-            title: "Expired Medicine Alert",
-            description: `${product.name} (ID: ${product.id}) has expired.`,
-            time: "Recently",
-            read: readIds.includes(expiredId),
-            path: `/management?highlight=${product.id}`,
-          });
-        }
-      });
-
-      setNotifications(generatedNotifications);
-      setLoading(false);
-    };
-
-    fetchNotifications();
+    setNotifications(generatedNotifications);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const channel = supabase
+      .channel("products-notifications")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "products" },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
