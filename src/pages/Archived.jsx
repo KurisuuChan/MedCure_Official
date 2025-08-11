@@ -12,6 +12,7 @@ import {
 import { useNotification } from "@/hooks/useNotification";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 const Archived = () => {
   const [archivedProducts, setArchivedProducts] = useState([]);
@@ -50,6 +51,16 @@ const Archived = () => {
       addNotification(`Error: ${error.message}`, "error");
     } else {
       addNotification("Product successfully unarchived.", "success");
+      addSystemNotification({
+        id: `unarchive-${productId}-${Date.now()}`,
+        iconType: "unarchive",
+        iconBg: "bg-green-100",
+        title: "Product Unarchived",
+        category: "System",
+        description: `A product was moved back to Available.`,
+        createdAt: new Date().toISOString(),
+        path: "/management",
+      });
       fetchArchivedProducts();
     }
   };
@@ -70,6 +81,16 @@ const Archived = () => {
         addNotification(`Error: ${error.message}`, "error");
       } else {
         addNotification("Product permanently deleted.", "success");
+        addSystemNotification({
+          id: `delete-${productId}-${Date.now()}`,
+          iconType: "delete",
+          iconBg: "bg-red-100",
+          title: "Product Deleted",
+          category: "System",
+          description: `A product was permanently deleted.`,
+          createdAt: new Date().toISOString(),
+          path: "/archived",
+        });
         fetchArchivedProducts();
       }
     }

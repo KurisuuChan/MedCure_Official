@@ -15,6 +15,7 @@ import ManagementHeader from "./modules/ManagementHeader";
 import ProductFilters from "./modules/ProductFilters";
 import ProductTable from "./modules/ProductTable";
 import { WifiOff, RefreshCw } from "lucide-react";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 const Management = () => {
   const [products, setProducts] = useState([]);
@@ -130,6 +131,16 @@ const Management = () => {
         `${selectedItems.length} product(s) successfully archived.`,
         "success"
       );
+      addSystemNotification({
+        id: `archive-${Date.now()}`,
+        iconType: "archive",
+        iconBg: "bg-purple-100",
+        title: "Products Archived",
+        category: "System",
+        description: `${selectedItems.length} product(s) were archived.`,
+        createdAt: new Date().toISOString(),
+        path: "/archived",
+      });
       fetchProducts();
       setSelectedItems([]);
     }
