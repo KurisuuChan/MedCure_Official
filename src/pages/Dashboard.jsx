@@ -11,19 +11,17 @@ import {
   Clock,
   Star,
   Activity,
-  BarChart,
+  BarChart as BarChartIcon,
   WifiOff,
   RefreshCw,
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  AreaChart,
+  BarChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Area,
-  ComposedChart,
   Bar,
   Legend,
 } from "recharts";
@@ -300,46 +298,43 @@ const Dashboard = () => {
             </button>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={monthlyProgressData}>
-              <defs>
-                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <BarChart data={monthlyProgressData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" />
               <YAxis />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip />
-              <Area
-                type="monotone"
+              <Tooltip cursor={{ fill: "rgba(239, 246, 255, 0.5)" }} />
+              <Bar
                 dataKey="sales"
-                stroke="#8884d8"
-                fillOpacity={1}
-                fill="url(#colorSales)"
+                fill="#3B82F6"
+                barSize={30}
+                radius={[4, 4, 0, 0]}
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <BarChart className="text-purple-500" />
+            <BarChartIcon className="text-purple-500" />
             Sales by Category
           </h2>
           <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart
+            <BarChart
               layout="vertical"
               data={salesByCategory}
-              margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+              margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
             >
-              <CartesianGrid stroke="#f5f5f5" />
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
               <XAxis type="number" />
-              <YAxis dataKey="name" type="category" scale="band" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" barSize={20} fill="#413ea0" />
-            </ComposedChart>
+              <YAxis dataKey="name" type="category" scale="band" width={80} />
+              <Tooltip cursor={{ fill: "rgba(239, 246, 255, 0.5)" }} />
+              <Bar
+                dataKey="value"
+                barSize={20}
+                fill="#8B5CF6"
+                radius={[0, 4, 4, 0]}
+              />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>

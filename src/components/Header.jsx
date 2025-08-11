@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
@@ -9,6 +9,7 @@ import {
   ChevronDown,
   LogOut,
   AlertTriangle,
+  X,
 } from "lucide-react";
 
 const Header = ({ handleLogout, user }) => {
@@ -16,17 +17,56 @@ const Header = ({ handleLogout, user }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState("All");
 
-  // Helper functions to manage read status in localStorage
-  const getReadNotificationIds = () => {
+  const notificationsRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setNotificationsOpen(false);
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const getStoredJson = (key) => {
     try {
-      const readIds = localStorage.getItem("readNotificationIds");
-      return readIds ? JSON.parse(readIds) : [];
+      const data = localStorage.getItem(key);
+      return data ? JSON.parse(data) : null;
     } catch (e) {
-      console.error("Failed to parse read notifications from localStorage", e);
-      return [];
+      console.error(`Failed to parse ${key} from localStorage`, e);
+      return null;
     }
   };
+
+  const setStoredJson = (key, value) => {
+    localStorage.setItem(key, JSON.stringify(value));
+  };
+
+  const getReadNotificationIds = () =>
+    getStoredJson("readNotificationIds") || [];
+  const setReadNotificationIds = (ids) =>
+    setStoredJson("readNotificationIds", ids);
+
+  const getDismissedNotificationIds = () =>
+    getStoredJson("dismissedNotificationIds") || [];
+  const setDismissedNotificationIds = (ids) =>
+    setStoredJson("dismissedNotificationIds", ids);
+
+  const getLowStockTimestamps = () => getStoredJson("lowStockTimestamps") || {};
+  const setLowStockTimestamps = (timestamps) =>
+    setStoredJson("lowStockTimestamps", timestamps);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
@@ -42,22 +82,35 @@ const Header = ({ handleLogout, user }) => {
     }
 
     const readIds = getReadNotificationIds();
+    const dismissedIds = getDismissedNotificationIds();
+    const lowStockTimestamps = getLowStockTimestamps();
+    let newTimestamps = { ...lowStockTimestamps };
+    let timestampsUpdated = false;
+
     const lowStockThreshold = 10;
     const today = new Date();
-    const generatedNotifications = [];
+    let generatedNotifications = [];
 
     products.forEach((product) => {
       const lowStockId = `low-${product.id}`;
       if (product.quantity <= lowStockThreshold && product.quantity > 0) {
+        let timestamp = newTimestamps[lowStockId];
+        if (!timestamp) {
+          timestamp = new Date().toISOString();
+          newTimestamps[lowStockId] = timestamp;
+          timestampsUpdated = true;
+        }
+
         generatedNotifications.push({
           id: lowStockId,
           icon: <AlertTriangle className="text-yellow-500" />,
           iconBg: "bg-yellow-100",
           title: "Low Stock Warning",
+          category: "Low Stock",
           description: `${product.name} has only ${product.quantity} items left.`,
-          time: "Recently",
           read: readIds.includes(lowStockId),
           path: `/management?highlight=${product.id}`,
+          createdAt: new Date(timestamp),
         });
       }
 
@@ -69,13 +122,23 @@ const Header = ({ handleLogout, user }) => {
           icon: <AlertTriangle className="text-red-500" />,
           iconBg: "bg-red-100",
           title: "Expired Medicine Alert",
+          category: "Expired",
           description: `${product.name} (ID: ${product.id}) has expired.`,
-          time: "Recently",
           read: readIds.includes(expiredId),
           path: `/management?highlight=${product.id}`,
+          createdAt: expiryDate,
         });
       }
     });
+
+    if (timestampsUpdated) {
+      setLowStockTimestamps(newTimestamps);
+    }
+
+    generatedNotifications = generatedNotifications.filter(
+      (n) => !dismissedIds.includes(n.id)
+    );
+    generatedNotifications.sort((a, b) => b.createdAt - a.createdAt);
 
     setNotifications(generatedNotifications);
     setLoading(false);
@@ -83,94 +146,106 @@ const Header = ({ handleLogout, user }) => {
 
   useEffect(() => {
     fetchNotifications();
-
     const channel = supabase
       .channel("products-notifications")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "products" },
-        () => {
-          fetchNotifications();
-        }
+        fetchNotifications
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [fetchNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleMarkAsRead = async (notificationId) => {
+  const handleMarkAsRead = (notificationId) => {
+    const readIds = getReadNotificationIds();
+    if (!readIds.includes(notificationId)) {
+      setReadNotificationIds([...readIds, notificationId]);
+    }
     setNotifications(
       notifications.map((n) =>
-        n.id === notificationId ? { ...n, is_read: true } : n
+        n.id === notificationId ? { ...n, read: true } : n
       )
     );
-    await supabase
-      .from("user_notifications")
-      .update({ is_read: true })
-      .eq("id", notificationId);
   };
 
-  const handleMarkAllAsRead = async () => {
-    setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
-    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
-    if (unreadIds.length > 0) {
-      await supabase
-        .from("user_notifications")
-        .update({ is_read: true })
-        .in("id", unreadIds);
-    }
+  const handleMarkAllAsRead = () => {
+    const allNotificationIds = notifications.map((n) => n.id);
+    const readIds = getReadNotificationIds();
+    const newReadIds = [...new Set([...readIds, ...allNotificationIds])];
+    setReadNotificationIds(newReadIds);
+    setNotifications(notifications.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleDismiss = (e, notificationId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dismissedIds = getDismissedNotificationIds();
+    setDismissedNotificationIds([...dismissedIds, notificationId]);
+    setNotifications(notifications.filter((n) => n.id !== notificationId));
   };
 
   const displayName = user?.user_metadata?.full_name || "Administrator";
   const displayEmail = user?.email || "medcure.ph";
   const avatarUrl = user?.user_metadata?.avatar_url;
 
-  // This part remains largely the same, but now it renders data from the new state
-  const renderNotificationContent = () => {
-    if (loading) {
-      return <div className="p-4 text-center text-gray-500">Loading...</div>;
-    }
+  const filteredNotifications =
+    activeCategory === "All"
+      ? notifications
+      : notifications.filter((n) => n.category === activeCategory);
 
-    if (notifications.length > 0) {
+  const renderNotificationContent = () => {
+    if (loading)
+      return <div className="p-4 text-center text-gray-500">Loading...</div>;
+    if (filteredNotifications.length > 0) {
       return (
         <>
-          {notifications.map((notification) => (
+          {filteredNotifications.map((notification) => (
             <Link
-              to={notification.link_to || "#"}
+              to={notification.path || "#"}
               key={notification.id}
               onClick={() => handleMarkAsRead(notification.id)}
-              className={`flex items-start gap-3 p-4 transition-colors ${
-                !notification.is_read ? "bg-blue-50" : "hover:bg-gray-50"
+              className={`flex items-start gap-3 p-4 transition-colors relative group ${
+                !notification.read ? "bg-blue-50" : "hover:bg-gray-50"
               }`}
             >
-              <div className="flex-shrink-0 p-2 rounded-full bg-blue-100">
-                <Bell className="text-blue-500" />
+              <div
+                className={`flex-shrink-0 p-2 rounded-full ${notification.iconBg}`}
+              >
+                {notification.icon}
               </div>
               <div className="flex-grow">
                 <p className="font-semibold text-sm text-gray-800">
-                  {notification.type.replace("_", " ").toUpperCase()}
+                  {notification.title}
                 </p>
-                <p className="text-xs text-gray-600">{notification.message}</p>
+                <p className="text-xs text-gray-600">
+                  {notification.description}
+                </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {new Date(notification.created_at).toLocaleString()}
+                  {notification.createdAt.toLocaleString()}
                 </p>
               </div>
-              {!notification.is_read && (
-                <div
-                  className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0 mt-1"
-                  title="Unread"
-                ></div>
-              )}
+              <div className="flex items-center">
+                {!notification.read && (
+                  <div
+                    className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0"
+                    title="Unread"
+                  ></div>
+                )}
+                <button
+                  onClick={(e) => handleDismiss(e, notification.id)}
+                  className="ml-2 p-1 rounded-full text-gray-400 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </Link>
           ))}
         </>
       );
     }
-
     return (
       <div className="text-center py-8 text-gray-500">
         <Bell size={32} className="mx-auto mb-2" />
@@ -196,7 +271,7 @@ const Header = ({ handleLogout, user }) => {
         </div>
 
         <div className="flex items-center space-x-6">
-          <div className="relative">
+          <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setNotificationsOpen(!notificationsOpen)}
               className="p-2.5 text-gray-500 hover:text-blue-600 relative rounded-full hover:bg-gray-100 transition-colors"
@@ -207,7 +282,7 @@ const Header = ({ handleLogout, user }) => {
               )}
             </button>
             {notificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-30">
+              <div className="absolute right-0 mt-3 w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-30">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>
                   {unreadCount > 0 && (
@@ -219,6 +294,40 @@ const Header = ({ handleLogout, user }) => {
                     </button>
                   )}
                 </div>
+                <div className="p-2 bg-gray-50 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveCategory("All")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        activeCategory === "All"
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-200"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setActiveCategory("Low Stock")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        activeCategory === "Low Stock"
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-200"
+                      }`}
+                    >
+                      Low Stock
+                    </button>
+                    <button
+                      onClick={() => setActiveCategory("Expired")}
+                      className={`px-3 py-1 text-sm rounded-md ${
+                        activeCategory === "Expired"
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-200"
+                      }`}
+                    >
+                      Expired
+                    </button>
+                  </div>
+                </div>
                 <div className="max-h-96 overflow-y-auto">
                   {renderNotificationContent()}
                 </div>
@@ -226,7 +335,7 @@ const Header = ({ handleLogout, user }) => {
             )}
           </div>
 
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <button
               className="flex items-center space-x-3 cursor-pointer"
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -248,7 +357,6 @@ const Header = ({ handleLogout, user }) => {
               </div>
               <ChevronDown className="w-5 h-5 text-gray-400" />
             </button>
-
             {dropdownOpen && (
               <div className="absolute right-0 mt-3 w-48 bg-white rounded-xl shadow-lg py-2 z-30 border border-gray-100">
                 <button
