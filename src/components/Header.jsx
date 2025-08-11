@@ -2,8 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
-import { useNotification } from "@/hooks/useNotification"; // Import the toast notification hook
-import { Search, Bell, User, ChevronDown, LogOut } from "lucide-react";
+import {
+  Search,
+  Bell,
+  User,
+  ChevronDown,
+  LogOut,
+  AlertTriangle,
+} from "lucide-react";
 
 const Header = ({ handleLogout, user }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -20,10 +26,6 @@ const Header = ({ handleLogout, user }) => {
       console.error("Failed to parse read notifications from localStorage", e);
       return [];
     }
-  };
-
-  const setReadNotificationIds = (ids) => {
-    localStorage.setItem("readNotificationIds", JSON.stringify(ids));
   };
 
   const fetchNotifications = useCallback(async () => {
