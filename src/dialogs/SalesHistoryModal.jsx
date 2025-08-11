@@ -1,9 +1,8 @@
-// src/dialogs/SalesHistoryModal.jsx
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { supabase } from "@/supabase/client";
 import { X, Printer, Loader2 } from "lucide-react";
-import { generateReceiptPDF } from "@/utils/pdfGenerator";
+import { generateReceiptPDF } from "@/utils/pdf";
+import * as api from "@/services/api";
 
 const SalesHistoryModal = ({ isOpen, onClose, branding }) => {
   const [sales, setSales] = useState([]);
@@ -13,10 +12,7 @@ const SalesHistoryModal = ({ isOpen, onClose, branding }) => {
     if (isOpen) {
       const fetchSales = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("sales")
-          .select(`*, sale_items (*, products (name))`)
-          .order("created_at", { ascending: false });
+        const { data, error } = await api.getSalesHistory();
 
         if (error) {
           console.error("Error fetching sales history:", error);

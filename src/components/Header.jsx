@@ -12,6 +12,34 @@ import {
   X,
 } from "lucide-react";
 
+// Helper functions for local storage moved outside the component
+const getStoredJson = (key) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    console.error(`Failed to parse ${key} from localStorage`, e);
+    return null;
+  }
+};
+
+const setStoredJson = (key, value) => {
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
+const getReadNotificationIds = () => getStoredJson("readNotificationIds") || [];
+const setReadNotificationIds = (ids) =>
+  setStoredJson("readNotificationIds", ids);
+
+const getDismissedNotificationIds = () =>
+  getStoredJson("dismissedNotificationIds") || [];
+const setDismissedNotificationIds = (ids) =>
+  setStoredJson("dismissedNotificationIds", ids);
+
+const getLowStockTimestamps = () => getStoredJson("lowStockTimestamps") || {};
+const setLowStockTimestamps = (timestamps) =>
+  setStoredJson("lowStockTimestamps", timestamps);
+
 const Header = ({ handleLogout, user }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -39,34 +67,6 @@ const Header = ({ handleLogout, user }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
-
-  const getStoredJson = (key) => {
-    try {
-      const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
-    } catch (e) {
-      console.error(`Failed to parse ${key} from localStorage`, e);
-      return null;
-    }
-  };
-
-  const setStoredJson = (key, value) => {
-    localStorage.setItem(key, JSON.stringify(value));
-  };
-
-  const getReadNotificationIds = () =>
-    getStoredJson("readNotificationIds") || [];
-  const setReadNotificationIds = (ids) =>
-    setStoredJson("readNotificationIds", ids);
-
-  const getDismissedNotificationIds = () =>
-    getStoredJson("dismissedNotificationIds") || [];
-  const setDismissedNotificationIds = (ids) =>
-    setStoredJson("dismissedNotificationIds", ids);
-
-  const getLowStockTimestamps = () => getStoredJson("lowStockTimestamps") || {};
-  const setLowStockTimestamps = (timestamps) =>
-    setStoredJson("lowStockTimestamps", timestamps);
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);

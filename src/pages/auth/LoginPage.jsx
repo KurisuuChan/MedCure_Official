@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
-import { supabase } from "@/supabase/client";
 import { AlertCircle, Loader2 } from "lucide-react";
+import * as api from "@/services/api";
 
 const LoginPage = ({ onLogin, branding }) => {
   const navigate = useNavigate();
@@ -14,14 +14,9 @@ const LoginPage = ({ onLogin, branding }) => {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      setError(""); // Clear previous errors
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      setError("");
+      const { error } = await api.signIn(email, password);
       if (error) throw error;
-
       onLogin();
       navigate("/");
     } catch (error) {

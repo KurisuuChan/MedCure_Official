@@ -23,7 +23,6 @@ import {
   CartesianGrid,
   Tooltip,
   Bar,
-  Legend,
 } from "recharts";
 import { supabase } from "@/supabase/client";
 

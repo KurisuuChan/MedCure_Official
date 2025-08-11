@@ -9,7 +9,7 @@ import PointOfSales from "./pages/PointOfSales";
 import Contacts from "./pages/Contacts";
 import Settings from "./pages/Settings";
 import LoginPage from "./pages/auth/LoginPage";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 import defaultLogo from "@/assets/images/logo-transparent.png";
 
 function App() {
@@ -25,15 +25,11 @@ function App() {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession();
+      } = await api.getSession();
       setIsLoggedIn(!!session);
       setUser(session?.user ?? null);
 
-      const { data: brandingData } = await supabase
-        .from("branding")
-        .select("name, logo_url")
-        .eq("id", 1)
-        .single();
+      const { data: brandingData } = await api.getBranding();
       if (brandingData) {
         setBranding({ name: brandingData.name, url: brandingData.logo_url });
       }
@@ -47,13 +43,11 @@ function App() {
   useEffect(() => {
     fetchSessionAndBranding();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setIsLoggedIn(!!session);
-        setUser(session?.user ?? null);
-        setAuthLoading(false);
-      }
-    );
+    const { data: authListener } = api.onAuthStateChange((_event, session) => {
+      setIsLoggedIn(!!session);
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
 
     return () => {
       authListener.subscription.unsubscribe();
@@ -65,7 +59,7 @@ function App() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await api.signOut();
     setIsLoggedIn(false);
     setUser(null);
   };
