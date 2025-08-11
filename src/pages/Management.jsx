@@ -37,15 +37,49 @@ const Management = () => {
   const [highlightedRow, setHighlightedRow] = useState(null);
   const { addNotification } = useNotification();
 
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const statusMatch =
+        activeFilters.status === "All" ||
+        product.status === activeFilters.status;
+      const typeMatch =
+        activeFilters.productType === "All" ||
+        product.productType === activeFilters.productType;
+      return statusMatch && typeMatch;
+    });
+  }, [products, activeFilters]);
+
+  const { searchTerm, setSearchTerm, searchedProducts } =
+    useProductSearch(filteredProducts);
+
+  const {
+    paginatedData: paginatedProducts,
+    PaginationComponent,
+    ItemsPerPageComponent,
+    setCurrentPage,
+    itemsPerPage,
+  } = usePagination(searchedProducts);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const highlightId = params.get("highlight");
-    if (highlightId) {
-      setHighlightedRow(parseInt(highlightId, 10));
-      const timer = setTimeout(() => setHighlightedRow(null), 3000);
-      return () => clearTimeout(timer);
+    if (highlightId && products.length > 0) {
+      const highlightIdNum = parseInt(highlightId, 10);
+      const productIndex = products.findIndex((p) => p.id === highlightIdNum);
+
+      if (productIndex !== -1) {
+        setActiveFilters({ status: "All", productType: "All" });
+        setSearchTerm("");
+
+        const pageNumber = Math.ceil((productIndex + 1) / itemsPerPage);
+        setCurrentPage(pageNumber);
+        setHighlightedRow(highlightIdNum);
+
+        const timer = setTimeout(() => setHighlightedRow(null), 3000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [location]);
+  }, [location, products, itemsPerPage, setCurrentPage, setSearchTerm]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -86,29 +120,9 @@ const Management = () => {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const statusMatch =
-        activeFilters.status === "All" ||
-        product.status === activeFilters.status;
-      const typeMatch =
-        activeFilters.productType === "All" ||
-        product.productType === activeFilters.productType;
-      return statusMatch && typeMatch;
-    });
-  }, [products, activeFilters]);
-
-  const { searchTerm, setSearchTerm, searchedProducts } =
-    useProductSearch(filteredProducts);
-
-  const {
-    paginatedData: paginatedProducts,
-    PaginationComponent,
-    ItemsPerPageComponent,
-  } = usePagination(searchedProducts);
-
   const handleFilterChange = (filterName, value) => {
     setActiveFilters((prev) => ({ ...prev, [filterName]: value }));
+    setCurrentPage(1);
   };
 
   const handleViewProduct = (product) => {

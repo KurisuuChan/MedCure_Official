@@ -35,7 +35,7 @@ const ProductTableRow = ({
 
   const getRowClass = () => {
     if (isHighlighted) {
-      return "bg-yellow-100";
+      return "bg-yellow-100 animate-pulse-once";
     }
     if (isSelected) {
       return "bg-blue-50";

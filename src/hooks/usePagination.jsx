@@ -44,7 +44,10 @@ export const usePagination = (data) => {
       <select
         className="border border-gray-300 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         value={itemsPerPage}
-        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+        onChange={(e) => {
+          setItemsPerPage(Number(e.target.value));
+          setCurrentPage(1); // Reset to page 1 when items per page changes
+        }}
       >
         <option value={10}>10</option>
         <option value={20}>20</option>
@@ -57,5 +60,7 @@ export const usePagination = (data) => {
     paginatedData,
     PaginationComponent,
     ItemsPerPageComponent,
+    setCurrentPage,
+    itemsPerPage,
   };
 };
