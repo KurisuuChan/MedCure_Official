@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/supabase/client";
-import { Archive, RotateCcw, PackageX, Trash2, Search } from "lucide-react";
+import {
+  Archive,
+  RotateCcw,
+  PackageX,
+  Trash2,
+  Search,
+  WifiOff,
+  RefreshCw,
+} from "lucide-react";
 import { useNotification } from "@/hooks/useNotification";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
@@ -13,6 +21,7 @@ const Archived = () => {
 
   const fetchArchivedProducts = async () => {
     setLoading(true);
+    setError(null); // Reset error state
     const { data, error } = await supabase
       .from("products")
       .select("*")
@@ -46,8 +55,9 @@ const Archived = () => {
   };
 
   const handleDeletePermanent = async (productId) => {
+    // Replace window.confirm with a custom modal in a real app
     if (
-      window.confirm(
+      confirm(
         "Are you sure you want to permanently delete this product? This action cannot be undone."
       )
     ) {
@@ -80,8 +90,22 @@ const Archived = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-full text-red-500">
-        <p>Error: {error.message}</p>
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <WifiOff size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+          Connection Error
+        </h2>
+        <p className="text-gray-600 mb-6">
+          There was a problem fetching the data. Please check your internet
+          connection.
+        </p>
+        <button
+          onClick={fetchArchivedProducts}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-md"
+        >
+          <RefreshCw size={16} />
+          Try Again
+        </button>
       </div>
     );
   }
