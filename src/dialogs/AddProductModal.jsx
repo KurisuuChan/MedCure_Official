@@ -4,10 +4,23 @@ import { supabase } from "@/supabase/client";
 import { PlusCircle, X } from "lucide-react";
 import { useNotification } from "@/hooks/useNotification";
 
+const productCategories = [
+  "Pain Relief",
+  "Allergy & Sinus",
+  "Cold & Flu",
+  "Digestive Health",
+  "Vitamins & Supplements",
+  "First Aid",
+  "Skin Care",
+  "Personal Care",
+  "Prescription",
+  "Other",
+];
+
 const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
+    category: productCategories[0], // Default to the first category
     quantity: "",
     price: "",
     expireDate: "",
@@ -108,13 +121,18 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
-            <input
-              type="text"
+            <select
               name="category"
-              placeholder="Category"
+              value={formData.category}
               onChange={handleChange}
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            >
+              {productCategories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
