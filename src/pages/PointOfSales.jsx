@@ -11,7 +11,6 @@ import {
   History,
 } from "lucide-react";
 import SalesHistoryModal from "@/dialogs/SalesHistoryModal";
-import { generateReceiptPDF } from "@/utils/pdfGenerator";
 
 const PointOfSales = ({ branding }) => {
   const [availableMedicines, setAvailableMedicines] = useState([]);
@@ -70,6 +69,13 @@ const PointOfSales = ({ branding }) => {
     }
   };
 
+  const handleQuantityChange = (medicineId, e) => {
+    const newQuantity = parseInt(e.target.value, 10);
+    if (!isNaN(newQuantity)) {
+      updateQuantity(medicineId, newQuantity);
+    }
+  };
+
   const total = useMemo(() => {
     const subtotal = cart.reduce(
       (acc, item) => acc + item.price * item.quantity,
@@ -125,9 +131,6 @@ const PointOfSales = ({ branding }) => {
           .eq("id", item.id);
         if (updateError) throw updateError;
       }
-
-      const saleDetailsForReceipt = { ...saleData, items: cart };
-      await generateReceiptPDF(saleDetailsForReceipt, branding);
 
       setCart([]);
       setIsDiscounted(false);
@@ -237,9 +240,12 @@ const PointOfSales = ({ branding }) => {
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="w-8 text-center font-medium">
-                        {item.quantity}
-                      </span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleQuantityChange(item.id, e)}
+                        className="w-12 text-center font-medium border border-gray-200 rounded-md"
+                      />
                       <button
                         onClick={() =>
                           updateQuantity(item.id, item.quantity + 1)

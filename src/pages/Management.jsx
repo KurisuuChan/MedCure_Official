@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabase/client";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
+import { useNotification } from "@/hooks/useNotification";
 
-// Import all dialogs/modals
 import AddProductModal from "@/dialogs/AddProductModal";
 import EditProductModal from "@/dialogs/EditProductModal";
 import ViewProductModal from "@/dialogs/ViewProductModal";
 import ImportCSVModal from "@/dialogs/ImportCSVModal";
 import ExportPDFModal from "@/dialogs/ExportPDFModal";
 
-// Import page-specific components
 import ManagementHeader from "./modules/ManagementHeader";
 import ProductFilters from "./modules/ProductFilters";
 import ProductTable from "./modules/ProductTable";
@@ -21,7 +21,6 @@ const Management = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // State for all modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -33,6 +32,67 @@ const Management = () => {
     status: "All",
     productType: "All",
   });
+
+  const location = useLocation();
+  const [highlightedRow, setHighlightedRow] = useState(null);
+  const [pendingHighlight, setPendingHighlight] = useState(null);
+  const { addNotification } = useNotification();
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const statusMatch =
+        activeFilters.status === "All" ||
+        product.status === activeFilters.status;
+      const typeMatch =
+        activeFilters.productType === "All" ||
+        product.productType === activeFilters.productType;
+      return statusMatch && typeMatch;
+    });
+  }, [products, activeFilters]);
+
+  const { searchTerm, setSearchTerm, searchedProducts } =
+    useProductSearch(filteredProducts);
+
+  const {
+    paginatedData: paginatedProducts,
+    PaginationComponent,
+    ItemsPerPageComponent,
+    setCurrentPage,
+    itemsPerPage,
+  } = usePagination(searchedProducts);
+
+  // Effect 1: Catches the highlight request from the URL and resets filters.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const highlightId = params.get("highlight");
+    if (highlightId) {
+      setActiveFilters({ status: "All", productType: "All" });
+      setSearchTerm("");
+      setPendingHighlight(parseInt(highlightId, 10));
+    }
+  }, [location, setSearchTerm]);
+
+  // Effect 2: Executes the highlight once the product list is confirmed to be up-to-date.
+  useEffect(() => {
+    if (pendingHighlight && searchedProducts.length > 0) {
+      const productIndex = searchedProducts.findIndex(
+        (p) => p.id === pendingHighlight
+      );
+
+      if (productIndex !== -1) {
+        const pageNumber = Math.ceil((productIndex + 1) / itemsPerPage);
+        setCurrentPage(pageNumber);
+        setHighlightedRow(pendingHighlight);
+
+        const timer = setTimeout(() => {
+          setHighlightedRow(null);
+        }, 3000);
+
+        setPendingHighlight(null);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [pendingHighlight, searchedProducts, itemsPerPage, setCurrentPage]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -62,35 +122,20 @@ const Management = () => {
 
     if (error) {
       console.error("Error archiving products:", error);
+      addNotification(`Error: ${error.message}`, "error");
     } else {
+      addNotification(
+        `${selectedItems.length} product(s) successfully archived.`,
+        "success"
+      );
       fetchProducts();
       setSelectedItems([]);
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const statusMatch =
-        activeFilters.status === "All" ||
-        product.status === activeFilters.status;
-      const typeMatch =
-        activeFilters.productType === "All" ||
-        product.productType === activeFilters.productType;
-      return statusMatch && typeMatch;
-    });
-  }, [products, activeFilters]);
-
-  const { searchTerm, setSearchTerm, searchedProducts } =
-    useProductSearch(filteredProducts);
-
-  const {
-    paginatedData: paginatedProducts,
-    PaginationComponent,
-    ItemsPerPageComponent,
-  } = usePagination(searchedProducts);
-
   const handleFilterChange = (filterName, value) => {
     setActiveFilters((prev) => ({ ...prev, [filterName]: value }));
+    setCurrentPage(1);
   };
 
   const handleViewProduct = (product) => {
@@ -113,7 +158,6 @@ const Management = () => {
 
   return (
     <>
-      {/* All Modals */}
       <AddProductModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -145,7 +189,6 @@ const Management = () => {
         </>
       )}
 
-      {/* Main Page Content */}
       <div className="bg-white p-8 rounded-2xl shadow-lg font-sans">
         <ManagementHeader
           selectedItemsCount={selectedItems.length}
@@ -170,6 +213,7 @@ const Management = () => {
           searchedProducts={searchedProducts}
           onViewProduct={handleViewProduct}
           onEditProduct={handleEditProduct}
+          highlightedRow={highlightedRow}
         />
         <PaginationComponent />
       </div>

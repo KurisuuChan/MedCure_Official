@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
 import { PlusCircle, X } from "lucide-react";
+import { useNotification } from "@/hooks/useNotification";
 
 const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { addNotification } = useNotification();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,11 +63,13 @@ const AddProductModal = ({ isOpen, onClose, onProductAdded }) => {
         throw insertError;
       }
 
+      addNotification("Product added successfully!", "success");
       onProductAdded();
       onClose();
     } catch (e) {
       console.error("Error adding product:", e);
       setError("Failed to add product: " + e.message);
+      addNotification("Failed to add product.", "error");
     } finally {
       setLoading(false);
     }

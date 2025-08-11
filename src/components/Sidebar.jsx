@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Settings,
-  Bell,
   ShoppingCart,
   Contact,
   ChevronsLeft,
@@ -15,28 +14,16 @@ import Logo from "./Logo.jsx";
 import PropTypes from "prop-types";
 
 const Sidebar = ({ branding }) => {
-  // **FIX**: Read initial state from localStorage, defaulting to true (expanded).
-  // This function runs only once on component mount.
   const [expanded, setExpanded] = useState(() => {
     const savedState = localStorage.getItem("sidebar-expanded");
-    // JSON.parse is used to convert the string from localStorage back to a boolean.
     return savedState !== null ? JSON.parse(savedState) : true;
   });
 
   const location = useLocation();
 
-  // **FIX**: Use useEffect to save the state to localStorage whenever it changes.
   useEffect(() => {
     localStorage.setItem("sidebar-expanded", JSON.stringify(expanded));
   }, [expanded]);
-
-  // This function is no longer needed and has been removed to prevent
-  // the sidebar from always collapsing on navigation.
-  // const handleLinkClick = () => {
-  //   if (expanded) {
-  //     setExpanded(false);
-  //   }
-  // };
 
   return (
     <aside
@@ -60,7 +47,6 @@ const Sidebar = ({ branding }) => {
             <li key={item.name} className="relative group">
               <Link
                 to={item.path}
-                // onClick={handleLinkClick} // Removed this onClick handler
                 className={`w-full flex items-center p-3 rounded-lg transition-all duration-300 ease-in-out ${
                   location.pathname === item.path
                     ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
@@ -101,7 +87,6 @@ const Sidebar = ({ branding }) => {
 const menuItems = [
   { name: "Dashboard", icon: <LayoutDashboard size={20} />, path: "/" },
   { name: "Management", icon: <Pill size={20} />, path: "/management" },
-  { name: "Notification", icon: <Bell size={20} />, path: "/notification" },
   {
     name: "Point Of Sales",
     icon: <ShoppingCart size={20} />,
