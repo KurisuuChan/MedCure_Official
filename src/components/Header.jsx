@@ -10,6 +10,8 @@ import {
   LogOut,
   AlertTriangle,
   X,
+  PackageX,
+  UploadCloud,
 } from "lucide-react";
 
 // Helper functions for local storage moved outside the component
@@ -39,6 +41,27 @@ const setDismissedNotificationIds = (ids) =>
 const getLowStockTimestamps = () => getStoredJson("lowStockTimestamps") || {};
 const setLowStockTimestamps = (timestamps) =>
   setStoredJson("lowStockTimestamps", timestamps);
+
+// Moved TabButton outside of the Header component
+const TabButton = ({ category, activeCategory, setActiveCategory }) => (
+  <button
+    onClick={() => setActiveCategory(category)}
+    className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+      activeCategory === category
+        ? "bg-white text-gray-800 shadow-sm font-semibold"
+        : "text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+    }`}
+  >
+    {category}
+  </button>
+);
+
+// Added prop validation for the new TabButton component
+TabButton.propTypes = {
+  category: PropTypes.string.isRequired,
+  activeCategory: PropTypes.string.isRequired,
+  setActiveCategory: PropTypes.func.isRequired,
+};
 
 const Header = ({ handleLogout, user }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -91,6 +114,23 @@ const Header = ({ handleLogout, user }) => {
     const today = new Date();
     let generatedNotifications = [];
 
+    // Check for CSV import notification
+    const csvImportData = getStoredJson("csvImported");
+    if (csvImportData) {
+      generatedNotifications.push({
+        id: `csv-${csvImportData.timestamp}`,
+        icon: <UploadCloud className="text-green-500" />,
+        iconBg: "bg-green-100",
+        title: "CSV Import Successful",
+        category: "System",
+        description: `${csvImportData.count} products were successfully imported.`,
+        read: readIds.includes(`csv-${csvImportData.timestamp}`),
+        path: "/management",
+        createdAt: new Date(csvImportData.timestamp),
+      });
+      localStorage.removeItem("csvImported");
+    }
+
     products.forEach((product) => {
       const lowStockId = `low-${product.id}`;
       if (product.quantity <= lowStockThreshold && product.quantity > 0) {
@@ -111,6 +151,21 @@ const Header = ({ handleLogout, user }) => {
           read: readIds.includes(lowStockId),
           path: `/management?highlight=${product.id}`,
           createdAt: new Date(timestamp),
+        });
+      }
+
+      const noStockId = `no-stock-${product.id}`;
+      if (product.quantity === 0) {
+        generatedNotifications.push({
+          id: noStockId,
+          icon: <PackageX className="text-red-500" />,
+          iconBg: "bg-red-100",
+          title: "Out of Stock",
+          category: "No Stock",
+          description: `${product.name} is out of stock.`,
+          read: readIds.includes(noStockId),
+          path: `/management?highlight=${product.id}`,
+          createdAt: new Date(),
         });
       }
 
@@ -144,8 +199,11 @@ const Header = ({ handleLogout, user }) => {
     setLoading(false);
   }, []);
 
+  // Listen for real-time database changes and local storage changes
   useEffect(() => {
     fetchNotifications();
+
+    // Listen for Supabase real-time updates
     const channel = supabase
       .channel("products-notifications")
       .on(
@@ -154,7 +212,17 @@ const Header = ({ handleLogout, user }) => {
         fetchNotifications
       )
       .subscribe();
-    return () => supabase.removeChannel(channel);
+
+    // Listen for local storage changes (for CSV import)
+    const handleStorageChange = () => {
+      fetchNotifications();
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -207,8 +275,10 @@ const Header = ({ handleLogout, user }) => {
               to={notification.path || "#"}
               key={notification.id}
               onClick={() => handleMarkAsRead(notification.id)}
-              className={`flex items-start gap-3 p-4 transition-colors relative group ${
-                !notification.read ? "bg-blue-50" : "hover:bg-gray-50"
+              className={`flex items-start gap-3 p-4 transition-colors relative group border-b border-gray-100 ${
+                !notification.read
+                  ? "bg-blue-50 hover:bg-blue-100"
+                  : "hover:bg-gray-50"
               }`}
             >
               <div
@@ -217,30 +287,22 @@ const Header = ({ handleLogout, user }) => {
                 {notification.icon}
               </div>
               <div className="flex-grow">
-                <p className="font-semibold text-sm text-gray-800">
+                <p className="font-semibold text-sm text-gray-900">
                   {notification.title}
                 </p>
-                <p className="text-xs text-gray-600">
+                <p className="text-sm text-gray-600">
                   {notification.description}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
                   {notification.createdAt.toLocaleString()}
                 </p>
               </div>
-              <div className="flex items-center">
-                {!notification.read && (
-                  <div
-                    className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0"
-                    title="Unread"
-                  ></div>
-                )}
-                <button
-                  onClick={(e) => handleDismiss(e, notification.id)}
-                  className="ml-2 p-1 rounded-full text-gray-400 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <X size={14} />
-                </button>
-              </div>
+              <button
+                onClick={(e) => handleDismiss(e, notification.id)}
+                className="ml-2 p-1 rounded-full text-gray-400 hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={14} />
+              </button>
             </Link>
           ))}
         </>
@@ -295,37 +357,32 @@ const Header = ({ handleLogout, user }) => {
                   )}
                 </div>
                 <div className="p-2 bg-gray-50 border-b border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setActiveCategory("All")}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        activeCategory === "All"
-                          ? "bg-blue-600 text-white"
-                          : "hover:bg-gray-200"
-                      }`}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setActiveCategory("Low Stock")}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        activeCategory === "Low Stock"
-                          ? "bg-blue-600 text-white"
-                          : "hover:bg-gray-200"
-                      }`}
-                    >
-                      Low Stock
-                    </button>
-                    <button
-                      onClick={() => setActiveCategory("Expired")}
-                      className={`px-3 py-1 text-sm rounded-md ${
-                        activeCategory === "Expired"
-                          ? "bg-blue-600 text-white"
-                          : "hover:bg-gray-200"
-                      }`}
-                    >
-                      Expired
-                    </button>
+                  <div className="flex items-center gap-1">
+                    <TabButton
+                      category="All"
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                    />
+                    <TabButton
+                      category="Low Stock"
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                    />
+                    <TabButton
+                      category="No Stock"
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                    />
+                    <TabButton
+                      category="Expired"
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                    />
+                    <TabButton
+                      category="System"
+                      activeCategory={activeCategory}
+                      setActiveCategory={setActiveCategory}
+                    />
                   </div>
                 </div>
                 <div className="max-h-96 overflow-y-auto">

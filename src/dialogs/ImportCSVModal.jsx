@@ -102,12 +102,23 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           throw insertError;
         }
 
+        // Set flag in local storage for notification
+        localStorage.setItem(
+          "csvImported",
+          JSON.stringify({
+            count: productsToInsert.length,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        // Dispatch a custom event to notify the header
+        window.dispatchEvent(new Event("storage"));
+
         addNotification(
           `${productsToInsert.length} products imported successfully!`,
           "success"
         );
         onImportSuccess();
-        handleClose(); // Close modal on success
+        handleClose();
       } catch (e) {
         const errorMessage = `Import failed: ${e.message}`;
         setError(errorMessage);
