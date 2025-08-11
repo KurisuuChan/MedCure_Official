@@ -1,17 +1,19 @@
-// src/pages/auth/LoginPage.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 const LoginPage = ({ onLogin, branding }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       setError(""); // Clear previous errors
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -25,6 +27,8 @@ const LoginPage = ({ onLogin, branding }) => {
     } catch (error) {
       const errorMessage = error.error_description || error.message;
       setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,7 +43,6 @@ const LoginPage = ({ onLogin, branding }) => {
           <p className="mt-2 text-lg text-gray-500">
             Please enter your email and password to log in.
           </p>
-          {error && <p className="text-red-500 text-center mt-4">{error}</p>}
         </div>
 
         <form
@@ -49,7 +52,22 @@ const LoginPage = ({ onLogin, branding }) => {
             handleLogin();
           }}
         >
-          {/* ... rest of your form ... */}
+          {error && (
+            <div
+              className="bg-red-50 border-l-4 border-red-400 p-4"
+              role="alert"
+            >
+              <div className="flex">
+                <div className="py-1">
+                  <AlertCircle className="h-6 w-6 text-red-500 mr-4" />
+                </div>
+                <div>
+                  <p className="font-bold">Login Failed</p>
+                  <p className="text-sm">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="relative">
             <label
               htmlFor="email-address"
@@ -91,10 +109,17 @@ const LoginPage = ({ onLogin, branding }) => {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full flex justify-between items-center py-3 px-6 border border-transparent text-lg font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset- focus:ring-indigo-00"
+              disabled={loading}
+              className="w-full flex justify-center items-center py-3 px-6 border border-transparent text-lg font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset- focus:ring-indigo-00 disabled:bg-indigo-400"
             >
-              <span>Continue</span>
-              <span>&rarr;</span>
+              {loading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <>
+                  <span>Continue</span>
+                  <span>&rarr;</span>
+                </>
+              )}
             </button>
           </div>
         </form>

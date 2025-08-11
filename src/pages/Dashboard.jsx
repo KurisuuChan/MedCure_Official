@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Archive,
   Pill,
@@ -12,6 +12,8 @@ import {
   Star,
   Activity,
   BarChart,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -62,6 +64,7 @@ const Dashboard = () => {
   const [bestSellers, setBestSellers] = useState([]);
   const [recentSales, setRecentSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const getInventoryStatus = (products) => {
     const totalProducts = products.length;
@@ -101,145 +104,168 @@ const Dashboard = () => {
     };
   };
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      try {
-        const { data: products, error: productsError } = await supabase
-          .from("products")
-          .select("id, name, quantity, status, price, expireDate, category");
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: products, error: productsError } = await supabase
+        .from("products")
+        .select("id, name, quantity, status, price, expireDate, category");
 
-        if (productsError) throw productsError;
+      if (productsError) throw productsError;
 
-        const inventoryStatusInfo = getInventoryStatus(products);
-        const medicineAvailable = products.filter(
-          (p) => p.status === "Available" && p.quantity > 0
-        ).length;
-        const outOfStock = products.filter((p) => p.quantity === 0).length;
-        const totalValue = products.reduce(
-          (acc, p) => acc + (p.price || 0) * (p.quantity || 0),
-          0
-        );
+      const inventoryStatusInfo = getInventoryStatus(products);
+      const medicineAvailable = products.filter(
+        (p) => p.status === "Available" && p.quantity > 0
+      ).length;
+      const outOfStock = products.filter((p) => p.quantity === 0).length;
+      const totalValue = products.reduce(
+        (acc, p) => acc + (p.price || 0) * (p.quantity || 0),
+        0
+      );
 
-        setLowStockItems(
-          products.filter((p) => p.quantity > 0 && p.quantity <= 10).slice(0, 5)
-        );
+      setLowStockItems(
+        products.filter((p) => p.quantity > 0 && p.quantity <= 10).slice(0, 5)
+      );
 
-        const today = new Date();
-        const thirtyDaysFromNow = new Date();
-        thirtyDaysFromNow.setDate(today.getDate() + 30);
+      const today = new Date();
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-        const expiringProducts = products
-          .filter((p) => {
-            const expiryDate = new Date(p.expireDate);
-            return expiryDate > today && expiryDate <= thirtyDaysFromNow;
-          })
-          .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate));
-        setExpiringSoon(expiringProducts.slice(0, 5));
+      const expiringProducts = products
+        .filter((p) => {
+          const expiryDate = new Date(p.expireDate);
+          return expiryDate > today && expiryDate <= thirtyDaysFromNow;
+        })
+        .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate));
+      setExpiringSoon(expiringProducts.slice(0, 5));
 
-        const { data: sales, error: salesError } = await supabase
-          .from("sales")
-          .select("id, created_at, total_amount");
+      const { data: sales, error: salesError } = await supabase
+        .from("sales")
+        .select("id, created_at, total_amount");
 
-        if (salesError) throw salesError;
+      if (salesError) throw salesError;
 
-        const monthlySales = sales.reduce((acc, sale) => {
-          const month = new Date(sale.created_at).getMonth();
-          acc[month] = (acc[month] || 0) + sale.total_amount;
-          return acc;
-        }, {});
+      const monthlySales = sales.reduce((acc, sale) => {
+        const month = new Date(sale.created_at).getMonth();
+        acc[month] = (acc[month] || 0) + sale.total_amount;
+        return acc;
+      }, {});
 
-        const generatedMonthlyProgress = Array.from({ length: 12 }, (_, i) => {
-          const monthName = new Date(0, i).toLocaleString("default", {
-            month: "short",
-          });
-          return {
-            month: monthName,
-            sales: monthlySales[i] || 0,
-          };
+      const generatedMonthlyProgress = Array.from({ length: 12 }, (_, i) => {
+        const monthName = new Date(0, i).toLocaleString("default", {
+          month: "short",
         });
-        setMonthlyProgressData(generatedMonthlyProgress);
+        return {
+          month: monthName,
+          sales: monthlySales[i] || 0,
+        };
+      });
+      setMonthlyProgressData(generatedMonthlyProgress);
 
-        const { data: saleItems, error: saleItemsError } = await supabase
-          .from("sale_items")
-          .select("quantity, price_at_sale, products (name, category)");
+      const { data: saleItems, error: saleItemsError } = await supabase
+        .from("sale_items")
+        .select("quantity, price_at_sale, products (name, category)");
 
-        if (saleItemsError) throw saleItemsError;
+      if (saleItemsError) throw saleItemsError;
 
-        const categorySales = saleItems.reduce((acc, item) => {
-          const category = item.products.category || "Uncategorized";
-          const saleValue = item.quantity * item.price_at_sale;
-          acc[category] = (acc[category] || 0) + saleValue;
-          return acc;
-        }, {});
+      const categorySales = saleItems.reduce((acc, item) => {
+        const category = item.products.category || "Uncategorized";
+        const saleValue = item.quantity * item.price_at_sale;
+        acc[category] = (acc[category] || 0) + saleValue;
+        return acc;
+      }, {});
 
-        const salesByCategoryData = Object.entries(categorySales).map(
-          ([name, value]) => ({ name, value })
-        );
-        setSalesByCategory(salesByCategoryData);
+      const salesByCategoryData = Object.entries(categorySales).map(
+        ([name, value]) => ({ name, value })
+      );
+      setSalesByCategory(salesByCategoryData);
 
-        const productSales = saleItems.reduce((acc, item) => {
-          const name = item.products.name;
-          acc[name] = (acc[name] || 0) + item.quantity;
-          return acc;
-        }, {});
+      const productSales = saleItems.reduce((acc, item) => {
+        const name = item.products.name;
+        acc[name] = (acc[name] || 0) + item.quantity;
+        return acc;
+      }, {});
 
-        const sortedBestSellers = Object.entries(productSales)
-          .sort(([, a], [, b]) => b - a)
-          .slice(0, 5)
-          .map(([name, quantity]) => ({ name, quantity }));
-        setBestSellers(sortedBestSellers);
+      const sortedBestSellers = Object.entries(productSales)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([name, quantity]) => ({ name, quantity }));
+      setBestSellers(sortedBestSellers);
 
-        const { data: recentSalesData, error: recentSalesError } =
-          await supabase
-            .from("sale_items")
-            .select("*, products(name), sales(created_at)")
-            .order("id", { ascending: false })
-            .limit(5);
+      const { data: recentSalesData, error: recentSalesError } = await supabase
+        .from("sale_items")
+        .select("*, products(name), sales(created_at)")
+        .order("id", { ascending: false })
+        .limit(5);
 
-        if (recentSalesError) throw recentSalesError;
-        setRecentSales(recentSalesData);
+      if (recentSalesError) throw recentSalesError;
+      setRecentSales(recentSalesData);
 
-        setSummaryCards([
-          {
-            title: "Inventory Status",
-            value: inventoryStatusInfo.level,
-            icon: inventoryStatusInfo.icon,
-            iconBg: inventoryStatusInfo.iconBg,
-          },
-          {
-            title: "Medicines Available",
-            value: medicineAvailable.toString(),
-            icon: <Pill className="text-sky-500" />,
-            iconBg: "bg-sky-100",
-          },
-          {
-            title: "Total Inventory Value",
-            value: `₱${totalValue.toFixed(2)}`,
-            icon: <TrendingUp className="text-amber-500" />,
-            iconBg: "bg-amber-100",
-          },
-          {
-            title: "Out of Stock",
-            value: outOfStock.toString(),
-            icon: <PackageX className="text-rose-500" />,
-            iconBg: "bg-rose-100",
-          },
-        ]);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
+      setSummaryCards([
+        {
+          title: "Inventory Status",
+          value: inventoryStatusInfo.level,
+          icon: inventoryStatusInfo.icon,
+          iconBg: inventoryStatusInfo.iconBg,
+        },
+        {
+          title: "Medicines Available",
+          value: medicineAvailable.toString(),
+          icon: <Pill className="text-sky-500" />,
+          iconBg: "bg-sky-100",
+        },
+        {
+          title: "Total Inventory Value",
+          value: `₱${totalValue.toFixed(2)}`,
+          icon: <TrendingUp className="text-amber-500" />,
+          iconBg: "bg-amber-100",
+        },
+        {
+          title: "Out of Stock",
+          value: outOfStock.toString(),
+          icon: <PackageX className="text-rose-500" />,
+          iconBg: "bg-rose-100",
+        },
+      ]);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      setError(error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <WifiOff size={48} className="text-red-500 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+          Connection Error
+        </h2>
+        <p className="text-gray-600 mb-6">
+          There was a problem fetching the dashboard data. Please check your
+          internet connection.
+        </p>
+        <button
+          onClick={fetchDashboardData}
+          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-md"
+        >
+          <RefreshCw size={16} />
+          Try Again
+        </button>
       </div>
     );
   }
