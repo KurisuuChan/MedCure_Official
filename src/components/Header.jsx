@@ -2,14 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
-import {
-  Search,
-  Bell,
-  User,
-  ChevronDown,
-  LogOut,
-  AlertTriangle,
-} from "lucide-react";
+import { useNotification } from "@/hooks/useNotification"; // Import the toast notification hook
+import { Search, Bell, User, ChevronDown, LogOut } from "lucide-react";
 
 const Header = ({ handleLogout, user }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -104,28 +98,36 @@ const Header = ({ handleLogout, user }) => {
     };
   }, [fetchNotifications]);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  const handleMarkAsRead = (id) => {
+  const handleMarkAsRead = async (notificationId) => {
     setNotifications(
-      notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
+      notifications.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n
+      )
     );
-    const readIds = getReadNotificationIds();
-    if (!readIds.includes(id)) {
-      setReadNotificationIds([...readIds, id]);
-    }
+    await supabase
+      .from("user_notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId);
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
-    const allIds = notifications.map((n) => n.id);
-    setReadNotificationIds(allIds);
+  const handleMarkAllAsRead = async () => {
+    setNotifications(notifications.map((n) => ({ ...n, is_read: true })));
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    if (unreadIds.length > 0) {
+      await supabase
+        .from("user_notifications")
+        .update({ is_read: true })
+        .in("id", unreadIds);
+    }
   };
 
   const displayName = user?.user_metadata?.full_name || "Administrator";
   const displayEmail = user?.email || "medcure.ph";
   const avatarUrl = user?.user_metadata?.avatar_url;
 
+  // This part remains largely the same, but now it renders data from the new state
   const renderNotificationContent = () => {
     if (loading) {
       return <div className="p-4 text-center text-gray-500">Loading...</div>;
@@ -136,30 +138,26 @@ const Header = ({ handleLogout, user }) => {
         <>
           {notifications.map((notification) => (
             <Link
-              to={notification.path}
+              to={notification.link_to || "#"}
               key={notification.id}
               onClick={() => handleMarkAsRead(notification.id)}
               className={`flex items-start gap-3 p-4 transition-colors ${
-                !notification.read ? "bg-blue-50" : "hover:bg-gray-50"
+                !notification.is_read ? "bg-blue-50" : "hover:bg-gray-50"
               }`}
             >
-              <div
-                className={`flex-shrink-0 p-2 rounded-full ${notification.iconBg}`}
-              >
-                {notification.icon}
+              <div className="flex-shrink-0 p-2 rounded-full bg-blue-100">
+                <Bell className="text-blue-500" />
               </div>
               <div className="flex-grow">
                 <p className="font-semibold text-sm text-gray-800">
-                  {notification.title}
+                  {notification.type.replace("_", " ").toUpperCase()}
                 </p>
-                <p className="text-xs text-gray-600">
-                  {notification.description}
-                </p>
+                <p className="text-xs text-gray-600">{notification.message}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {notification.time}
+                  {new Date(notification.created_at).toLocaleString()}
                 </p>
               </div>
-              {!notification.read && (
+              {!notification.is_read && (
                 <div
                   className="w-2.5 h-2.5 bg-blue-500 rounded-full flex-shrink-0 mt-1"
                   title="Unread"
