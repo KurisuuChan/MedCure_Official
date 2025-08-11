@@ -35,6 +35,7 @@ const Management = () => {
 
   const location = useLocation();
   const [highlightedRow, setHighlightedRow] = useState(null);
+  const [pendingHighlight, setPendingHighlight] = useState(null);
   const { addNotification } = useNotification();
 
   const filteredProducts = useMemo(() => {
@@ -60,30 +61,38 @@ const Management = () => {
     itemsPerPage,
   } = usePagination(searchedProducts);
 
+  // Effect 1: Catches the highlight request from the URL and resets filters.
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const highlightId = params.get("highlight");
+    if (highlightId) {
+      setActiveFilters({ status: "All", productType: "All" });
+      setSearchTerm("");
+      setPendingHighlight(parseInt(highlightId, 10));
+    }
+  }, [location, setSearchTerm]);
 
-    if (highlightId && products.length > 0) {
-      const highlightIdNum = parseInt(highlightId, 10);
-      const productIndex = products.findIndex((p) => p.id === highlightIdNum);
+  // Effect 2: Executes the highlight once the product list is confirmed to be up-to-date.
+  useEffect(() => {
+    if (pendingHighlight && searchedProducts.length > 0) {
+      const productIndex = searchedProducts.findIndex(
+        (p) => p.id === pendingHighlight
+      );
 
       if (productIndex !== -1) {
-        // Clear filters to ensure the product is visible
-        setActiveFilters({ status: "All", productType: "All" });
-        setSearchTerm("");
-
-        // Calculate the page the product is on in the full, unfiltered list
         const pageNumber = Math.ceil((productIndex + 1) / itemsPerPage);
         setCurrentPage(pageNumber);
-        setHighlightedRow(highlightIdNum);
+        setHighlightedRow(pendingHighlight);
 
-        // Remove the highlight after 3 seconds
-        const timer = setTimeout(() => setHighlightedRow(null), 3000);
+        const timer = setTimeout(() => {
+          setHighlightedRow(null);
+        }, 3000);
+
+        setPendingHighlight(null);
         return () => clearTimeout(timer);
       }
     }
-  }, [location, products, itemsPerPage, setCurrentPage, setSearchTerm]);
+  }, [pendingHighlight, searchedProducts, itemsPerPage, setCurrentPage]);
 
   const fetchProducts = async () => {
     setLoading(true);

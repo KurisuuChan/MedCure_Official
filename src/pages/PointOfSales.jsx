@@ -69,6 +69,13 @@ const PointOfSales = ({ branding }) => {
     }
   };
 
+  const handleQuantityChange = (medicineId, e) => {
+    const newQuantity = parseInt(e.target.value, 10);
+    if (!isNaN(newQuantity)) {
+      updateQuantity(medicineId, newQuantity);
+    }
+  };
+
   const total = useMemo(() => {
     const subtotal = cart.reduce(
       (acc, item) => acc + item.price * item.quantity,
@@ -233,9 +240,12 @@ const PointOfSales = ({ branding }) => {
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="w-8 text-center font-medium">
-                        {item.quantity}
-                      </span>
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => handleQuantityChange(item.id, e)}
+                        className="w-12 text-center font-medium border border-gray-200 rounded-md"
+                      />
                       <button
                         onClick={() =>
                           updateQuantity(item.id, item.quantity + 1)
