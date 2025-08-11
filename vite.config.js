@@ -9,6 +9,24 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
+  build: {
+    // Slightly raise warning limit and create separate vendor chunk
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router')) return 'vendor-react-router';
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('supabase')) return 'vendor-supabase';
+            if (id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
   // This 'resolve' section is essential for the '@/' alias to work
   resolve: {
     alias: {

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import Dashboard from "./pages/Dashboard";
-import Management from "./pages/Management";
-import Archived from "./pages/Archived";
-import PointOfSales from "./pages/PointOfSales";
-import Contacts from "./pages/Contacts";
-import Settings from "./pages/Settings";
-import LoginPage from "./pages/auth/LoginPage";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Management = lazy(() => import("./pages/Management"));
+const Archived = lazy(() => import("./pages/Archived"));
+const PointOfSales = lazy(() => import("./pages/PointOfSales"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Settings = lazy(() => import("./pages/Settings"));
+const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
 import * as api from "@/services/api";
 import defaultLogo from "@/assets/images/logo-transparent.png";
 
@@ -73,7 +73,14 @@ function App() {
   }
 
   return (
-    <Routes>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen bg-gray-100">
+          <div className="text-2xl font-semibold text-gray-600">Loading...</div>
+        </div>
+      }
+    >
+      <Routes>
       {isLoggedIn ? (
         <Route
           path="/*"
@@ -112,7 +119,8 @@ function App() {
           <Route path="*" element={<Navigate to="/login" />} />
         </>
       )}
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 

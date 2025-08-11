@@ -152,14 +152,30 @@ const Header = ({ handleLogout, user }) => {
     });
 
     products.forEach((product) => {
-      const lowStockId = `low-${product.id}`;
-      if (product.quantity <= lowStockThreshold && product.quantity > 0) {
-        let timestamp = newTimestamps[lowStockId];
-        if (!timestamp) {
-          timestamp = new Date().toISOString();
-          newTimestamps[lowStockId] = timestamp;
+      const baseLowStockId = `low-${product.id}`;
+
+      // Clear stored low-stock episode if stock recovered
+      if (product.quantity > lowStockThreshold && newTimestamps[baseLowStockId]) {
+        delete newTimestamps[baseLowStockId];
+        timestampsUpdated = true;
+      }
+
+      if (product.quantity === 0) {
+        if (newTimestamps[baseLowStockId]) {
+          delete newTimestamps[baseLowStockId];
           timestampsUpdated = true;
         }
+      }
+
+      if (product.quantity <= lowStockThreshold && product.quantity > 0) {
+        let timestamp = newTimestamps[baseLowStockId];
+        if (!timestamp) {
+          timestamp = new Date().toISOString();
+          newTimestamps[baseLowStockId] = timestamp;
+          timestampsUpdated = true;
+        }
+
+        const lowStockId = `${baseLowStockId}-${timestamp}`;
 
         generatedNotifications.push({
           id: lowStockId,

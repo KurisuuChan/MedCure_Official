@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 import {
   Archive,
   RotateCcw,
@@ -23,10 +23,7 @@ const Archived = () => {
   const fetchArchivedProducts = async () => {
     setLoading(true);
     setError(null); // Reset error state
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("status", "Archived");
+    const { data, error } = await api.getArchivedProducts();
 
     if (error) {
       console.error("Error fetching archived products:", error);
@@ -42,10 +39,7 @@ const Archived = () => {
   }, []);
 
   const handleUnarchive = async (productId) => {
-    const { error } = await supabase
-      .from("products")
-      .update({ status: "Available" })
-      .eq("id", productId);
+    const { error } = await api.updateProduct(productId, { status: "Available" });
 
     if (error) {
       addNotification(`Error: ${error.message}`, "error");
@@ -72,10 +66,7 @@ const Archived = () => {
         "Are you sure you want to permanently delete this product? This action cannot be undone."
       )
     ) {
-      const { error } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", productId);
+      const { error } = await api.deleteProduct(productId);
 
       if (error) {
         addNotification(`Error: ${error.message}`, "error");

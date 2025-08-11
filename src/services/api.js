@@ -41,6 +41,14 @@ export const getLastProductId = () =>
 export const insertProducts = (products) =>
   supabase.from("products").insert(products);
 
+// Bulk operations
+export const archiveProducts = (ids) =>
+  supabase.from("products").update({ status: "Archived" }).in("id", ids);
+
+// Sales table
+export const getSales = () =>
+  supabase.from("sales").select("id, created_at, total_amount");
+
 // Sales
 export const getSalesHistory = () =>
   supabase

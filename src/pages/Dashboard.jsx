@@ -15,16 +15,9 @@ import {
   WifiOff,
   RefreshCw,
 } from "lucide-react";
-import {
-  ResponsiveContainer,
-  BarChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Bar,
-} from "recharts";
-import { supabase } from "@/supabase/client";
+import MonthlySalesChart from "@/components/charts/MonthlySalesChart";
+import SalesByCategoryChart from "@/components/charts/SalesByCategoryChart";
+import * as api from "@/services/api";
 
 const Dashboard = () => {
   const [summaryCards, setSummaryCards] = useState([
@@ -105,9 +98,7 @@ const Dashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data: products, error: productsError } = await supabase
-        .from("products")
-        .select("id, name, quantity, status, price, expireDate, category");
+      const { data: products, error: productsError } = await api.getProducts();
 
       if (productsError) throw productsError;
 
@@ -137,9 +128,7 @@ const Dashboard = () => {
         .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate));
       setExpiringSoon(expiringProducts.slice(0, 5));
 
-      const { data: sales, error: salesError } = await supabase
-        .from("sales")
-        .select("id, created_at, total_amount");
+      const { data: sales, error: salesError } = await api.getSales();
 
       if (salesError) throw salesError;
 
@@ -160,9 +149,7 @@ const Dashboard = () => {
       });
       setMonthlyProgressData(generatedMonthlyProgress);
 
-      const { data: saleItems, error: saleItemsError } = await supabase
-        .from("sale_items")
-        .select("quantity, price_at_sale, products (name, category)");
+      const { data: saleItems, error: saleItemsError } = await api.getAllSaleItems();
 
       if (saleItemsError) throw saleItemsError;
 
@@ -190,11 +177,7 @@ const Dashboard = () => {
         .map(([name, quantity]) => ({ name, quantity }));
       setBestSellers(sortedBestSellers);
 
-      const { data: recentSalesData, error: recentSalesError } = await supabase
-        .from("sale_items")
-        .select("*, products(name), sales(created_at)")
-        .order("id", { ascending: false })
-        .limit(5);
+      const { data: recentSalesData, error: recentSalesError } = await api.getRecentSaleItems();
 
       if (recentSalesError) throw recentSalesError;
       setRecentSales(recentSalesData);
@@ -296,20 +279,7 @@ const Dashboard = () => {
               This Year <ChevronDown size={16} className="ml-1" />
             </button>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyProgressData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip cursor={{ fill: "rgba(239, 246, 255, 0.5)" }} />
-              <Bar
-                dataKey="sales"
-                fill="#3B82F6"
-                barSize={30}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <MonthlySalesChart data={monthlyProgressData} />
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -317,24 +287,7 @@ const Dashboard = () => {
             <BarChartIcon className="text-purple-500" />
             Sales by Category
           </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              layout="vertical"
-              data={salesByCategory}
-              margin={{ top: 0, right: 20, bottom: 0, left: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" scale="band" width={80} />
-              <Tooltip cursor={{ fill: "rgba(239, 246, 255, 0.5)" }} />
-              <Bar
-                dataKey="value"
-                barSize={20}
-                fill="#8B5CF6"
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <SalesByCategoryChart data={salesByCategory} />
         </div>
       </div>
 

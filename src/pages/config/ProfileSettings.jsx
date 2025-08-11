@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { supabase } from "@/supabase/client";
+import * as api from "@/services/api";
 
 const ProfileSettings = ({ onUpdate }) => {
   const [user, setUser] = useState(null);
@@ -14,9 +14,8 @@ const ProfileSettings = ({ onUpdate }) => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await api.getUser();
+      const user = data?.user;
       if (user) {
         setUser(user);
         setFullName(user.user_metadata.full_name || "");
@@ -33,7 +32,7 @@ const ProfileSettings = ({ onUpdate }) => {
 
   const handleSaveChanges = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.auth.updateUser({
+    const { error } = await api.updateUser({
       email: email,
       data: {
         full_name: fullName,
@@ -58,9 +57,7 @@ const ProfileSettings = ({ onUpdate }) => {
     setUploading(true);
 
     const fileName = `${user.id}/${Date.now()}`;
-    const { error: uploadError } = await supabase.storage
-      .from("avatars")
-      .upload(fileName, file);
+    const { error: uploadError } = await api.uploadFile("avatars", fileName, file);
 
     if (uploadError) {
       alert("Error uploading file: " + uploadError.message);
@@ -68,14 +65,12 @@ const ProfileSettings = ({ onUpdate }) => {
       return;
     }
 
-    const { data } = supabase.storage.from("avatars").getPublicUrl(fileName);
+    const { data } = api.getPublicUrl("avatars", fileName);
 
     const publicUrl = data.publicUrl;
     setAvatarUrl(publicUrl);
 
-    const { error: updateUserError } = await supabase.auth.updateUser({
-      data: { avatar_url: publicUrl },
-    });
+    const { error: updateUserError } = await api.updateUser({ data: { avatar_url: publicUrl } });
 
     if (updateUserError) {
       alert("Error updating user photo: " + updateUserError.message);
