@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  Archive, // Changed from Wallet
+  Archive,
   Pill,
   TrendingUp,
   PackageX,
   ChevronDown,
-  ArrowUpRight,
+  ShieldCheck,
+  ShieldAlert,
+  ShieldX,
+  Clock,
+  Star,
+  Activity,
 } from "lucide-react";
 import { supabase } from "@/supabase/client";
 
@@ -13,18 +18,18 @@ const Dashboard = () => {
   const [summaryCards, setSummaryCards] = useState([
     {
       title: "Inventory Status",
-      value: "0",
-      icon: <Archive className="text-indigo-500" />, // Changed from Wallet
+      value: "Calculating...",
+      icon: <Archive className="text-indigo-500" />,
       iconBg: "bg-indigo-100",
     },
     {
-      title: "Medicine Available",
+      title: "Medicines Available",
       value: "0",
       icon: <Pill className="text-sky-500" />,
       iconBg: "bg-sky-100",
     },
     {
-      title: "Total Profit",
+      title: "Total Inventory Value",
       value: "₱0",
       icon: <TrendingUp className="text-amber-500" />,
       iconBg: "bg-amber-100",
@@ -38,9 +43,48 @@ const Dashboard = () => {
   ]);
 
   const [monthlyProgressData, setMonthlyProgressData] = useState([]);
-  const [posData, setPosData] = useState([]);
+  const [expiringSoon, setExpiringSoon] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [recentSales, setRecentSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [totalEarning, setTotalEarning] = useState(0);
+
+  const getInventoryStatus = (products) => {
+    const totalProducts = products.length;
+    if (totalProducts === 0) {
+      return {
+        level: "N/A",
+        icon: <ShieldAlert className="text-gray-500" />,
+        iconBg: "bg-gray-100",
+      };
+    }
+    const outOfStock = products.filter((p) => p.quantity === 0).length;
+    const lowStock = products.filter(
+      (p) => p.quantity > 0 && p.quantity <= 10
+    ).length;
+
+    const badProducts = outOfStock + lowStock;
+    const badPercentage = (badProducts / totalProducts) * 100;
+
+    if (badPercentage > 50) {
+      return {
+        level: "Bad",
+        icon: <ShieldX className="text-rose-500" />,
+        iconBg: "bg-rose-100",
+      };
+    }
+    if (badPercentage > 20) {
+      return {
+        level: "Warning",
+        icon: <ShieldAlert className="text-amber-500" />,
+        iconBg: "bg-amber-100",
+      };
+    }
+    return {
+      level: "Good",
+      icon: <ShieldCheck className="text-green-500" />,
+      iconBg: "bg-green-100",
+    };
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -48,31 +92,37 @@ const Dashboard = () => {
       try {
         const { data: products, error: productsError } = await supabase
           .from("products")
-          .select("quantity, status, price");
+          .select("id, name, quantity, status, price, expireDate");
 
         if (productsError) throw productsError;
 
-        const inventoryStatus = products.length;
+        const inventoryStatusInfo = getInventoryStatus(products);
         const medicineAvailable = products.filter(
-          (p) => p.status === "Available"
+          (p) => p.status === "Available" && p.quantity > 0
         ).length;
         const outOfStock = products.filter((p) => p.quantity === 0).length;
-        const totalProfit = products.reduce(
+        const totalValue = products.reduce(
           (acc, p) => acc + (p.price || 0) * (p.quantity || 0),
           0
         );
+
+        const today = new Date();
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+        const expiringProducts = products
+          .filter((p) => {
+            const expiryDate = new Date(p.expireDate);
+            return expiryDate > today && expiryDate <= thirtyDaysFromNow;
+          })
+          .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate));
+        setExpiringSoon(expiringProducts.slice(0, 5));
 
         const { data: sales, error: salesError } = await supabase
           .from("sales")
           .select("created_at, total_amount");
 
         if (salesError) throw salesError;
-
-        const currentTotalEarning = sales.reduce(
-          (acc, s) => acc + s.total_amount,
-          0
-        );
-        setTotalEarning(currentTotalEarning);
 
         const monthlySales = sales.reduce((acc, sale) => {
           const month = new Date(sale.created_at).getMonth();
@@ -93,45 +143,52 @@ const Dashboard = () => {
         });
         setMonthlyProgressData(generatedMonthlyProgress);
 
-        const { data: recentSales, error: recentSalesError } = await supabase
-          .from("sale_items")
-          .select(
-            `
-            quantity,
-            price_at_sale,
-            sales (created_at),
-            products (name, medicineId)
-          `
-          )
-          .limit(5);
+        const { data: bestSellersData, error: bestSellersError } =
+          await supabase
+            .from("sale_items")
+            .select("quantity, products (name)")
+            .limit(100);
+
+        if (bestSellersError) throw bestSellersError;
+
+        const productSales = bestSellersData.reduce((acc, item) => {
+          const name = item.products.name;
+          acc[name] = (acc[name] || 0) + item.quantity;
+          return acc;
+        }, {});
+
+        const sortedBestSellers = Object.entries(productSales)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 5)
+          .map(([name, quantity]) => ({ name, quantity }));
+        setBestSellers(sortedBestSellers);
+
+        const { data: recentSalesData, error: recentSalesError } =
+          await supabase
+            .from("sale_items")
+            .select("*, products(name), sales(created_at)")
+            .order("id", { ascending: false })
+            .limit(5);
 
         if (recentSalesError) throw recentSalesError;
-
-        const formattedPosData = recentSales.map((item) => ({
-          medicineName: item.products.name,
-          batchNo: item.products.medicineId,
-          quantity: item.quantity,
-          status: "Delivered",
-          price: `₱${item.price_at_sale.toFixed(2)}`,
-        }));
-        setPosData(formattedPosData);
+        setRecentSales(recentSalesData);
 
         setSummaryCards([
           {
             title: "Inventory Status",
-            value: inventoryStatus.toString(),
-            icon: <Archive className="text-indigo-500" />, // Changed from Wallet
-            iconBg: "bg-indigo-100",
+            value: inventoryStatusInfo.level,
+            icon: inventoryStatusInfo.icon,
+            iconBg: inventoryStatusInfo.iconBg,
           },
           {
-            title: "Medicine Available",
+            title: "Medicines Available",
             value: medicineAvailable.toString(),
             icon: <Pill className="text-sky-500" />,
             iconBg: "bg-sky-100",
           },
           {
-            title: "Total Profit",
-            value: `₱${totalProfit.toFixed(2)}`,
+            title: "Total Inventory Value",
+            value: `₱${totalValue.toFixed(2)}`,
             icon: <TrendingUp className="text-amber-500" />,
             iconBg: "bg-amber-100",
           },
@@ -152,35 +209,6 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const getStatusChip = (status) => {
-    switch (status) {
-      case "Delivered":
-        return (
-          <span className="px-3 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full">
-            {status}
-          </span>
-        );
-      case "Pending":
-        return (
-          <span className="px-3 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full">
-            {status}
-          </span>
-        );
-      case "Canceled":
-        return (
-          <span className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 rounded-full">
-            {status}
-          </span>
-        );
-      default:
-        return (
-          <span className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-full">
-            {status}
-          </span>
-        );
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -191,7 +219,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {summaryCards.map((card) => (
           <div
@@ -210,14 +237,13 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Monthly Progress Chart */}
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">
-              Monthly Progress
+              Monthly Sales
             </h2>
             <button className="flex items-center text-gray-600 bg-gray-100 px-3 py-1 rounded-md text-sm hover:bg-gray-200">
-              Monthly <ChevronDown size={16} className="ml-1" />
+              This Year <ChevronDown size={16} className="ml-1" />
             </button>
           </div>
           <div className="h-72 flex items-end justify-between space-x-2 text-center">
@@ -247,120 +273,91 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Today's Report Donut Chart */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Today's Report
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Star className="text-yellow-400" />
+            Best Sellers
           </h2>
-          <div className="relative flex items-center justify-center h-48 w-48 mx-auto my-4">
-            <svg className="w-full h-full" viewBox="0 0 36 36">
-              <path
-                className="text-gray-200"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.8"
-              />
-              <path
-                className="text-indigo-500"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.8"
-                strokeDasharray="55, 100"
-                strokeLinecap="round"
-              />
-              <path
-                className="text-green-500"
-                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.8"
-                strokeDasharray="25, 100"
-                strokeDashoffset="-55"
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <p className="text-gray-500 text-sm">Total Earning</p>
-              <p className="text-2xl font-bold text-gray-800">
-                ₱{totalEarning.toFixed(2)}
-              </p>
-              <div className="flex items-center justify-center text-green-500 text-xs mt-1">
-                <ArrowUpRight size={12} />
-                <span>15.5%</span>
-              </div>
-            </div>
-          </div>
-          <ul className="space-y-2 text-sm text-gray-600 mt-6">
-            <li className="flex items-center">
-              <span className="w-3 h-3 rounded-full bg-indigo-500 mr-3"></span>
-              <span>Total Purchase</span>
-            </li>
-            <li className="flex items-center">
-              <span className="w-3 h-3 rounded-full bg-green-500 mr-3"></span>
-              <span>Cash Received</span>
-            </li>
+          <ul className="space-y-3">
+            {bestSellers.map((item) => (
+              <li
+                key={item.name}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="font-medium text-gray-700">{item.name}</span>
+                <span className="font-bold text-gray-800 bg-gray-100 px-3 py-1 rounded-full">
+                  {item.quantity} sold
+                </span>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
 
-      {/* Point of Sales Table */}
-      <div className="bg-white p-6 rounded-xl shadow-md">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Point Of Sales
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Activity className="text-green-500" />
+            Recent Sales
           </h2>
-          <button className="text-sm text-indigo-600 hover:underline font-medium">
-            See All &gt;
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
-                  Medicine name
-                </th>
-                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
-                  Batch No
-                </th>
-                <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                  Quantity
-                </th>
-                <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                  Status
-                </th>
-                <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
-                  Price
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {posData.map((item, index) => (
-                <tr
-                  key={`${item.medicineName}-${item.batchNo}-${index}`}
-                  className="hover:bg-gray-50"
-                >
-                  <td className="py-4 px-4 text-sm text-gray-800 font-medium">
-                    {item.medicineName}
-                  </td>
-                  <td className="py-4 px-4 text-sm text-gray-500">
-                    {item.batchNo}
-                  </td>
-                  <td className="py-4 px-4 text-center text-sm text-gray-500">
-                    {item.quantity}
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    {getStatusChip(item.status)}
-                  </td>
-                  <td className="py-4 px-4 text-right text-sm text-gray-800 font-semibold">
-                    {item.price}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
+                    Product
+                  </th>
+                  <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
+                    Quantity
+                  </th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                    Price
+                  </th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                    Time
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentSales.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="py-4 px-4 text-sm text-gray-800 font-medium">
+                      {item.products.name}
+                    </td>
+                    <td className="py-4 px-4 text-center text-sm text-gray-500">
+                      {item.quantity}
+                    </td>
+                    <td className="py-4 px-4 text-right text-sm text-green-600 font-semibold">
+                      ₱{(item.price_at_sale * item.quantity).toFixed(2)}
+                    </td>
+                    <td className="py-4 px-4 text-right text-sm text-gray-500">
+                      {new Date(item.sales.created_at).toLocaleTimeString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Clock className="text-amber-500" />
+            Expiring Soon
+          </h2>
+          <ul className="space-y-3">
+            {expiringSoon.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="font-medium text-gray-700">{item.name}</span>
+                <span className="font-bold text-amber-600">
+                  {new Date(item.expireDate).toLocaleDateString()}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

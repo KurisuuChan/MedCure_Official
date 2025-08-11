@@ -17,6 +17,21 @@ const Header = ({ handleLogout, user }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper functions to manage read status in localStorage
+  const getReadNotificationIds = () => {
+    try {
+      const readIds = localStorage.getItem("readNotificationIds");
+      return readIds ? JSON.parse(readIds) : [];
+    } catch (e) {
+      console.error("Failed to parse read notifications from localStorage", e);
+      return [];
+    }
+  };
+
+  const setReadNotificationIds = (ids) => {
+    localStorage.setItem("readNotificationIds", JSON.stringify(ids));
+  };
+
   useEffect(() => {
     const fetchNotifications = async () => {
       setLoading(true);
@@ -31,34 +46,37 @@ const Header = ({ handleLogout, user }) => {
         return;
       }
 
+      const readIds = getReadNotificationIds();
       const lowStockThreshold = 10;
       const today = new Date();
       const generatedNotifications = [];
 
       products.forEach((product) => {
+        const lowStockId = `low-${product.id}`;
         if (product.quantity <= lowStockThreshold && product.quantity > 0) {
           generatedNotifications.push({
-            id: `low-${product.id}`,
+            id: lowStockId,
             icon: <AlertTriangle className="text-yellow-500" />,
             iconBg: "bg-yellow-100",
             title: "Low Stock Warning",
             description: `${product.name} has only ${product.quantity} items left.`,
             time: "Recently",
-            read: false,
+            read: readIds.includes(lowStockId),
             path: `/management?highlight=${product.id}`,
           });
         }
 
+        const expiredId = `expired-${product.id}`;
         const expiryDate = new Date(product.expireDate);
         if (expiryDate < today) {
           generatedNotifications.push({
-            id: `expired-${product.id}`,
+            id: expiredId,
             icon: <AlertTriangle className="text-red-500" />,
             iconBg: "bg-red-100",
             title: "Expired Medicine Alert",
             description: `${product.name} (ID: ${product.id}) has expired.`,
             time: "Recently",
-            read: false,
+            read: readIds.includes(expiredId),
             path: `/management?highlight=${product.id}`,
           });
         }
@@ -77,10 +95,16 @@ const Header = ({ handleLogout, user }) => {
     setNotifications(
       notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
     );
+    const readIds = getReadNotificationIds();
+    if (!readIds.includes(id)) {
+      setReadNotificationIds([...readIds, id]);
+    }
   };
 
   const handleMarkAllAsRead = () => {
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
+    const allIds = notifications.map((n) => n.id);
+    setReadNotificationIds(allIds);
   };
 
   const displayName = user?.user_metadata?.full_name || "Administrator";
@@ -171,12 +195,14 @@ const Header = ({ handleLogout, user }) => {
               <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-30">
                 <div className="flex justify-between items-center p-4 border-b border-gray-200">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>
-                  <button
-                    onClick={handleMarkAllAsRead}
-                    className="text-sm text-blue-600 hover:underline"
-                  >
-                    Mark all as read
-                  </button>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
                 </div>
                 <div className="max-h-96 overflow-y-auto">
                   {renderNotificationContent()}

@@ -63,18 +63,22 @@ const Management = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const highlightId = params.get("highlight");
+
     if (highlightId && products.length > 0) {
       const highlightIdNum = parseInt(highlightId, 10);
       const productIndex = products.findIndex((p) => p.id === highlightIdNum);
 
       if (productIndex !== -1) {
+        // Clear filters to ensure the product is visible
         setActiveFilters({ status: "All", productType: "All" });
         setSearchTerm("");
 
+        // Calculate the page the product is on in the full, unfiltered list
         const pageNumber = Math.ceil((productIndex + 1) / itemsPerPage);
         setCurrentPage(pageNumber);
         setHighlightedRow(highlightIdNum);
 
+        // Remove the highlight after 3 seconds
         const timer = setTimeout(() => setHighlightedRow(null), 3000);
         return () => clearTimeout(timer);
       }

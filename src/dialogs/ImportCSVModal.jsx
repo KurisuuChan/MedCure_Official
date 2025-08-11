@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
 import { UploadCloud, FileText, X } from "lucide-react";
+import { useNotification } from "@/hooks/useNotification";
 
 const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const { addNotification } = useNotification();
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -16,7 +17,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
       setFile(selectedFile);
       setFileName(selectedFile.name);
       setError("");
-      setSuccessMessage("");
     } else {
       setFile(null);
       setFileName("");
@@ -49,7 +49,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
         }
       });
 
-      // Auto-generate medicineId and set status
       const nextId = startingId + i - 1;
       const typePart = entry.productType === "Medicine" ? "1" : "0";
       entry.medicineId = `${datePart}${typePart}${nextId}`;
@@ -68,12 +67,10 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
 
     setLoading(true);
     setError("");
-    setSuccessMessage("");
 
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        // 1. Get the last product ID to determine the next ID
         const { data: lastProduct, error: fetchError } = await supabase
           .from("products")
           .select("id")
@@ -87,7 +84,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
 
         const nextId = lastProduct ? lastProduct.id + 1 : 1;
 
-        // 2. Parse CSV and generate medicine IDs
         const productsToInsert = parseAndPrepareData(
           event.target.result,
           nextId
@@ -98,7 +94,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           return;
         }
 
-        // 3. Insert the new products
         const { error: insertError } = await supabase
           .from("products")
           .insert(productsToInsert);
@@ -107,14 +102,16 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           throw insertError;
         }
 
-        setSuccessMessage(
-          `${productsToInsert.length} products imported successfully!`
+        addNotification(
+          `${productsToInsert.length} products imported successfully!`,
+          "success"
         );
         onImportSuccess();
-        setFile(null);
-        setFileName("");
+        handleClose(); // Close modal on success
       } catch (e) {
-        setError(`Import failed: ${e.message}`);
+        const errorMessage = `Import failed: ${e.message}`;
+        setError(errorMessage);
+        addNotification(errorMessage, "error");
       } finally {
         setLoading(false);
       }
@@ -126,7 +123,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
     setFile(null);
     setFileName("");
     setError("");
-    setSuccessMessage("");
     setLoading(false);
     onClose();
   };
@@ -196,9 +192,6 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           )}
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          {successMessage && (
-            <p className="text-green-600 text-sm">{successMessage}</p>
-          )}
         </div>
 
         <div className="mt-8 flex justify-end gap-4">
