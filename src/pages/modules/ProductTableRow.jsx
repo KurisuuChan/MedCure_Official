@@ -8,6 +8,7 @@ const ProductTableRow = ({
   onSelectItem,
   onViewProduct,
   onEditProduct,
+  isHighlighted,
 }) => {
   const getStatusBadge = (status) => {
     switch (status) {
@@ -32,11 +33,19 @@ const ProductTableRow = ({
     }
   };
 
+  const getRowClass = () => {
+    if (isHighlighted) {
+      return "bg-yellow-100";
+    }
+    if (isSelected) {
+      return "bg-blue-50";
+    }
+    return "hover:bg-gray-50";
+  };
+
   return (
     <tr
-      className={`transition-colors group align-middle ${
-        isSelected ? "bg-blue-50" : "hover:bg-gray-50"
-      }`}
+      className={`transition-colors duration-500 group align-middle ${getRowClass()}`}
     >
       <td className="px-4 sm:px-6 py-4">
         <input
@@ -95,6 +104,7 @@ ProductTableRow.propTypes = {
   onSelectItem: PropTypes.func.isRequired,
   onViewProduct: PropTypes.func.isRequired,
   onEditProduct: PropTypes.func.isRequired,
+  isHighlighted: PropTypes.bool,
 };
 
 export default ProductTableRow;

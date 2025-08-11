@@ -11,7 +11,6 @@ import {
   History,
 } from "lucide-react";
 import SalesHistoryModal from "@/dialogs/SalesHistoryModal";
-import { generateReceiptPDF } from "@/utils/pdfGenerator";
 
 const PointOfSales = ({ branding }) => {
   const [availableMedicines, setAvailableMedicines] = useState([]);
@@ -125,9 +124,6 @@ const PointOfSales = ({ branding }) => {
           .eq("id", item.id);
         if (updateError) throw updateError;
       }
-
-      const saleDetailsForReceipt = { ...saleData, items: cart };
-      await generateReceiptPDF(saleDetailsForReceipt, branding);
 
       setCart([]);
       setIsDiscounted(false);

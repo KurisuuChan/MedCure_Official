@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/supabase/client";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
+import { useNotification } from "@/hooks/useNotification";
 
-// Import all dialogs/modals
 import AddProductModal from "@/dialogs/AddProductModal";
 import EditProductModal from "@/dialogs/EditProductModal";
 import ViewProductModal from "@/dialogs/ViewProductModal";
 import ImportCSVModal from "@/dialogs/ImportCSVModal";
 import ExportPDFModal from "@/dialogs/ExportPDFModal";
 
-// Import page-specific components
 import ManagementHeader from "./modules/ManagementHeader";
 import ProductFilters from "./modules/ProductFilters";
 import ProductTable from "./modules/ProductTable";
@@ -21,7 +21,6 @@ const Management = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // State for all modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -33,6 +32,20 @@ const Management = () => {
     status: "All",
     productType: "All",
   });
+
+  const location = useLocation();
+  const [highlightedRow, setHighlightedRow] = useState(null);
+  const { addNotification } = useNotification();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const highlightId = params.get("highlight");
+    if (highlightId) {
+      setHighlightedRow(parseInt(highlightId, 10));
+      const timer = setTimeout(() => setHighlightedRow(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -62,7 +75,12 @@ const Management = () => {
 
     if (error) {
       console.error("Error archiving products:", error);
+      addNotification(`Error: ${error.message}`, "error");
     } else {
+      addNotification(
+        `${selectedItems.length} product(s) successfully archived.`,
+        "success"
+      );
       fetchProducts();
       setSelectedItems([]);
     }
@@ -113,7 +131,6 @@ const Management = () => {
 
   return (
     <>
-      {/* All Modals */}
       <AddProductModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -145,7 +162,6 @@ const Management = () => {
         </>
       )}
 
-      {/* Main Page Content */}
       <div className="bg-white p-8 rounded-2xl shadow-lg font-sans">
         <ManagementHeader
           selectedItemsCount={selectedItems.length}
@@ -170,6 +186,7 @@ const Management = () => {
           searchedProducts={searchedProducts}
           onViewProduct={handleViewProduct}
           onEditProduct={handleEditProduct}
+          highlightedRow={highlightedRow}
         />
         <PaginationComponent />
       </div>

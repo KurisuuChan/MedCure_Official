@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "../supabase/client";
 import { X, Edit } from "lucide-react";
+import { useNotification } from "@/hooks/useNotification";
 
 const EditProductModal = ({ isOpen, onClose, product, onProductUpdated }) => {
   const [formData, setFormData] = useState(product);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     setFormData(product);
@@ -33,7 +35,9 @@ const EditProductModal = ({ isOpen, onClose, product, onProductUpdated }) => {
     if (updateError) {
       console.error("Error updating product:", updateError);
       setError("Failed to update product: " + updateError.message);
+      addNotification("Failed to update product.", "error");
     } else {
+      addNotification("Product updated successfully!", "success");
       onProductUpdated();
       onClose();
     }
