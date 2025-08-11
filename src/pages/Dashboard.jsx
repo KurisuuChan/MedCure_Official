@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Archive,
   Pill,
@@ -11,7 +11,20 @@ import {
   Clock,
   Star,
   Activity,
+  BarChart,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Area,
+  ComposedChart,
+  Bar,
+  Legend,
+} from "recharts";
 import { supabase } from "@/supabase/client";
 
 const Dashboard = () => {
@@ -43,7 +56,9 @@ const Dashboard = () => {
   ]);
 
   const [monthlyProgressData, setMonthlyProgressData] = useState([]);
+  const [salesByCategory, setSalesByCategory] = useState([]);
   const [expiringSoon, setExpiringSoon] = useState([]);
+  const [lowStockItems, setLowStockItems] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [recentSales, setRecentSales] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -86,19 +101,13 @@ const Dashboard = () => {
     };
   };
 
-  const maxSaleValue = useMemo(() => {
-    const maxValue = Math.max(...monthlyProgressData.map((d) => d.value), 1);
-    // Round up to the nearest nice number (e.g., 1000, 5000)
-    return Math.ceil(maxValue / 1000) * 1000;
-  }, [monthlyProgressData]);
-
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
         const { data: products, error: productsError } = await supabase
           .from("products")
-          .select("id, name, quantity, status, price, expireDate");
+          .select("id, name, quantity, status, price, expireDate, category");
 
         if (productsError) throw productsError;
 
@@ -110,6 +119,10 @@ const Dashboard = () => {
         const totalValue = products.reduce(
           (acc, p) => acc + (p.price || 0) * (p.quantity || 0),
           0
+        );
+
+        setLowStockItems(
+          products.filter((p) => p.quantity > 0 && p.quantity <= 10).slice(0, 5)
         );
 
         const today = new Date();
@@ -126,7 +139,7 @@ const Dashboard = () => {
 
         const { data: sales, error: salesError } = await supabase
           .from("sales")
-          .select("created_at, total_amount");
+          .select("id, created_at, total_amount");
 
         if (salesError) throw salesError;
 
@@ -136,29 +149,36 @@ const Dashboard = () => {
           return acc;
         }, {});
 
-        const currentMonth = new Date().getMonth();
         const generatedMonthlyProgress = Array.from({ length: 12 }, (_, i) => {
           const monthName = new Date(0, i).toLocaleString("default", {
             month: "short",
           });
           return {
             month: monthName,
-            value: monthlySales[i] || 0,
-            isCurrent: i === currentMonth,
+            sales: monthlySales[i] || 0,
           };
         });
         setMonthlyProgressData(generatedMonthlyProgress);
 
-        const { data: bestSellersData, error: bestSellersError } =
-          await supabase
-            .from("sale_items")
-            .select("quantity, products (name)")
-            .limit(100);
+        const { data: saleItems, error: saleItemsError } = await supabase
+          .from("sale_items")
+          .select("quantity, price_at_sale, products (name, category)");
 
-        if (bestSellersError) throw bestSellersError;
+        if (saleItemsError) throw saleItemsError;
 
-        const productSales = bestSellersData.reduce((acc, item) => {
-          if (!item.products) return acc;
+        const categorySales = saleItems.reduce((acc, item) => {
+          const category = item.products.category || "Uncategorized";
+          const saleValue = item.quantity * item.price_at_sale;
+          acc[category] = (acc[category] || 0) + saleValue;
+          return acc;
+        }, {});
+
+        const salesByCategoryData = Object.entries(categorySales).map(
+          ([name, value]) => ({ name, value })
+        );
+        setSalesByCategory(salesByCategoryData);
+
+        const productSales = saleItems.reduce((acc, item) => {
           const name = item.products.name;
           acc[name] = (acc[name] || 0) + item.quantity;
           return acc;
@@ -253,40 +273,52 @@ const Dashboard = () => {
               This Year <ChevronDown size={16} className="ml-1" />
             </button>
           </div>
-          <div className="flex">
-            <div className="flex flex-col justify-between text-xs text-gray-400 pr-4">
-              <span>{`₱${maxSaleValue}`}</span>
-              <span>{`₱${maxSaleValue / 2}`}</span>
-              <span>₱0</span>
-            </div>
-            <div className="w-full h-72 flex items-end justify-between space-x-2 text-center border-l border-b border-gray-200 pl-2">
-              {monthlyProgressData.map((item) => (
-                <div
-                  key={item.month}
-                  className="relative flex-1 flex flex-col items-center h-full justify-end group"
-                >
-                  <div className="absolute -top-8 hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded-md">
-                    {`₱${item.value.toFixed(2)}`}
-                  </div>
-                  <div
-                    className={`w-3/4 rounded-t-md transition-all duration-300 ease-in-out ${
-                      item.isCurrent
-                        ? "bg-gradient-to-t from-indigo-500 to-indigo-400"
-                        : "bg-gray-200"
-                    } group-hover:bg-gradient-to-t group-hover:from-sky-500 group-hover:to-sky-400`}
-                    style={{
-                      height: `${(item.value / maxSaleValue) * 100}%`,
-                    }}
-                  ></div>
-                  <span className="text-xs text-gray-500 mt-2">
-                    {item.month}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={monthlyProgressData}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="month" />
+              <YAxis />
+              <CartesianGrid strokeDasharray="3 3" />
+              <Tooltip />
+              <Area
+                type="monotone"
+                dataKey="sales"
+                stroke="#8884d8"
+                fillOpacity={1}
+                fill="url(#colorSales)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
 
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <BarChart className="text-purple-500" />
+            Sales by Category
+          </h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart
+              layout="vertical"
+              data={salesByCategory}
+              margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+            >
+              <CartesianGrid stroke="#f5f5f5" />
+              <XAxis type="number" />
+              <YAxis dataKey="name" type="category" scale="band" />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" barSize={20} fill="#413ea0" />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <Star className="text-yellow-400" />
@@ -306,57 +338,9 @@ const Dashboard = () => {
             ))}
           </ul>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Activity className="text-green-500" />
-            Recent Sales
-          </h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
-                    Product
-                  </th>
-                  <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
-                    Quantity
-                  </th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
-                    Price
-                  </th>
-                  <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
-                    Time
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {recentSales.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="py-4 px-4 text-sm text-gray-800 font-medium">
-                      {item.products?.name || "N/A"}
-                    </td>
-                    <td className="py-4 px-4 text-center text-sm text-gray-500">
-                      {item.quantity}
-                    </td>
-                    <td className="py-4 px-4 text-right text-sm text-green-600 font-semibold">
-                      ₱{(item.price_at_sale * item.quantity).toFixed(2)}
-                    </td>
-                    <td className="py-4 px-4 text-right text-sm text-gray-500">
-                      {new Date(item.sales.created_at).toLocaleTimeString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         <div className="bg-white p-6 rounded-xl shadow-md">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Clock className="text-amber-500" />
+            <Clock className="text-red-500" />
             Expiring Soon
           </h2>
           <ul className="space-y-3">
@@ -366,12 +350,76 @@ const Dashboard = () => {
                 className="flex items-center justify-between text-sm"
               >
                 <span className="font-medium text-gray-700">{item.name}</span>
-                <span className="font-bold text-amber-600">
+                <span className="font-bold text-red-600">
                   {new Date(item.expireDate).toLocaleDateString()}
                 </span>
               </li>
             ))}
           </ul>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <PackageX className="text-orange-500" />
+            Low Stock Items
+          </h2>
+          <ul className="space-y-3">
+            {lowStockItems.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center justify-between text-sm"
+              >
+                <span className="font-medium text-gray-700">{item.name}</span>
+                <span className="font-bold text-orange-600">
+                  {item.quantity} left
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-xl shadow-md">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <Activity className="text-green-500" />
+          Recent Sales
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="py-3 px-4 text-left text-sm font-semibold text-gray-500">
+                  Product
+                </th>
+                <th className="py-3 px-4 text-center text-sm font-semibold text-gray-500">
+                  Quantity
+                </th>
+                <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                  Price
+                </th>
+                <th className="py-3 px-4 text-right text-sm font-semibold text-gray-500">
+                  Time
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {recentSales.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="py-4 px-4 text-sm text-gray-800 font-medium">
+                    {item.products.name}
+                  </td>
+                  <td className="py-4 px-4 text-center text-sm text-gray-500">
+                    {item.quantity}
+                  </td>
+                  <td className="py-4 px-4 text-right text-sm text-green-600 font-semibold">
+                    ₱{(item.price_at_sale * item.quantity).toFixed(2)}
+                  </td>
+                  <td className="py-4 px-4 text-right text-sm text-gray-500">
+                    {new Date(item.sales.created_at).toLocaleTimeString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
