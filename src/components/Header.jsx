@@ -128,7 +128,7 @@ const Header = ({ handleLogout, user }) => {
         path: "/management",
         createdAt: new Date(csvImportData.timestamp),
       });
-      localStorage.removeItem("csvImported");
+      // Do not remove it immediately, allow it to persist until dismissed or read
     }
 
     products.forEach((product) => {
@@ -215,6 +215,7 @@ const Header = ({ handleLogout, user }) => {
 
     // Listen for local storage changes (for CSV import)
     const handleStorageChange = () => {
+      // Re-fetch notifications whenever a relevant local storage item changes
       fetchNotifications();
     };
     window.addEventListener("storage", handleStorageChange);
@@ -237,6 +238,10 @@ const Header = ({ handleLogout, user }) => {
         n.id === notificationId ? { ...n, read: true } : n
       )
     );
+    // If it's a CSV import notification, mark it as read and dismiss it permanently
+    if (notificationId.startsWith("csv-")) {
+      handleDismiss(null, notificationId);
+    }
   };
 
   const handleMarkAllAsRead = () => {
@@ -245,14 +250,27 @@ const Header = ({ handleLogout, user }) => {
     const newReadIds = [...new Set([...readIds, ...allNotificationIds])];
     setReadNotificationIds(newReadIds);
     setNotifications(notifications.map((n) => ({ ...n, read: true })));
+    // Dismiss all system notifications
+    const systemNotifications = notifications.filter(
+      (n) => n.category === "System"
+    );
+    const dismissedIds = getDismissedNotificationIds();
+    setDismissedNotificationIds([
+      ...dismissedIds,
+      ...systemNotifications.map((n) => n.id),
+    ]);
   };
 
   const handleDismiss = (e, notificationId) => {
-    e.preventDefault();
-    e.stopPropagation();
+    e?.preventDefault();
+    e?.stopPropagation();
     const dismissedIds = getDismissedNotificationIds();
     setDismissedNotificationIds([...dismissedIds, notificationId]);
     setNotifications(notifications.filter((n) => n.id !== notificationId));
+    // Also remove the CSV item from local storage if it's dismissed
+    if (notificationId.startsWith("csv-")) {
+      localStorage.removeItem("csvImported");
+    }
   };
 
   const displayName = user?.user_metadata?.full_name || "Administrator";
