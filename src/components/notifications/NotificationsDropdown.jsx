@@ -64,13 +64,19 @@ const NotificationsDropdown = ({
                   onClick={() => onMarkAsRead(n.id)}
                   className={`flex items-start gap-3 p-4 transition-colors relative group border-b border-gray-100 ${getAccentClass(
                     n.category
-                  )} ${!n.read ? "bg-blue-50 hover:bg-blue-100" : "hover:bg-gray-50"}`}
+                  )} ${
+                    !n.read
+                      ? "bg-blue-50 hover:bg-blue-100"
+                      : "hover:bg-gray-50"
+                  }`}
                 >
                   <div className={`flex-shrink-0 p-2 rounded-full ${n.iconBg}`}>
                     {iconForType(n.iconType)}
                   </div>
                   <div className="flex-grow">
-                    <p className="font-semibold text-sm text-gray-900">{n.title}</p>
+                    <p className="font-semibold text-sm text-gray-900">
+                      {n.title}
+                    </p>
                     <p className="text-sm text-gray-600">{n.description}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       {n.createdAt instanceof Date
@@ -104,7 +110,10 @@ const NotificationsDropdown = ({
         <h3 className="font-semibold text-gray-800">Notifications</h3>
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search size={16} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search
+              size={16}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400"
+            />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -151,7 +160,9 @@ const NotificationsDropdown = ({
             <button
               className="ml-auto flex items-center gap-1 text-gray-600 hover:text-gray-800"
               onClick={() => toggleMuteCategory(activeCategory)}
-              title={mutedCategories.includes(activeCategory) ? "Unmute" : "Mute"}
+              title={
+                mutedCategories.includes(activeCategory) ? "Unmute" : "Mute"
+              }
             >
               {mutedCategories.includes(activeCategory) ? (
                 <>
@@ -192,5 +203,3 @@ NotificationsDropdown.propTypes = {
 };
 
 export default NotificationsDropdown;
-
-
