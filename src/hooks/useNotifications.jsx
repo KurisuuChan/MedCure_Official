@@ -28,7 +28,6 @@ export default function useNotifications() {
       .in("status", ["Available", "Unavailable"]);
 
     if (error) {
-      // eslint-disable-next-line no-console
       console.error("Error fetching products for notifications:", error);
       setLoading(false);
       return;
@@ -65,7 +64,10 @@ export default function useNotifications() {
       const baseLowStockId = `low-${product.id}`;
 
       // If stock recovered above threshold, clear stored episode timestamp
-      if (product.quantity > lowStockThreshold && newTimestamps[baseLowStockId]) {
+      if (
+        product.quantity > lowStockThreshold &&
+        newTimestamps[baseLowStockId]
+      ) {
         delete newTimestamps[baseLowStockId];
         timestampsUpdated = true;
       }
@@ -194,7 +196,14 @@ export default function useNotifications() {
   );
 
   const categories = useMemo(
-    () => ["All", "Low Stock", "No Stock", "Expired", "Expiring Soon", "System"],
+    () => [
+      "All",
+      "Low Stock",
+      "No Stock",
+      "Expired",
+      "Expiring Soon",
+      "System",
+    ],
     []
   );
 
@@ -225,7 +234,7 @@ export default function useNotifications() {
         dismiss(notificationId);
       }
     },
-    [notifications]
+    [notifications, dismiss]
   );
 
   const markAllAsRead = useCallback(() => {
@@ -268,5 +277,3 @@ export default function useNotifications() {
     dismiss,
   };
 }
-
-

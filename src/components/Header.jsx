@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { supabase } from "@/supabase/client";
@@ -18,8 +24,6 @@ import {
   Tag,
 } from "lucide-react";
 import {
-  getStoredJson,
-  setStoredJson,
   getReadNotificationIds,
   setReadNotificationIds,
   getDismissedNotificationIds,
@@ -31,9 +35,13 @@ import {
   removeSystemNotification,
 } from "@/utils/notificationStorage";
 
-
 // Moved TabButton outside of the Header component
-const TabButton = ({ category, activeCategory, setActiveCategory, count = 0 }) => (
+const TabButton = ({
+  category,
+  activeCategory,
+  setActiveCategory,
+  count = 0,
+}) => (
   <button
     onClick={() => setActiveCategory(category)}
     className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-2 ${
@@ -46,7 +54,9 @@ const TabButton = ({ category, activeCategory, setActiveCategory, count = 0 }) =
     {count > 0 && (
       <span
         className={`text-[10px] rounded-full px-1.5 py-0.5 ${
-          activeCategory === category ? "bg-white/20" : "bg-gray-200 text-gray-700"
+          activeCategory === category
+            ? "bg-white/20"
+            : "bg-gray-200 text-gray-700"
         }`}
       >
         {count}
@@ -155,7 +165,10 @@ const Header = ({ handleLogout, user }) => {
       const baseLowStockId = `low-${product.id}`;
 
       // Clear stored low-stock episode if stock recovered
-      if (product.quantity > lowStockThreshold && newTimestamps[baseLowStockId]) {
+      if (
+        product.quantity > lowStockThreshold &&
+        newTimestamps[baseLowStockId]
+      ) {
         delete newTimestamps[baseLowStockId];
         timestampsUpdated = true;
       }
@@ -356,7 +369,9 @@ const Header = ({ handleLogout, user }) => {
     e?.preventDefault();
     e?.stopPropagation();
     const dismissedIds = getDismissedNotificationIds();
-    setDismissedNotificationIds([...new Set([...dismissedIds, notificationId])]);
+    setDismissedNotificationIds([
+      ...new Set([...dismissedIds, notificationId]),
+    ]);
     const target = notifications.find((n) => n.id === notificationId);
     if (target && target.category === "System") {
       removeSystemNotification(notificationId);

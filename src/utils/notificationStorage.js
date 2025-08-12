@@ -13,7 +13,6 @@ export const getStoredJson = (key) => {
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : null;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error(`Failed to parse ${key} from localStorage`, e);
     return null;
   }
@@ -77,5 +76,3 @@ export const removeSystemNotification = (id) => {
   const next = current.filter((n) => n.id !== id);
   setSystemNotifications(next);
 };
-
-
