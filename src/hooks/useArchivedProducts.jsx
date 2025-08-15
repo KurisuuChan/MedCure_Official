@@ -5,7 +5,6 @@ import * as api from "@/services/api";
 export const useArchivedProducts = (addNotification) => {
   const queryClient = useQueryClient();
 
-  // Query to fetch all archived products
   const {
     data: archivedProducts = [],
     isLoading,
@@ -19,7 +18,6 @@ export const useArchivedProducts = (addNotification) => {
     },
   });
 
-  // Mutation to unarchive (restore) products
   const unarchiveMutation = useMutation({
     mutationFn: (productIds) =>
       api.supabase
@@ -34,19 +32,20 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) successfully unarchived.`,
         "success"
       );
+      // --- FIX: This line was missing ---
       api.addNotification({
         type: "unarchive",
         title: "Products Restored",
         description: `${productIds.length} product(s) were restored from the archive.`,
         path: "/management",
       });
+      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");
     },
   });
 
-  // Mutation to permanently delete products
   const deleteMutation = useMutation({
     mutationFn: (productIds) =>
       api.supabase.from("products").delete().in("id", productIds),
@@ -56,12 +55,14 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) permanently deleted.`,
         "success"
       );
+      // --- FIX: This line was missing ---
       api.addNotification({
         type: "delete",
         title: "Products Deleted",
         description: `${productIds.length} product(s) were permanently deleted.`,
         path: "/archived",
       });
+      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");

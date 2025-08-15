@@ -5,7 +5,6 @@ import * as api from "@/services/api";
 export const useProducts = (addNotification) => {
   const queryClient = useQueryClient();
 
-  // Query to fetch all non-archived products
   const {
     data: products = [],
     isLoading,
@@ -19,7 +18,6 @@ export const useProducts = (addNotification) => {
     },
   });
 
-  // Mutation for archiving products
   const archiveProductsMutation = useMutation({
     mutationFn: (productIds) => api.archiveProducts(productIds),
     onSuccess: (data, productIds) => {
@@ -28,12 +26,14 @@ export const useProducts = (addNotification) => {
         `${productIds.length} product(s) successfully archived.`,
         "success"
       );
+      // --- FIX: This line was missing ---
       api.addNotification({
         type: "archive",
         title: "Products Archived",
         description: `${productIds.length} product(s) were archived.`,
         path: "/archived",
       });
+      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");
