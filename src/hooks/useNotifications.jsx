@@ -14,6 +14,7 @@ const NOTIFICATION_CATEGORIES = {
   unarchive: { id: "unarchive", label: "System" },
   delete: { id: "delete", label: "System" },
   upload: { id: "upload", label: "System" },
+  sale: { id: "sale", label: "Sales" }, // ADDED
   default: { id: "system", label: "System" },
 };
 

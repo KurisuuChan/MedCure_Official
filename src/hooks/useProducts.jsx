@@ -1,10 +1,10 @@
-// src/hooks/useProducts.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/services/api";
 
 export const useProducts = (addNotification) => {
   const queryClient = useQueryClient();
 
+  // Query to fetch all non-archived products
   const {
     data: products = [],
     isLoading,
@@ -18,22 +18,23 @@ export const useProducts = (addNotification) => {
     },
   });
 
+  // Mutation for archiving products
   const archiveProductsMutation = useMutation({
     mutationFn: (productIds) => api.archiveProducts(productIds),
     onSuccess: (data, productIds) => {
+      // When the mutation is successful, invalidate the 'products' query
+      // This will trigger a re-fetch and update the UI automatically
       queryClient.invalidateQueries({ queryKey: ["products"] });
       addNotification(
         `${productIds.length} product(s) successfully archived.`,
         "success"
       );
-      // --- FIX: This line was missing ---
       api.addNotification({
         type: "archive",
         title: "Products Archived",
         description: `${productIds.length} product(s) were archived.`,
         path: "/archived",
       });
-      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");
