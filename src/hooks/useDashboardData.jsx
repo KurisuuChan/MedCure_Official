@@ -134,12 +134,15 @@ export const useDashboardData = (dateRange = "all") => {
         const thresholdDate = addDays(now, settings.expiringSoonDays);
         if (expiryDate <= thresholdDate && expiryDate > now) {
           const expiryNotifId = `expiry-${product.id}`;
+          const lastExpiryNotificationTime =
+            updatedTimestamps[expiryNotifId] &&
+            new Date(updatedTimestamps[expiryNotifId]);
+
           if (
-            !lastNotificationTime ||
-            lastNotificationTime < twentyFourHoursAgo
+            !lastExpiryNotificationTime ||
+            lastExpiryNotificationTime < twentyFourHoursAgo
           ) {
             notificationsToAdd.push({
-              id: expiryNotifId, // Use a specific ID to avoid duplicates
               type: "expiring_soon",
               title: "Expiring Soon",
               description: `${

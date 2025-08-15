@@ -1,3 +1,4 @@
+// src/hooks/useProducts.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/services/api";
 
@@ -22,8 +23,6 @@ export const useProducts = (addNotification) => {
   const archiveProductsMutation = useMutation({
     mutationFn: (productIds) => api.archiveProducts(productIds),
     onSuccess: (data, productIds) => {
-      // When the mutation is successful, invalidate the 'products' query
-      // This will trigger a re-fetch and update the UI automatically
       queryClient.invalidateQueries({ queryKey: ["products"] });
       addNotification(
         `${productIds.length} product(s) successfully archived.`,

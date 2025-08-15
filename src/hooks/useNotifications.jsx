@@ -8,7 +8,7 @@ import { NotificationContext } from "@/context/NotificationContext";
 const NOTIFICATION_CATEGORIES = {
   low_stock: { id: "low_stock", label: "Low Stock" },
   no_stock: { id: "no_stock", label: "No Stock" },
-  expiring_soon: { id: "expiring_soon", label: "Expiring Soon" }, // <-- ADD THIS LINE
+  expiring_soon: { id: "expiring_soon", label: "Expiring Soon" },
   price_change: { id: "price_change", label: "System" },
   archive: { id: "archive", label: "System" },
   unarchive: { id: "unarchive", label: "System" },

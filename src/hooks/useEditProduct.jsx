@@ -1,3 +1,4 @@
+// src/hooks/useEditProduct.jsx
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import * as api from "@/services/api";
@@ -22,7 +23,6 @@ export const useEditProduct = (product, onSuccess) => {
       if (productError) throw productError;
 
       // 2. Delete existing variants for this product
-      // A simple approach is to delete and re-insert.
       const { error: deleteError } = await api.supabase
         .from("product_variants")
         .delete()

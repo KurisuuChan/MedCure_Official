@@ -27,7 +27,6 @@ export const useArchivedProducts = (addNotification) => {
         .update({ status: "Available" })
         .in("id", productIds),
     onSuccess: (data, productIds) => {
-      // Invalidate both archived and regular product queries to update all lists
       queryClient.invalidateQueries({ queryKey: ["archivedProducts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
 

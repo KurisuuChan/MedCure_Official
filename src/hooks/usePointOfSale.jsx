@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import * as api from "@/services/api";
 import { useNotification } from "@/hooks/useNotifications";
 import { useQueryClient } from "@tanstack/react-query";
+import { getNotificationSettings } from "@/utils/notificationStorage"; // <-- IMPORT ADDED
 
 export const usePointOfSale = (products, isLoading) => {
   const [cart, setCart] = useState([]);
@@ -136,15 +137,46 @@ export const usePointOfSale = (products, isLoading) => {
       const { error: itemsError } = await api.addSaleItems(saleItemsData);
       if (itemsError) throw itemsError;
 
+      await api.addNotification({
+        type: "sale",
+        title: "Sale Successful",
+        description: `Sale #${newSale.id} for ₱${total.toFixed(
+          2
+        )} was completed.`,
+        path: "/point-of-sales",
+      });
+
+      // --- FIX: Check stock and create inventory notifications after sale ---
+      const { lowStockThreshold } = getNotificationSettings();
       for (const item of cart) {
         const product = products.find((p) => p.id === item.id);
         if (product) {
           const piecesSold =
             item.quantity * (item.selectedVariant?.units_per_variant || 1);
           const newQuantity = Math.max(0, product.quantity - piecesSold);
+
+          // Update product in the database
           await api.updateProduct(item.id, { quantity: newQuantity });
+
+          // Check if a notification is needed
+          if (newQuantity === 0) {
+            await api.addNotification({
+              type: "no_stock",
+              title: "Out of Stock",
+              description: `${product.name} is now out of stock.`,
+              path: `/management?highlight=${product.id}`,
+            });
+          } else if (newQuantity <= lowStockThreshold) {
+            await api.addNotification({
+              type: "low_stock",
+              title: "Low Stock Alert",
+              description: `${product.name} has only ${newQuantity} items left.`,
+              path: `/management?highlight=${product.id}`,
+            });
+          }
         }
       }
+      // --- END FIX ---
 
       queryClient.invalidateQueries({ queryKey: ["products"] });
 
