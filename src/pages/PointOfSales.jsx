@@ -105,30 +105,6 @@ const PointOfSales = ({ branding }) => {
       />
       <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-110px)]">
         <div className="flex-1 lg:w-3/5 bg-white p-6 rounded-2xl shadow-lg flex flex-col">
-          {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
-            <div className="mb-4 space-y-2">
-              {outOfStockProducts.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-red-800">
-                      {outOfStockProducts.length} product(s) out of stock
-                    </span>
-                  </div>
-                </div>
-              )}
-              {lowStockProducts.length > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-yellow-800">
-                      {lowStockProducts.length} product(s) running low on stock
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
           <div className="flex items-center gap-4 mb-4 flex-shrink-0">
             <div className="relative flex-1">
               <Search
@@ -152,6 +128,34 @@ const PointOfSales = ({ branding }) => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto -m-2 p-2">
+            {/* --- NEW LOW STOCK ALERT SECTION --- */}
+            {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
+              <div className="mb-4 space-y-2">
+                {outOfStockProducts.length > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-red-800">
+                        {outOfStockProducts.length} product(s) out of stock
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {lowStockProducts.length > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                      <span className="text-sm font-medium text-yellow-800">
+                        {lowStockProducts.length} product(s) running low on
+                        stock
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* --- END OF NEW SECTION --- */}
+
             {productsLoading ? (
               <div className="flex justify-center items-center h-full">
                 <Loader2 className="animate-spin text-blue-500" size={32} />
@@ -159,29 +163,26 @@ const PointOfSales = ({ branding }) => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredProducts.map((med) => {
-                  let stockClass = "text-gray-400";
-                  let stockText = formatStock(
-                    med.quantity,
-                    med.product_variants
-                  );
-                  if (med.quantity === 0) {
-                    stockClass = "text-red-500 font-medium";
-                  } else if (med.quantity <= 10) {
-                    stockClass = "text-yellow-600 font-medium";
-                  }
-
                   return (
                     <div
                       key={med.id}
-                      className="border rounded-lg transition-all duration-200 hover:shadow-md hover:border-blue-400"
+                      // --- MODIFIED LINE: DYNAMIC BORDERS ---
+                      className={`border rounded-lg transition-all duration-200 hover:shadow-md ${
+                        med.quantity === 0
+                          ? "border-red-300 bg-red-50/50"
+                          : med.quantity <= 10
+                          ? "border-yellow-300"
+                          : "hover:border-blue-400"
+                      }`}
                     >
                       <button
                         onClick={() => handleSelectProduct(med)}
                         className={`w-full p-4 text-left transition-all duration-200 ${
                           cart.some((item) => item.id === med.id)
-                            ? "bg-blue-50 border-blue-500 shadow-md"
+                            ? "bg-blue-50"
                             : "hover:bg-gray-50"
                         }`}
+                        disabled={med.quantity === 0} // <-- MODIFIED LINE: Disable button
                       >
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-800 leading-tight">
@@ -194,8 +195,19 @@ const PointOfSales = ({ branding }) => {
                         <p className="text-xs text-gray-500 mb-2">
                           {med.category}
                         </p>
-                        <p className={`text-xs mb-3 ${stockClass}`}>
-                          {stockText}
+                        {/* --- MODIFIED LINE: DYNAMIC STOCK TEXT --- */}
+                        <p
+                          className={`text-xs mb-3 font-medium ${
+                            med.quantity === 0
+                              ? "text-red-600"
+                              : med.quantity <= 10
+                              ? "text-yellow-600"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {med.quantity > 0
+                            ? `${med.quantity} pieces available`
+                            : "Out of Stock"}
                         </p>
                         {med.product_variants &&
                           med.product_variants.length > 1 && (

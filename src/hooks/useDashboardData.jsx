@@ -10,6 +10,13 @@ import {
   PackageX,
   TrendingUp,
 } from "lucide-react";
+import {
+  subDays,
+  startOfMonth,
+  startOfYear,
+  endOfDay,
+  startOfDay,
+} from "date-fns";
 
 // Helper function to determine inventory health
 const getInventoryStatus = (products) => {
@@ -46,8 +53,7 @@ const getInventoryStatus = (products) => {
   };
 };
 
-export const useDashboardData = () => {
-  // Consume our centralized hooks
+export const useDashboardData = (dateRange = "all") => {
   const {
     products,
     isLoading: productsLoading,
@@ -61,11 +67,51 @@ export const useDashboardData = () => {
     isError: salesError,
   } = useSales();
 
-  // useMemo will re-calculate the dashboard data only when products or sales change.
   const dashboardData = useMemo(() => {
     if (!products || !saleItems || !sales) return null;
 
-    // Product-based calculations
+    const now = new Date();
+    let startDate;
+
+    switch (dateRange) {
+      case "today":
+        startDate = startOfDay(now);
+        break;
+      case "7d":
+        startDate = subDays(now, 7);
+        break;
+      case "month":
+        startDate = startOfMonth(now);
+        break;
+      case "year":
+        startDate = startOfYear(now);
+        break;
+      case "all":
+      default:
+        startDate = new Date(0); // A very long time ago
+        break;
+    }
+    const endDate = endOfDay(now);
+
+    const filteredSales = sales.filter((s) => {
+      const saleDate = new Date(s.created_at);
+      return saleDate >= startDate && saleDate <= endDate;
+    });
+
+    const filteredSaleItems = saleItems.filter((item) =>
+      filteredSales.some((s) => s.id === item.sale_id)
+    );
+
+    const salesByHourData = Array.from({ length: 24 }, (_, i) => ({
+      hour: `${i}:00`,
+      sales: 0,
+    }));
+
+    filteredSales.forEach((sale) => {
+      const hour = new Date(sale.created_at).getHours();
+      salesByHourData[hour].sales += sale.total_amount;
+    });
+
     const inventoryStatusInfo = getInventoryStatus(products);
     const medicineAvailable = products.filter(
       (p) => p.status === "Available" && p.quantity > 0
@@ -86,15 +132,14 @@ export const useDashboardData = () => {
       .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate))
       .slice(0, 5);
 
-    // Sales-based calculations
-    const totalProfit = saleItems.reduce((acc, item) => {
+    const totalProfit = filteredSaleItems.reduce((acc, item) => {
       const cost = item.products?.cost_price || 0;
       const revenue = item.price_at_sale;
       const profitPerItem = revenue - cost;
       return acc + profitPerItem * item.quantity;
     }, 0);
 
-    const monthlySales = sales.reduce((acc, sale) => {
+    const monthlySales = filteredSales.reduce((acc, sale) => {
       const month = new Date(sale.created_at).getMonth();
       acc[month] = (acc[month] || 0) + sale.total_amount;
       return acc;
@@ -107,7 +152,7 @@ export const useDashboardData = () => {
       return { month: monthName, sales: monthlySales[i] || 0 };
     });
 
-    const categorySales = saleItems.reduce((acc, item) => {
+    const categorySales = filteredSaleItems.reduce((acc, item) => {
       const category = item.products?.category || "Uncategorized";
       const saleValue = item.quantity * item.price_at_sale;
       acc[category] = (acc[category] || 0) + saleValue;
@@ -117,7 +162,7 @@ export const useDashboardData = () => {
       ([name, value]) => ({ name, value })
     );
 
-    const productSales = saleItems.reduce((acc, item) => {
+    const productSales = filteredSaleItems.reduce((acc, item) => {
       const name = item.products?.name;
       if (name) {
         acc[name] = (acc[name] || 0) + item.quantity;
@@ -143,8 +188,8 @@ export const useDashboardData = () => {
         iconBg: "bg-sky-100",
       },
       {
-        title: "Total Profit",
-        value: `₱${totalProfit.toFixed(2)}`,
+        title: `Profit (${dateRange === "all" ? "All Time" : "Filtered"})`,
+        value: `PHP ${totalProfit.toFixed(2)}`,
         icon: <TrendingUp className="text-green-500" />,
         iconBg: "bg-green-100",
       },
@@ -160,15 +205,16 @@ export const useDashboardData = () => {
       summaryCards,
       monthlyProgressData,
       salesByCategory,
+      salesByHourData,
       expiringSoon,
       lowStockItems,
       bestSellers,
     };
-  }, [products, saleItems, sales]);
+  }, [products, saleItems, sales, dateRange]);
 
   return {
     ...dashboardData,
-    recentSales, // Pass recentSales directly
+    recentSales,
     loading: productsLoading || salesLoading,
     error: productsError || salesError,
   };

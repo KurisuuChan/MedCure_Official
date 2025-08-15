@@ -1,8 +1,7 @@
 // src/pages/Dashboard.jsx
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ChevronDown,
   Clock,
   Star,
   Activity,
@@ -12,23 +11,24 @@ import {
   PackageX,
   Loader2,
 } from "lucide-react";
-import MonthlySalesChart from "@/components/charts/MonthlySalesChart";
 import SalesByCategoryChart from "@/components/charts/SalesByCategoryChart";
+import SalesByHourChart from "@/components/charts/SalesByHourChart";
 import { useDashboardData } from "@/hooks/useDashboardData.jsx";
+import DateRangePicker from "@/components/DateRangePicker";
 
 const Dashboard = () => {
+  const [dateRange, setDateRange] = useState("all");
   const {
     summaryCards,
-    monthlyProgressData,
     salesByCategory,
+    salesByHourData,
     expiringSoon,
     lowStockItems,
     bestSellers,
     recentSales,
     loading,
     error,
-    fetchDashboardData,
-  } = useDashboardData();
+  } = useDashboardData(dateRange);
 
   if (loading) {
     return (
@@ -49,7 +49,7 @@ const Dashboard = () => {
           There was a problem fetching the dashboard data.
         </p>
         <button
-          onClick={fetchDashboardData}
+          onClick={() => window.location.reload()}
           className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-md"
         >
           <RefreshCw size={16} />
@@ -61,6 +61,14 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+        <DateRangePicker
+          selectedRange={dateRange}
+          onRangeChange={setDateRange}
+        />
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {summaryCards.map((card) => {
           const cardContent = (
@@ -80,7 +88,7 @@ const Dashboard = () => {
             </div>
           );
 
-          if (card.title === "Total Profit") {
+          if (card.title.includes("Profit")) {
             return (
               <Link to="/financials" key={card.title}>
                 {cardContent}
@@ -93,15 +101,10 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Monthly Sales
-            </h2>
-            <button className="flex items-center text-gray-600 bg-gray-100 px-3 py-1 rounded-md text-sm hover:bg-gray-200">
-              This Year <ChevronDown size={16} className="ml-1" />
-            </button>
-          </div>
-          <MonthlySalesChart data={monthlyProgressData} />
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            Hourly Sales Performance
+          </h2>
+          <SalesByHourChart data={salesByHourData} />
         </div>
 
         <div className="bg-white p-6 rounded-xl shadow-md">
@@ -206,7 +209,7 @@ const Dashboard = () => {
                     {item.quantity}
                   </td>
                   <td className="py-4 px-4 text-right text-sm text-green-600 font-semibold">
-                    ₱{(item.price_at_sale * item.quantity).toFixed(2)}
+                    PHP {(item.price_at_sale * item.quantity).toFixed(2)}
                   </td>
                   <td className="py-4 px-4 text-right text-sm text-gray-500">
                     {new Date(item.sales.created_at).toLocaleTimeString()}

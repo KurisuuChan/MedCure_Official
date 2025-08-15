@@ -1,5 +1,5 @@
 // src/pages/Financials.jsx
-import React from "react";
+import React, { useState } from "react";
 import { useFinancialsData } from "@/hooks/useFinancialsData.jsx";
 import {
   Landmark,
@@ -11,10 +11,12 @@ import {
   Loader2,
 } from "lucide-react";
 import MonthlySalesChart from "@/components/charts/MonthlySalesChart";
+import DateRangePicker from "@/components/DateRangePicker";
 
 const Financials = () => {
+  const [dateRange, setDateRange] = useState("all");
   const { stats, monthlyProfitData, productProfitability, loading, error } =
-    useFinancialsData();
+    useFinancialsData(dateRange);
 
   if (loading) {
     return (
@@ -40,18 +42,24 @@ const Financials = () => {
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
-      <div className="flex items-center gap-4 mb-8">
-        <div className="p-3 rounded-lg bg-blue-100">
-          <BarChart size={32} className="text-blue-600" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-lg bg-blue-100">
+            <BarChart size={32} className="text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">
+              Financial Overview
+            </h1>
+            <p className="text-gray-500 mt-1">
+              An analysis of your inventory value and profitability.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Financial Overview
-          </h1>
-          <p className="text-gray-500 mt-1">
-            An analysis of your inventory value and profitability.
-          </p>
-        </div>
+        <DateRangePicker
+          selectedRange={dateRange}
+          onRangeChange={setDateRange}
+        />
       </div>
 
       <div className="space-y-8">
@@ -65,7 +73,7 @@ const Financials = () => {
                 Inventory Value (at Cost)
               </p>
               <p className="text-3xl font-bold text-gray-800">
-                ₱{stats.totalInventoryValue.toFixed(2)}
+                PHP {stats.totalInventoryValue.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500">
                 Total cost of all products currently in stock.
@@ -77,12 +85,12 @@ const Financials = () => {
               <Landmark className="w-8 h-8 text-green-500" />
             </div>
             <div>
-              <p className="text-gray-600 font-medium">Net Profit (All Time)</p>
+              <p className="text-gray-600 font-medium">Net Profit (Filtered)</p>
               <p className="text-3xl font-bold text-gray-800">
-                ₱{stats.totalProfit.toFixed(2)}
+                PHP {stats.totalProfit.toFixed(2)}
               </p>
               <p className="text-xs text-gray-500">
-                Total profit from all completed sales.
+                Total profit from sales in the selected period.
               </p>
             </div>
           </div>
@@ -91,19 +99,19 @@ const Financials = () => {
         <div className="border border-gray-200 p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <TrendingUp className="text-indigo-500" />
-            Monthly Profit Trend
+            Monthly Profit Trend (This Year)
           </h2>
           <MonthlySalesChart
             data={monthlyProfitData.map((d) => ({
               month: d.month,
-              sales: d.profit, // Re-using sales prop for profit
+              sales: d.profit,
             }))}
           />
         </div>
 
         <div className="border border-gray-200 p-6 rounded-xl">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Profitability by Product
+            Profitability by Product (Filtered)
           </h2>
           <div className="overflow-x-auto">
             <table className="min-w-full">
@@ -136,14 +144,14 @@ const Financials = () => {
                       {item.totalSold}
                     </td>
                     <td className="py-4 px-4 text-right text-sm text-gray-600">
-                      ₱{item.totalRevenue.toFixed(2)}
+                      PHP {item.totalRevenue.toFixed(2)}
                     </td>
                     <td
                       className={`py-4 px-4 text-right text-sm font-bold ${
                         item.profit > 0 ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      ₱{item.profit.toFixed(2)}
+                      PHP {item.profit.toFixed(2)}
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
