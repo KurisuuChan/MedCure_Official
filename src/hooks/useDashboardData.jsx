@@ -1,7 +1,13 @@
 // src/hooks/useDashboardData.jsx
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts.jsx";
 import { useSales } from "@/hooks/useSales.js";
+import * as api from "@/services/api";
+import {
+  getNotificationSettings,
+  getLowStockTimestamps,
+  setLowStockTimestamps,
+} from "@/utils/notificationStorage";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -16,6 +22,7 @@ import {
   startOfYear,
   endOfDay,
   startOfDay,
+  addDays,
 } from "date-fns";
 
 // Helper function to determine inventory health
@@ -66,6 +73,91 @@ export const useDashboardData = (dateRange = "all") => {
     isLoading: salesLoading,
     isError: salesError,
   } = useSales();
+
+  // Effect to handle automatic inventory notifications
+  useEffect(() => {
+    if (!products || products.length === 0) return;
+
+    const settings = getNotificationSettings();
+    const lowStockTimestamps = getLowStockTimestamps();
+    const now = new Date();
+    const twentyFourHoursAgo = subDays(now, 1);
+
+    const notificationsToAdd = [];
+    const updatedTimestamps = { ...lowStockTimestamps };
+
+    products.forEach((product) => {
+      const lastNotificationTime =
+        updatedTimestamps[product.id] &&
+        new Date(updatedTimestamps[product.id]);
+
+      // --- Check for Low Stock ---
+      if (
+        product.quantity > 0 &&
+        product.quantity <= settings.lowStockThreshold
+      ) {
+        if (
+          !lastNotificationTime ||
+          lastNotificationTime < twentyFourHoursAgo
+        ) {
+          notificationsToAdd.push({
+            type: "low_stock",
+            title: "Low Stock Alert",
+            description: `${product.name} has only ${product.quantity} items left.`,
+            path: `/management?highlight=${product.id}`,
+          });
+          updatedTimestamps[product.id] = now.toISOString();
+        }
+      }
+      // --- Check for No Stock ---
+      else if (product.quantity === 0) {
+        if (
+          !lastNotificationTime ||
+          lastNotificationTime < twentyFourHoursAgo
+        ) {
+          notificationsToAdd.push({
+            type: "no_stock",
+            title: "Out of Stock",
+            description: `${product.name} is now out of stock.`,
+            path: `/management?highlight=${product.id}`,
+          });
+          updatedTimestamps[product.id] = now.toISOString();
+        }
+      }
+      // --- Check for Expiring Soon ---
+      if (
+        settings.enableExpiringSoon &&
+        product.expireDate &&
+        product.quantity > 0
+      ) {
+        const expiryDate = new Date(product.expireDate);
+        const thresholdDate = addDays(now, settings.expiringSoonDays);
+        if (expiryDate <= thresholdDate && expiryDate > now) {
+          const expiryNotifId = `expiry-${product.id}`;
+          if (
+            !lastNotificationTime ||
+            lastNotificationTime < twentyFourHoursAgo
+          ) {
+            notificationsToAdd.push({
+              id: expiryNotifId, // Use a specific ID to avoid duplicates
+              type: "expiring_soon",
+              title: "Expiring Soon",
+              description: `${
+                product.name
+              } will expire on ${expiryDate.toLocaleDateString()}.`,
+              path: `/management?highlight=${product.id}`,
+            });
+            updatedTimestamps[expiryNotifId] = now.toISOString();
+          }
+        }
+      }
+    });
+
+    if (notificationsToAdd.length > 0) {
+      notificationsToAdd.forEach((notif) => api.addNotification(notif));
+      setLowStockTimestamps(updatedTimestamps);
+    }
+  }, [products]);
 
   const dashboardData = useMemo(() => {
     if (!products || !saleItems || !sales) return null;

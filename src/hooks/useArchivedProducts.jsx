@@ -1,7 +1,6 @@
 // src/hooks/useArchivedProducts.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/services/api";
-import { addSystemNotification } from "@/utils/notificationStorage";
 
 export const useArchivedProducts = (addNotification) => {
   const queryClient = useQueryClient();
@@ -36,14 +35,10 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) successfully unarchived.`,
         "success"
       );
-      addSystemNotification({
-        id: `unarchive-${Date.now()}`,
-        iconType: "unarchive",
-        iconBg: "bg-green-100",
+      api.addNotification({
+        type: "unarchive",
         title: "Products Restored",
-        category: "System",
         description: `${productIds.length} product(s) were restored from the archive.`,
-        createdAt: new Date().toISOString(),
         path: "/management",
       });
     },
@@ -62,14 +57,10 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) permanently deleted.`,
         "success"
       );
-      addSystemNotification({
-        id: `delete-${Date.now()}`,
-        iconType: "delete",
-        iconBg: "bg-red-100",
+      api.addNotification({
+        type: "delete",
         title: "Products Deleted",
-        category: "System",
         description: `${productIds.length} product(s) were permanently deleted.`,
-        createdAt: new Date().toISOString(),
         path: "/archived",
       });
     },
