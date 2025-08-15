@@ -2,17 +2,13 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
-import {
-  iconForType,
-  getAccentClass,
-  getIconBgClass,
-} from "@/utils/notifications.jsx";
-import { formatRelativeTime } from "@/utils/timeFormatters.js"; // Import the new formatter
+import { getNotificationConfig } from "@/utils/notifications.jsx";
+import { formatRelativeTime } from "@/utils/timeFormatters.js";
 
 const notificationItemShape = PropTypes.shape({
   id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   path: PropTypes.string,
-  type: PropTypes.string.isRequired, // We will use `type` for the icon
+  type: PropTypes.string.isRequired,
   is_read: PropTypes.bool.isRequired,
   title: PropTypes.string.isRequired,
   description: PropTypes.string,
@@ -21,11 +17,11 @@ const notificationItemShape = PropTypes.shape({
 });
 
 export function NotificationItem({ item, onMarkAsRead, onDismiss }) {
+  const config = getNotificationConfig(item.type);
+
   return (
     <div
-      className={`relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-50 group ${getAccentClass(
-        item.category
-      )}`}
+      className={`relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-50 group ${config.accent}`}
     >
       {!item.is_read && (
         <span
@@ -33,12 +29,8 @@ export function NotificationItem({ item, onMarkAsRead, onDismiss }) {
           title="Unread"
         ></span>
       )}
-      <div
-        className={`flex-shrink-0 p-2 rounded-full ${getIconBgClass(
-          item.category
-        )}`}
-      >
-        {iconForType(item.type)}
+      <div className={`flex-shrink-0 p-2 rounded-full ${config.bg}`}>
+        {config.icon}
       </div>
       <div className="flex-grow">
         <Link

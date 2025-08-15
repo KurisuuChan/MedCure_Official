@@ -1,27 +1,13 @@
-// src/hooks/useNotifications.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/supabase/client";
 import { useEffect, useContext, useMemo } from "react";
 import { NotificationContext } from "@/context/NotificationContext";
+import {
+  NOTIFICATION_CONFIG,
+  getNotificationConfig,
+} from "@/utils/notifications";
 
-// Define categories in a single place for consistency
-const NOTIFICATION_CATEGORIES = {
-  low_stock: { id: "low_stock", label: "Low Stock" },
-  no_stock: { id: "no_stock", label: "No Stock" },
-  expiring_soon: { id: "expiring_soon", label: "Expiring Soon" },
-  price_change: { id: "price_change", label: "System" },
-  archive: { id: "archive", label: "System" },
-  unarchive: { id: "unarchive", label: "System" },
-  delete: { id: "delete", label: "System" },
-  upload: { id: "upload", label: "System" },
-  sale: { id: "sale", label: "Sales" }, // ADDED
-  default: { id: "system", label: "System" },
-};
-
-const getCategory = (type) => {
-  return NOTIFICATION_CATEGORIES[type] || NOTIFICATION_CATEGORIES.default;
-};
-
+// This hook handles fetching and managing notification data
 export function useNotificationHistory() {
   const queryClient = useQueryClient();
 
@@ -41,7 +27,7 @@ export function useNotificationHistory() {
   const notifications = useMemo(() => {
     return rawNotifications.map((n) => ({
       ...n,
-      category: getCategory(n.type).label,
+      category: getNotificationConfig(n.type).label,
     }));
   }, [rawNotifications]);
 
@@ -75,6 +61,7 @@ export function useNotificationHistory() {
     },
   });
 
+  // Real-time subscription for new notifications
   useEffect(() => {
     const channel = supabase
       .channel("notifications-realtime")
@@ -100,7 +87,7 @@ export function useNotificationHistory() {
     const categorySet = new Set(["All"]);
 
     notifications.forEach((n) => {
-      const categoryLabel = getCategory(n.type).label;
+      const categoryLabel = getNotificationConfig(n.type).label;
       counts[categoryLabel] = (counts[categoryLabel] || 0) + 1;
       categorySet.add(categoryLabel);
     });
@@ -135,6 +122,7 @@ export function useNotificationHistory() {
   };
 }
 
+// Hook for accessing the notification context (for toasts)
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (!context) {

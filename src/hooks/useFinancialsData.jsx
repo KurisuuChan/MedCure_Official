@@ -1,4 +1,3 @@
-// src/hooks/useFinancialsData.jsx
 import { useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts.jsx";
 import { useSales } from "@/hooks/useSales.js";
@@ -10,17 +9,19 @@ import {
   startOfDay,
 } from "date-fns";
 
+const defaultFinancialsData = {
+  stats: { totalInventoryValue: 0, totalProfit: 0 },
+  monthlyProfitData: [],
+  productProfitability: [],
+};
+
 export const useFinancialsData = (dateRange = "all") => {
-  const { products, isLoading: productsLoading } = useProducts();
+  const { data: products, isLoading: productsLoading } = useProducts();
   const { sales, saleItems, isLoading: salesLoading } = useSales();
 
   const financials = useMemo(() => {
-    if (!products || !saleItems || !sales) {
-      return {
-        stats: { totalInventoryValue: 0, totalProfit: 0 },
-        monthlyProfitData: [],
-        productProfitability: [],
-      };
+    if (productsLoading || salesLoading || !products || !saleItems || !sales) {
+      return defaultFinancialsData;
     }
 
     const now = new Date();
@@ -69,15 +70,12 @@ export const useFinancialsData = (dateRange = "all") => {
 
     filteredSales.forEach((sale) => {
       const itemsForThisSale = itemsBySaleId.get(sale.id) || [];
-
       const totalCostForSale = itemsForThisSale.reduce((acc, item) => {
         const cost = item.products?.cost_price || 0;
         return acc + cost * item.quantity;
       }, 0);
-
       const netProfitForSale = sale.total_amount - totalCostForSale;
       totalProfit += netProfitForSale;
-
       const month = new Date(sale.created_at).getMonth();
       monthlyProfit[month] += netProfitForSale;
     });
@@ -125,7 +123,7 @@ export const useFinancialsData = (dateRange = "all") => {
       monthlyProfitData,
       productProfitability,
     };
-  }, [products, saleItems, sales, dateRange]);
+  }, [products, saleItems, sales, dateRange, productsLoading, salesLoading]);
 
   return {
     ...financials,

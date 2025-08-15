@@ -1,9 +1,9 @@
-// src/App.jsx
 import React, { Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import LoadingScreen from "./layouts/LoadingScreen";
 import FullLayout from "./layouts/FullLayout";
 import AuthLayout from "./layouts/AuthLayout";
+import ErrorBoundary from "@/components/ErrorBoundary"; // Import the new ErrorBoundary
 
 const App = () => {
   const {
@@ -20,18 +20,20 @@ const App = () => {
   }
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      {isLoggedIn ? (
-        <FullLayout
-          branding={branding}
-          user={user}
-          handleLogout={handleLogout}
-          onUpdate={fetchSessionAndBranding}
-        />
-      ) : (
-        <AuthLayout onLogin={fetchSessionAndBranding} branding={branding} />
-      )}
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingScreen />}>
+        {isLoggedIn ? (
+          <FullLayout
+            branding={branding}
+            user={user}
+            handleLogout={handleLogout}
+            onUpdate={fetchSessionAndBranding}
+          />
+        ) : (
+          <AuthLayout onLogin={fetchSessionAndBranding} branding={branding} />
+        )}
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 

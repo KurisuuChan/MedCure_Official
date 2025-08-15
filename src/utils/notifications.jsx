@@ -6,65 +6,74 @@ import {
   PackageX,
   Tag,
   UploadCloud,
-  Clock,          // ADDED
-  ShoppingCart,   // ADDED
+  Clock,
+  ShoppingCart,
 } from "lucide-react";
 
-// This now matches the labels defined in useNotifications.jsx
-export const getAccentClass = (category) => {
-  switch (category) {
-    case "Low Stock":
-      return "border-l-4 border-yellow-400";
-    case "No Stock":
-      return "border-l-4 border-red-500";
-    case "Expiring Soon":            // ADDED
-      return "border-l-4 border-orange-400";
-    case "Sales":                    // ADDED
-      return "border-l-4 border-green-500";
-    case "System":
-      return "border-l-4 border-gray-300";
-    default:
-      return "border-l-4 border-blue-400";
-  }
+// Centralized map for notification categories and their properties
+export const NOTIFICATION_CONFIG = {
+  low_stock: {
+    label: "Low Stock",
+    icon: <AlertTriangle className="text-yellow-500" />,
+    accent: "border-l-4 border-yellow-400",
+    bg: "bg-yellow-100",
+  },
+  no_stock: {
+    label: "No Stock",
+    icon: <PackageX className="text-red-500" />,
+    accent: "border-l-4 border-red-500",
+    bg: "bg-red-100",
+  },
+  expiring_soon: {
+    label: "Expiring Soon",
+    icon: <Clock className="text-orange-500" />,
+    accent: "border-l-4 border-orange-400",
+    bg: "bg-orange-100",
+  },
+  sale: {
+    label: "Sales",
+    icon: <ShoppingCart className="text-green-600" />,
+    accent: "border-l-4 border-green-500",
+    bg: "bg-green-100",
+  },
+  price_change: {
+    label: "System",
+    icon: <Tag className="text-blue-600" />,
+    accent: "border-l-4 border-blue-400",
+    bg: "bg-blue-100",
+  },
+  archive: {
+    label: "System",
+    icon: <Archive className="text-purple-500" />,
+    accent: "border-l-4 border-blue-400",
+    bg: "bg-blue-100",
+  },
+  unarchive: {
+    label: "System",
+    icon: <Archive className="text-purple-500" />,
+    accent: "border-l-4 border-blue-400",
+    bg: "bg-blue-100",
+  },
+  delete: {
+    label: "System",
+    icon: <Archive className="text-purple-500" />,
+    accent: "border-l-4 border-blue-400",
+    bg: "bg-blue-100",
+  },
+  upload: {
+    label: "System",
+    icon: <UploadCloud className="text-green-500" />,
+    accent: "border-l-4 border-blue-400",
+    bg: "bg-blue-100",
+  },
+  default: {
+    label: "System",
+    icon: <Bell className="text-gray-500" />,
+    accent: "border-l-4 border-gray-300",
+    bg: "bg-gray-100",
+  },
 };
 
-export const getIconBgClass = (category) => {
-  switch (category) {
-    case "Low Stock":
-      return "bg-yellow-100";
-    case "No Stock":
-      return "bg-red-100";
-    case "Expiring Soon":            // ADDED
-      return "bg-orange-100";
-    case "Sales":                    // ADDED
-      return "bg-green-100";
-    case "System":
-      return "bg-blue-100";
-    default:
-      return "bg-gray-100";
-  }
-};
-
-// This uses `type` from the database, which is correct
-export const iconForType = (type) => {
-  switch (type) {
-    case "upload":
-      return <UploadCloud className="text-green-500" />;
-    case "archive":
-    case "unarchive":
-    case "delete":
-      return <Archive className="text-purple-500" />;
-    case "price_change":
-      return <Tag className="text-blue-600" />;
-    case "low_stock":
-      return <AlertTriangle className="text-yellow-500" />;
-    case "no_stock":
-      return <PackageX className="text-red-500" />;
-    case "expiring_soon":                // ADDED
-      return <Clock className="text-orange-500" />;
-    case "sale":                         // ADDED
-      return <ShoppingCart className="text-green-600" />;
-    default:
-      return <Bell className="text-gray-500" />;
-  }
+export const getNotificationConfig = (type) => {
+  return NOTIFICATION_CONFIG[type] || NOTIFICATION_CONFIG.default;
 };

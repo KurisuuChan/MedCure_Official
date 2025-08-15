@@ -1,8 +1,7 @@
-// src/hooks/useDashboardData.jsx
 import { useEffect, useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts.jsx";
 import { useSales } from "@/hooks/useSales.js";
-import * as api from "@/services/api";
+import { supabase } from "@/supabase/client"; // Corrected import
 import {
   getNotificationSettings,
   getLowStockTimestamps,
@@ -27,14 +26,14 @@ import {
 
 // Helper function to determine inventory health
 const getInventoryStatus = (products) => {
-  const totalProducts = products.length;
-  if (totalProducts === 0) {
+  if (!products || products.length === 0) {
     return {
       level: "N/A",
       icon: <ShieldAlert className="text-gray-500" />,
       iconBg: "bg-gray-100",
     };
   }
+  const totalProducts = products.length;
   const outOfStock = products.filter((p) => p.quantity === 0).length;
   const lowStock = products.filter(
     (p) => p.quantity > 0 && p.quantity <= 10
@@ -60,21 +59,57 @@ const getInventoryStatus = (products) => {
   };
 };
 
+// Provides a safe, default structure to prevent rendering errors
+const defaultDashboardData = {
+  summaryCards: [
+    {
+      title: "Inventory Status",
+      value: "Loading...",
+      icon: <ShieldAlert className="text-gray-500" />,
+      iconBg: "bg-gray-100",
+    },
+    {
+      title: "Medicines Available",
+      value: "...",
+      icon: <Pill className="text-sky-500" />,
+      iconBg: "bg-sky-100",
+    },
+    {
+      title: "Profit",
+      value: "...",
+      icon: <TrendingUp className="text-green-500" />,
+      iconBg: "bg-green-100",
+    },
+    {
+      title: "Out of Stock",
+      value: "...",
+      icon: <PackageX className="text-rose-500" />,
+      iconBg: "bg-rose-100",
+    },
+  ],
+  monthlyProgressData: [],
+  salesByCategory: [],
+  salesByHourData: [],
+  expiringSoon: [],
+  lowStockItems: [],
+  bestSellers: [],
+};
+
 export const useDashboardData = (dateRange = "all") => {
   const {
-    products,
+    data: products,
     isLoading: productsLoading,
     isError: productsError,
   } = useProducts();
   const {
-    saleItems,
     sales,
+    saleItems,
     recentSales,
     isLoading: salesLoading,
     isError: salesError,
   } = useSales();
 
-  // Effect to handle automatic inventory notifications
+  // Effect for automatic inventory notifications
   useEffect(() => {
     if (!products || products.length === 0) return;
 
@@ -82,7 +117,6 @@ export const useDashboardData = (dateRange = "all") => {
     const lowStockTimestamps = getLowStockTimestamps();
     const now = new Date();
     const twentyFourHoursAgo = subDays(now, 1);
-
     const notificationsToAdd = [];
     const updatedTimestamps = { ...lowStockTimestamps };
 
@@ -91,7 +125,6 @@ export const useDashboardData = (dateRange = "all") => {
         updatedTimestamps[product.id] &&
         new Date(updatedTimestamps[product.id]);
 
-      // --- Check for Low Stock ---
       if (
         product.quantity > 0 &&
         product.quantity <= settings.lowStockThreshold
@@ -108,9 +141,7 @@ export const useDashboardData = (dateRange = "all") => {
           });
           updatedTimestamps[product.id] = now.toISOString();
         }
-      }
-      // --- Check for No Stock ---
-      else if (product.quantity === 0) {
+      } else if (product.quantity === 0) {
         if (
           !lastNotificationTime ||
           lastNotificationTime < twentyFourHoursAgo
@@ -124,7 +155,7 @@ export const useDashboardData = (dateRange = "all") => {
           updatedTimestamps[product.id] = now.toISOString();
         }
       }
-      // --- Check for Expiring Soon ---
+
       if (
         settings.enableExpiringSoon &&
         product.expireDate &&
@@ -137,7 +168,6 @@ export const useDashboardData = (dateRange = "all") => {
           const lastExpiryNotificationTime =
             updatedTimestamps[expiryNotifId] &&
             new Date(updatedTimestamps[expiryNotifId]);
-
           if (
             !lastExpiryNotificationTime ||
             lastExpiryNotificationTime < twentyFourHoursAgo
@@ -157,17 +187,19 @@ export const useDashboardData = (dateRange = "all") => {
     });
 
     if (notificationsToAdd.length > 0) {
-      notificationsToAdd.forEach((notif) => api.addNotification(notif));
+      supabase.from("notifications").insert(notificationsToAdd).then();
       setLowStockTimestamps(updatedTimestamps);
     }
   }, [products]);
 
   const dashboardData = useMemo(() => {
-    if (!products || !saleItems || !sales) return null;
+    // **CRITICAL FIX**: Return the default shape if data is not ready.
+    if (productsLoading || salesLoading || !products || !saleItems || !sales) {
+      return defaultDashboardData;
+    }
 
     const now = new Date();
     let startDate;
-
     switch (dateRange) {
       case "today":
         startDate = startOfDay(now);
@@ -181,9 +213,8 @@ export const useDashboardData = (dateRange = "all") => {
       case "year":
         startDate = startOfYear(now);
         break;
-      case "all":
       default:
-        startDate = new Date(0); // A very long time ago
+        startDate = new Date(0);
         break;
     }
     const endDate = endOfDay(now);
@@ -201,7 +232,6 @@ export const useDashboardData = (dateRange = "all") => {
       hour: `${i}:00`,
       sales: 0,
     }));
-
     filteredSales.forEach((sale) => {
       const hour = new Date(sale.created_at).getHours();
       salesByHourData[hour].sales += sale.total_amount;
@@ -212,45 +242,15 @@ export const useDashboardData = (dateRange = "all") => {
       (p) => p.status === "Available" && p.quantity > 0
     ).length;
     const outOfStockCount = products.filter((p) => p.quantity === 0).length;
-    const lowStockItems = products
-      .filter((p) => p.quantity > 0 && p.quantity <= 10)
-      .slice(0, 5);
-
-    const today = new Date();
-    const thirtyDaysFromNow = new Date();
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
-    const expiringSoon = products
-      .filter((p) => {
-        const expiryDate = new Date(p.expireDate);
-        return expiryDate > today && expiryDate <= thirtyDaysFromNow;
-      })
-      .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate))
-      .slice(0, 5);
 
     const totalProfit = filteredSaleItems.reduce((acc, item) => {
       const cost = item.products?.cost_price || 0;
-      const revenue = item.price_at_sale;
-      const profitPerItem = revenue - cost;
-      return acc + profitPerItem * item.quantity;
+      return acc + item.price_at_sale * item.quantity - cost * item.quantity;
     }, 0);
-
-    const monthlySales = filteredSales.reduce((acc, sale) => {
-      const month = new Date(sale.created_at).getMonth();
-      acc[month] = (acc[month] || 0) + sale.total_amount;
-      return acc;
-    }, {});
-
-    const monthlyProgressData = Array.from({ length: 12 }, (_, i) => {
-      const monthName = new Date(0, i).toLocaleString("default", {
-        month: "short",
-      });
-      return { month: monthName, sales: monthlySales[i] || 0 };
-    });
 
     const categorySales = filteredSaleItems.reduce((acc, item) => {
       const category = item.products?.category || "Uncategorized";
-      const saleValue = item.quantity * item.price_at_sale;
-      acc[category] = (acc[category] || 0) + saleValue;
+      acc[category] = (acc[category] || 0) + item.quantity * item.price_at_sale;
       return acc;
     }, {});
     const salesByCategory = Object.entries(categorySales).map(
@@ -259,9 +259,7 @@ export const useDashboardData = (dateRange = "all") => {
 
     const productSales = filteredSaleItems.reduce((acc, item) => {
       const name = item.products?.name;
-      if (name) {
-        acc[name] = (acc[name] || 0) + item.quantity;
-      }
+      if (name) acc[name] = (acc[name] || 0) + item.quantity;
       return acc;
     }, {});
     const bestSellers = Object.entries(productSales)
@@ -298,14 +296,23 @@ export const useDashboardData = (dateRange = "all") => {
 
     return {
       summaryCards,
-      monthlyProgressData,
       salesByCategory,
       salesByHourData,
-      expiringSoon,
-      lowStockItems,
+      expiringSoon: products
+        .filter(
+          (p) =>
+            p.expireDate &&
+            new Date(p.expireDate) > new Date() &&
+            new Date(p.expireDate) < addDays(new Date(), 30)
+        )
+        .sort((a, b) => new Date(a.expireDate) - new Date(b.expireDate))
+        .slice(0, 5),
+      lowStockItems: products
+        .filter((p) => p.quantity > 0 && p.quantity <= 10)
+        .slice(0, 5),
       bestSellers,
     };
-  }, [products, saleItems, sales, dateRange]);
+  }, [products, saleItems, sales, dateRange, productsLoading, salesLoading]);
 
   return {
     ...dashboardData,

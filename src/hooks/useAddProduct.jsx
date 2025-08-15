@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import * as api from "@/services/api";
+import { supabase } from "@/supabase/client"; // CORRECT IMPORT for direct Supabase calls
 import { useNotification } from "@/hooks/useNotifications";
 
 const initialFormState = {
@@ -12,7 +12,7 @@ const initialFormState = {
   expireDate: "",
   productType: "Medicine",
   description: "",
-  supplier: "", // <-- ADDED THIS LINE
+  supplier: "",
 };
 
 const initialVariantState = [
@@ -40,7 +40,7 @@ export const useAddProduct = (onSuccess) => {
     mutationFn: async (newProductData) => {
       const { product, variants } = newProductData;
 
-      const { data: insertedProduct, error: productError } = await api.supabase
+      const { data: insertedProduct, error: productError } = await supabase
         .from("products")
         .insert([product])
         .select()
@@ -52,7 +52,7 @@ export const useAddProduct = (onSuccess) => {
           ...v,
           product_id: insertedProduct.id,
         }));
-        const { error: variantsError } = await api.supabase
+        const { error: variantsError } = await supabase
           .from("product_variants")
           .insert(variantsToInsert);
         if (variantsError) throw variantsError;
@@ -81,12 +81,14 @@ export const useAddProduct = (onSuccess) => {
       return;
     }
 
-    const { data: lastProduct } = await api.supabase
+    // **CRITICAL FIX**: Use the imported 'supabase' client directly.
+    const { data: lastProduct } = await supabase
       .from("products")
       .select("id")
       .order("id", { ascending: false })
       .limit(1)
       .single();
+
     const nextId = lastProduct ? lastProduct.id + 1 : 1;
     const today = new Date();
     const datePart = `${String(today.getMonth() + 1).padStart(2, "0")}${String(
@@ -110,7 +112,11 @@ export const useAddProduct = (onSuccess) => {
           : "Unavailable",
     };
 
-    const variantsToInsert = variants.map(({ id, ...rest }) => rest);
+    // Strip out the temporary variant id before insertion
+    const variantsToInsert = variants.map((v) => {
+      const { id, ...withoutId } = v; // eslint-disable-line no-unused-vars
+      return withoutId;
+    });
 
     addProductMutation.mutate({
       product: productToInsert,

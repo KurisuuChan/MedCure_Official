@@ -1,50 +1,28 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import * as api from "@/services/api";
+import { useQuery } from "@tanstack/react-query";
+import { productsApi } from "@/services/api/productsApi";
 
-export const useProducts = (addNotification) => {
-  const queryClient = useQueryClient();
+const FIVE_MINUTES = 5 * 60 * 1000;
 
-  // Query to fetch all non-archived products
-  const {
-    data: products = [],
-    isLoading,
-    isError,
-  } = useQuery({
+export const useProducts = () => {
+  return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { data, error } = await api.getProducts();
-      if (error) throw new Error(error.message);
-      return data || [];
+      const { data, error } = await productsApi.list();
+      if (error) throw error;
+      return data;
     },
+    staleTime: FIVE_MINUTES,
   });
+};
 
-  // Mutation for archiving products
-  const archiveProductsMutation = useMutation({
-    mutationFn: (productIds) => api.archiveProducts(productIds),
-    onSuccess: (data, productIds) => {
-      // When the mutation is successful, invalidate the 'products' query
-      // This will trigger a re-fetch and update the UI automatically
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      addNotification(
-        `${productIds.length} product(s) successfully archived.`,
-        "success"
-      );
-      api.addNotification({
-        type: "archive",
-        title: "Products Archived",
-        description: `${productIds.length} product(s) were archived.`,
-        path: "/archived",
-      });
+export const useArchivedProducts = () => {
+  return useQuery({
+    queryKey: ["archivedProducts"],
+    queryFn: async () => {
+      const { data, error } = await productsApi.listArchived();
+      if (error) throw error;
+      return data;
     },
-    onError: (error) => {
-      addNotification(`Error: ${error.message}`, "error");
-    },
+    staleTime: FIVE_MINUTES,
   });
-
-  return {
-    products,
-    isLoading,
-    isError,
-    archiveProducts: archiveProductsMutation.mutate,
-  };
 };

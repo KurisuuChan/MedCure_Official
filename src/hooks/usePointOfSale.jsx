@@ -1,4 +1,3 @@
-// src/hooks/usePointOfSale.jsx
 import { useState, useMemo } from "react";
 import * as api from "@/services/api";
 import { useNotification } from "@/hooks/useNotifications";
@@ -90,7 +89,8 @@ export const usePointOfSale = (products, isLoading) => {
   }, [cart, isDiscounted]);
 
   const filteredProducts = useMemo(() => {
-    const availableProducts = products.filter(
+    const availableProducts = (products || []).filter(
+      // Defensive check
       (p) => p.quantity > 0 && p.status === "Available"
     );
     if (!searchTerm) {
@@ -105,11 +105,11 @@ export const usePointOfSale = (products, isLoading) => {
   }, [products, searchTerm]);
 
   const lowStockProducts = useMemo(
-    () => products.filter((p) => p.quantity > 0 && p.quantity <= 10),
+    () => (products || []).filter((p) => p.quantity > 0 && p.quantity <= 10),
     [products]
   );
   const outOfStockProducts = useMemo(
-    () => products.filter((p) => p.quantity === 0),
+    () => (products || []).filter((p) => p.quantity === 0),
     [products]
   );
 

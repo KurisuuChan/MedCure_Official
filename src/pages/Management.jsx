@@ -1,11 +1,10 @@
-// src/pages/Management.jsx
 import React, { useState, useEffect } from "react";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
-import { useNotification } from "@/hooks/useNotifications";
-import { useProducts } from "@/hooks/useProducts"; // <-- Import the new hook
+import { useProducts } from "@/hooks/useProducts";
+import { useProductMutations } from "@/hooks/useProductMutations.jsx";
 
-// Modals and other components remain the same
+// Modals and other components
 import AddProductModal from "@/dialogs/AddProductModal";
 import EditProductModal from "@/dialogs/EditProductModal";
 import ViewProductModal from "@/dialogs/ViewProductModal";
@@ -17,9 +16,10 @@ import ProductTable from "./modules/ProductTable";
 import { WifiOff, RefreshCw } from "lucide-react";
 
 const Management = () => {
-  const { addNotification } = useNotification();
-  const { products, isLoading, isError, archiveProducts } =
-    useProducts(addNotification); // <-- Use the new hook
+  const { data: products = [], isLoading, isError, refetch } = useProducts();
+  const { archiveProducts } = useProductMutations({
+    onSuccess: () => setSelectedItems([]), // Clear selection on success
+  });
 
   const [selectedItems, setSelectedItems] = useState([]);
   const [modals, setModals] = useState({
@@ -34,9 +34,6 @@ const Management = () => {
     status: "All",
     productType: "All",
   });
-
-  // The rest of your state and functions for filtering, modals, etc. remain here for now.
-  // We've only replaced the data fetching and archiving logic.
 
   const filteredProducts = React.useMemo(() => {
     return (products || []).filter((product) => {
@@ -65,9 +62,7 @@ const Management = () => {
 
   const handleArchiveSelected = () => {
     if (selectedItems.length > 0) {
-      archiveProducts(selectedItems, {
-        onSuccess: () => setSelectedItems([]), // Clear selection on success
-      });
+      archiveProducts(selectedItems);
     }
   };
 
@@ -79,11 +74,6 @@ const Management = () => {
   const closeModal = (modalName) => {
     setModals((prev) => ({ ...prev, [modalName]: false }));
     setSelectedProduct(null);
-  };
-
-  const fetchProducts = () => {
-    // This function can be removed or repurposed to invalidate the query if needed
-    // For now, React Query handles refetching automatically.
   };
 
   if (isLoading)
@@ -99,7 +89,7 @@ const Management = () => {
           There was a problem fetching the data.
         </p>
         <button
-          onClick={() => queryClient.invalidateQueries(["products"])}
+          onClick={() => refetch()}
           className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg"
         >
           <RefreshCw size={16} /> Try Again
@@ -112,12 +102,12 @@ const Management = () => {
       <AddProductModal
         isOpen={modals.add}
         onClose={() => closeModal("add")}
-        onProductAdded={fetchProducts}
+        onProductAdded={refetch}
       />
       <ImportCSVModal
         isOpen={modals.import}
         onClose={() => closeModal("import")}
-        onImportSuccess={fetchProducts}
+        onImportSuccess={refetch}
       />
       <ExportPDFModal
         isOpen={modals.export}
@@ -130,7 +120,7 @@ const Management = () => {
             isOpen={modals.edit}
             onClose={() => closeModal("edit")}
             product={selectedProduct}
-            onProductUpdated={fetchProducts}
+            onProductUpdated={refetch}
           />
           <ViewProductModal
             isOpen={modals.view}
@@ -167,7 +157,7 @@ const Management = () => {
           searchedProducts={searchedProducts}
           onViewProduct={(product) => openModal("view", product)}
           onEditProduct={(product) => openModal("edit", product)}
-          highlightedRow={null} // Highlighting logic can be revisited
+          highlightedRow={null}
         />
         <PaginationComponent />
       </div>
