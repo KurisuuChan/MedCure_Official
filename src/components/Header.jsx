@@ -1,11 +1,20 @@
 // src/components/Header.jsx
 import React, { useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
-import { Search, Bell, User, ChevronDown, LogOut } from "lucide-react";
+import {
+  Search,
+  Bell,
+  User,
+  ChevronDown,
+  LogOut,
+  PackagePlus,
+  FileUp,
+  FileDown,
+} from "lucide-react";
 import { useNotificationHistory } from "@/hooks/useNotifications.jsx";
 import NotificationsDropdown from "./notifications/NotificationsDropdown";
 
-const Header = ({ handleLogout, user }) => {
+const Header = ({ handleLogout, user, onAddProduct, onImport, onExport }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
@@ -50,7 +59,34 @@ const Header = ({ handleLogout, user }) => {
           />
         </div>
 
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-4">
+          {/* Quick Action Buttons */}
+          <div className="hidden sm:flex items-center gap-2">
+            <button
+              onClick={onImport}
+              title="Import CSV"
+              className="p-2.5 text-gray-500 rounded-full hover:bg-gray-100 hover:text-blue-600 transition-colors"
+            >
+              <FileUp size={20} />
+            </button>
+            <button
+              onClick={onExport}
+              title="Export PDF"
+              className="p-2.5 text-gray-500 rounded-full hover:bg-gray-100 hover:text-blue-600 transition-colors"
+            >
+              <FileDown size={20} />
+            </button>
+            <button
+              onClick={onAddProduct}
+              title="Add New Product"
+              className="p-2.5 text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              <PackagePlus size={20} />
+            </button>
+          </div>
+
+          <div className="h-6 border-l border-gray-200 mx-2 hidden sm:block"></div>
+
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setNotificationsOpen(!notificationsOpen)}
@@ -114,6 +150,9 @@ const Header = ({ handleLogout, user }) => {
 Header.propTypes = {
   handleLogout: PropTypes.func.isRequired,
   user: PropTypes.object,
+  onAddProduct: PropTypes.func,
+  onImport: PropTypes.func,
+  onExport: PropTypes.func,
 };
 
 export default Header;
