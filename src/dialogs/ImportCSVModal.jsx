@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
 import { UploadCloud, FileText, X, Download } from "lucide-react";
 import { useNotification } from "@/hooks/useNotifications";
-import { addSystemNotification } from "@/utils/notificationStorage";
+import * as api from "@/services/api";
 
 // Helper to create a single variant entry
 const createVariantEntry = (unitType, price, units, isDefault = false) => {
@@ -184,14 +184,10 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           }
         }
 
-        addSystemNotification({
-          id: `csv-${Date.now()}`,
-          iconType: "upload",
-          iconBg: "bg-green-100",
+        api.addNotification({
+          type: "upload",
           title: "CSV Import Successful",
-          category: "System",
           description: `${productsToProcess.length} products were successfully imported.`,
-          createdAt: new Date().toISOString(),
           path: "/management",
         });
 

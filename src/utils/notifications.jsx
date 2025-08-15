@@ -22,6 +22,19 @@ export const getAccentClass = (category) => {
   }
 };
 
+export const getIconBgClass = (category) => {
+  switch (category) {
+    case "Low Stock":
+      return "bg-yellow-100";
+    case "No Stock":
+      return "bg-red-100";
+    case "System":
+      return "bg-blue-100";
+    default:
+      return "bg-gray-100";
+  }
+};
+
 // This uses `type` from the database, which is correct
 export const iconForType = (type) => {
   switch (type) {

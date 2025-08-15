@@ -2,7 +2,11 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
-import { iconForType } from "@/utils/notifications.jsx";
+import {
+  iconForType,
+  getAccentClass,
+  getIconBgClass,
+} from "@/utils/notifications.jsx";
 import { formatRelativeTime } from "@/utils/timeFormatters.js"; // Import the new formatter
 
 const notificationItemShape = PropTypes.shape({
@@ -13,27 +17,27 @@ const notificationItemShape = PropTypes.shape({
   title: PropTypes.string.isRequired,
   description: PropTypes.string,
   created_at: PropTypes.string.isRequired,
+  category: PropTypes.string.isRequired,
 });
 
 export function NotificationItem({ item, onMarkAsRead, onDismiss }) {
-  const accentColors = {
-    "Low Stock": "bg-yellow-100",
-    "No Stock": "bg-red-100",
-    System: "bg-blue-100",
-    Default: "bg-gray-100",
-  };
-
-  const iconBgClass = accentColors[item.category] || accentColors.Default;
-
   return (
-    <div className="relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-50 group">
+    <div
+      className={`relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-50 group ${getAccentClass(
+        item.category
+      )}`}
+    >
       {!item.is_read && (
         <span
           className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full"
           title="Unread"
         ></span>
       )}
-      <div className={`flex-shrink-0 p-2 rounded-full ${iconBgClass}`}>
+      <div
+        className={`flex-shrink-0 p-2 rounded-full ${getIconBgClass(
+          item.category
+        )}`}
+      >
         {iconForType(item.type)}
       </div>
       <div className="flex-grow">

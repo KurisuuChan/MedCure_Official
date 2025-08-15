@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/services/api";
-import { addSystemNotification } from "@/utils/notificationStorage";
 
 export const useProducts = (addNotification) => {
   const queryClient = useQueryClient();
@@ -30,14 +29,10 @@ export const useProducts = (addNotification) => {
         `${productIds.length} product(s) successfully archived.`,
         "success"
       );
-      addSystemNotification({
-        id: `archive-${Date.now()}`,
-        iconType: "archive",
-        iconBg: "bg-purple-100",
+      api.addNotification({
+        type: "archive",
         title: "Products Archived",
-        category: "System",
         description: `${productIds.length} product(s) were archived.`,
-        createdAt: new Date().toISOString(),
         path: "/archived",
       });
     },

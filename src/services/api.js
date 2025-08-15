@@ -192,3 +192,19 @@ export const resetFinancials = async () => {
 
   return { error: null };
 };
+
+// Suppliers
+export const getSuppliers = async () => {
+  const { data, error } = await supabase.from("suppliers").select("*");
+  if (error) throw new Error(error.message);
+  return data;
+};
+
+export const addSupplier = (supplierData) =>
+  supabase.from("suppliers").insert([supplierData]).select().single();
+
+export const updateSupplier = (id, supplierData) =>
+  supabase.from("suppliers").update(supplierData).eq("id", id);
+
+export const deleteSupplier = (id) =>
+  supabase.from("suppliers").delete().eq("id", id);

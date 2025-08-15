@@ -2,46 +2,11 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { useNotificationHistory } from "@/hooks/useNotifications.jsx";
-import { Link } from "react-router-dom";
 import { Bell, Loader2 } from "lucide-react";
-import { getAccentClass, iconForType } from "@/utils/notifications";
-
-const NotificationItem = ({ item, onMarkAsRead }) => (
-  <Link
-    to={item.path || "#"}
-    onClick={() => onMarkAsRead(item.id)}
-    className={`flex items-start gap-4 p-4 transition-colors group ${getAccentClass(
-      item.type
-    )} ${
-      !item.is_read
-        ? "bg-blue-50 hover:bg-blue-100"
-        : "bg-white hover:bg-gray-50"
-    }`}
-  >
-    <div
-      className={`flex-shrink-0 p-3 rounded-full ${
-        item.iconBg || "bg-gray-100"
-      }`}
-    >
-      {iconForType(item.type)}
-    </div>
-    <div className="flex-grow">
-      <p className="font-semibold text-gray-900">{item.title}</p>
-      <p className="text-sm text-gray-600">{item.description}</p>
-      <p className="text-xs text-gray-400 mt-1">
-        {new Date(item.created_at).toLocaleString()}
-      </p>
-    </div>
-  </Link>
-);
-
-NotificationItem.propTypes = {
-  item: PropTypes.object.isRequired,
-  onMarkAsRead: PropTypes.func.isRequired,
-};
+import { NotificationItem } from "@/components/notifications/NotificationItem";
 
 const NotificationHistory = () => {
-  const { notifications, loading, groupedByDate, markAsRead } =
+  const { notifications, loading, groupedByDate, markAsRead, dismiss } =
     useNotificationHistory();
 
   // --- FIX: Moved rendering logic into a separate function for clarity ---
@@ -85,6 +50,7 @@ const NotificationHistory = () => {
                     key={item.id}
                     item={item}
                     onMarkAsRead={markAsRead}
+                    onDismiss={dismiss}
                   />
                 ))}
               </div>
