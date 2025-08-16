@@ -1,4 +1,4 @@
-###💊 MedCure: Your Modern Pharmacy Management System
+\#\#\#💊 MedCure: Your Modern Pharmacy Management System
 
 A sleek, intuitive, and highly efficient solution designed to streamline pharmacy operations. MedCure offers a powerful set of tools for managing inventory, accelerating sales, and maintaining secure user data.
 
@@ -9,6 +9,7 @@ A sleek, intuitive, and highly efficient solution designed to streamline pharmac
   * **Real-time Dashboard:** Gain instant insights into your business with a dynamic dashboard featuring cards for inventory status, available medicines, total profit, and out-of-stock items.
   * **Intuitive Point of Sales (POS):** A fast and easy-to-use interface for processing sales transactions. It includes features like product search, quantity management, and an integrated discount for PWD/Seniors. You can also view a full sales history and generate official receipts on the fly.
   * **Robust Inventory Management:** Take full control of your stock with a dedicated management page. You can add, edit, and view product details through modals. The system also supports bulk importing of products via CSV and exporting comprehensive inventory reports as PDFs.
+  * **Financial Overview:** Analyze your pharmacy's financial health with a dedicated page for tracking inventory value, lifetime profit, and monthly profit trends. You can also view profitability by product.
   * **Secure Authentication:** User logins and management are handled securely via Supabase, a powerful open-source Firebase alternative.
   * **Customizable Settings:** Personalize the app's appearance and functionality. Update your profile, manage branding (name and logo), and configure security and notification settings.
   * **Archived Products:** Easily restore products that have been archived from the main inventory.
@@ -45,7 +46,7 @@ Follow these steps to get MedCure up and running on your local machine.
 3.  **Set up your environment variables:**
 
       * Create a `.env` file in the root of the project.
-      * Add your Supabase URL and Anon Key.
+      * Add your Supabase URL and Anon Key from your Supabase project settings.
 
     <!-- end list -->
 
@@ -68,4 +69,3 @@ In the project directory, you can run:
     Serves the production build locally for a preview.
   * `npm run lint`
     Lints the project files for code style issues.
-](https://github.com/KurisuuChan/MedCure_Official)
