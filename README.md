@@ -1,4 +1,4 @@
-### 💊 MedCure: Your Modern Pharmacy Management System
+[### 💊 MedCure: Your Modern Pharmacy Management System
 
 A sleek, intuitive, and highly efficient solution designed to streamline pharmacy operations. MedCure offers a powerful set of tools for managing inventory, accelerating sales, and maintaining secure user data.
 
@@ -68,3 +68,4 @@ In the project directory, you can run:
     Serves the production build locally for a preview.
   * `npm run lint`
     Lints the project files for code style issues.
+](https://github.com/KurisuuChan/MedCure_Official)
