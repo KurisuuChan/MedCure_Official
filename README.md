@@ -1,3 +1,5 @@
+An updated `README.md` for the MedCure project is below, reflecting the latest features and technologies.
+
 \#\#\#💊 MedCure: Your Modern Pharmacy Management System
 
 A sleek, intuitive, and highly efficient solution designed to streamline pharmacy operations. MedCure offers a powerful set of tools for managing inventory, accelerating sales, and maintaining secure user data.
