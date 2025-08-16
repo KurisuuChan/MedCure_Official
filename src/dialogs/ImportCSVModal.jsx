@@ -1,10 +1,9 @@
-// src/dialogs/ImportCSVModal.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { supabase } from "@/supabase/client";
 import { UploadCloud, FileText, X, Download } from "lucide-react";
 import { useNotification } from "@/hooks/useNotifications";
-import * as api from "@/services/api";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 // Helper to create a single variant entry
 const createVariantEntry = (unitType, price, units, isDefault = false) => {
@@ -78,7 +77,7 @@ const parseCsvLine = (line, headers, startingId, datePart) => {
       expireDate: entry.expireDate,
       productType: entry.productType,
       description: entry.description,
-      supplier: entry.supplier,
+      supplier: entry.supplier, // <-- ADDED THIS LINE
       medicineId: medicineId,
       status: numericQty > 0 ? "Available" : "Unavailable",
     },
@@ -146,6 +145,7 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           .single();
 
         if (fetchError && fetchError.code !== "PGRST116") {
+          // Ignore "PGRST116" which means no rows found (table is empty)
           throw fetchError;
         }
 
@@ -160,6 +160,7 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           return;
         }
 
+        // Insert products and then their variants
         for (const item of productsToProcess) {
           const { data: insertedProduct, error: productError } = await supabase
             .from("products")
@@ -183,10 +184,14 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
           }
         }
 
-        api.addNotification({
-          type: "upload",
+        addSystemNotification({
+          id: `csv-${Date.now()}`,
+          iconType: "upload",
+          iconBg: "bg-green-100",
           title: "CSV Import Successful",
+          category: "System",
           description: `${productsToProcess.length} products were successfully imported.`,
+          createdAt: new Date().toISOString(),
           path: "/management",
         });
 
@@ -209,6 +214,7 @@ const ImportCSVModal = ({ isOpen, onClose, onImportSuccess }) => {
   };
 
   const downloadTemplate = () => {
+    // UPDATED CSV CONTENT
     const csvContent = `name,category,supplier,quantity,price,cost_price,expireDate,productType,description,boxPrice,boxUnits,sheetPrice,sheetUnits,piecePrice,pieceUnits
 Paracetamol 500mg,Pain Relief,PharmaCorp,100,5.00,2.50,2025-12-31,Medicine,Generic pain reliever,45.00,10,9.00,2,5.00,1
 Amoxicillin 250mg,Prescription,MedSupply Inc.,50,8.50,4.00,2025-06-30,Medicine,Antibiotic,76.50,9,17.00,2,8.50,1

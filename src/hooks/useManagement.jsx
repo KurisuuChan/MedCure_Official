@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import * as api from "@/services/api";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 export const useManagement = (addNotification) => {
   const [products, setProducts] = useState([]);
@@ -81,10 +82,14 @@ export const useManagement = (addNotification) => {
         `${selectedItems.length} product(s) successfully archived.`,
         "success"
       );
-      api.addNotification({
-        type: "archive",
+      addSystemNotification({
+        id: `archive-${Date.now()}`,
+        iconType: "archive",
+        iconBg: "bg-purple-100",
         title: "Products Archived",
+        category: "System",
         description: `${selectedItems.length} product(s) were archived.`,
+        createdAt: new Date().toISOString(),
         path: "/archived",
       });
       fetchProducts();

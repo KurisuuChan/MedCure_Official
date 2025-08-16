@@ -1,12 +1,7 @@
 import React from "react";
 import PropTypes from "prop-types";
 
-const TabButton = ({
-  category,
-  activeCategory,
-  setActiveCategory,
-  count = 0,
-}) => (
+const TabButton = ({ category, activeCategory, setActiveCategory, count = 0 }) => (
   <button
     onClick={() => setActiveCategory(category)}
     className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-2 ${
@@ -19,9 +14,7 @@ const TabButton = ({
     {count > 0 && (
       <span
         className={`text-[10px] rounded-full px-1.5 py-0.5 ${
-          activeCategory === category
-            ? "bg-white/20"
-            : "bg-gray-200 text-gray-700"
+          activeCategory === category ? "bg-white/20" : "bg-gray-200 text-gray-700"
         }`}
       >
         {count}
@@ -38,3 +31,5 @@ TabButton.propTypes = {
 };
 
 export default TabButton;
+
+

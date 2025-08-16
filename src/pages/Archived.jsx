@@ -1,3 +1,4 @@
+// src/pages/Archived.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import {
@@ -14,10 +15,10 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
+import { useNotification } from "@/hooks/useNotifications";
 import { useProductSearch } from "@/hooks/useProductSearch";
 import { usePagination } from "@/hooks/usePagination.jsx";
-import { useArchivedProducts } from "@/hooks/useProducts";
-import { useProductMutations } from "@/hooks/useProductMutations.jsx";
+import { useArchivedProducts } from "@/hooks/useArchivedProducts"; // <-- Import the new hook
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
@@ -70,15 +71,14 @@ ConfirmationModal.propTypes = {
 };
 
 const Archived = () => {
+  const { addNotification } = useNotification();
   const {
-    data: archivedProducts = [],
+    archivedProducts,
     isLoading,
     isError,
-    refetch,
-  } = useArchivedProducts();
-  const { unarchiveProducts, deleteProductsPermanently } = useProductMutations({
-    onSuccess: () => setSelectedItems([]),
-  });
+    unarchiveProducts,
+    deleteProductsPermanently,
+  } = useArchivedProducts(addNotification);
 
   const [selectedItems, setSelectedItems] = useState([]);
   const { searchTerm, setSearchTerm, searchedProducts } =
@@ -103,12 +103,14 @@ const Archived = () => {
   };
 
   const confirmDelete = () => {
-    deleteProductsPermanently(selectedItems);
+    deleteProductsPermanently(selectedItems, {
+      onSuccess: () => setSelectedItems([]),
+    });
     setDeleteModalOpen(false);
   };
 
   const handleUnarchive = () => {
-    unarchiveProducts(selectedItems);
+    unarchiveProducts(selectedItems, { onSuccess: () => setSelectedItems([]) });
   };
 
   const formatDate = (dateString) =>
@@ -134,10 +136,7 @@ const Archived = () => {
         <WifiOff size={48} className="text-red-500 mb-4" />
         <h2 className="text-2xl font-semibold">Connection Error</h2>
         <p className="text-gray-600 mb-6">Could not fetch archived data.</p>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg"
-        >
+        <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg">
           <RefreshCw size={16} /> Try Again
         </button>
       </div>
@@ -154,6 +153,7 @@ const Archived = () => {
         message={`You are about to delete ${selectedItems.length} product(s). This is irreversible. Are you sure?`}
       />
       <div className="bg-white p-8 rounded-2xl shadow-lg">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-lg bg-gray-100">
@@ -203,6 +203,7 @@ const Archived = () => {
           </div>
         </div>
 
+        {/* Action Bar */}
         {selectedItems.length > 0 && (
           <div className="flex items-center gap-4 p-4 mb-6 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="font-semibold text-blue-800 flex-grow">
@@ -223,6 +224,7 @@ const Archived = () => {
           </div>
         )}
 
+        {/* Content */}
         {paginatedData.length > 0 ? (
           <div>
             {viewMode === "grid" ? (

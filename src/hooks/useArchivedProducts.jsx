@@ -1,10 +1,12 @@
 // src/hooks/useArchivedProducts.jsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/services/api";
+import { addSystemNotification } from "@/utils/notificationStorage";
 
 export const useArchivedProducts = (addNotification) => {
   const queryClient = useQueryClient();
 
+  // Query to fetch all archived products
   const {
     data: archivedProducts = [],
     isLoading,
@@ -18,6 +20,7 @@ export const useArchivedProducts = (addNotification) => {
     },
   });
 
+  // Mutation to unarchive (restore) products
   const unarchiveMutation = useMutation({
     mutationFn: (productIds) =>
       api.supabase
@@ -25,6 +28,7 @@ export const useArchivedProducts = (addNotification) => {
         .update({ status: "Available" })
         .in("id", productIds),
     onSuccess: (data, productIds) => {
+      // Invalidate both archived and regular product queries to update all lists
       queryClient.invalidateQueries({ queryKey: ["archivedProducts"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
 
@@ -32,20 +36,23 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) successfully unarchived.`,
         "success"
       );
-      // --- FIX: This line was missing ---
-      api.addNotification({
-        type: "unarchive",
+      addSystemNotification({
+        id: `unarchive-${Date.now()}`,
+        iconType: "unarchive",
+        iconBg: "bg-green-100",
         title: "Products Restored",
+        category: "System",
         description: `${productIds.length} product(s) were restored from the archive.`,
+        createdAt: new Date().toISOString(),
         path: "/management",
       });
-      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");
     },
   });
 
+  // Mutation to permanently delete products
   const deleteMutation = useMutation({
     mutationFn: (productIds) =>
       api.supabase.from("products").delete().in("id", productIds),
@@ -55,14 +62,16 @@ export const useArchivedProducts = (addNotification) => {
         `${productIds.length} product(s) permanently deleted.`,
         "success"
       );
-      // --- FIX: This line was missing ---
-      api.addNotification({
-        type: "delete",
+      addSystemNotification({
+        id: `delete-${Date.now()}`,
+        iconType: "delete",
+        iconBg: "bg-red-100",
         title: "Products Deleted",
+        category: "System",
         description: `${productIds.length} product(s) were permanently deleted.`,
+        createdAt: new Date().toISOString(),
         path: "/archived",
       });
-      // --- END FIX ---
     },
     onError: (error) => {
       addNotification(`Error: ${error.message}`, "error");

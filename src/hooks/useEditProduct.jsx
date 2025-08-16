@@ -1,4 +1,3 @@
-// src/hooks/useEditProduct.jsx
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import * as api from "@/services/api";
@@ -7,68 +6,42 @@ import { useNotification } from "@/hooks/useNotifications";
 export const useEditProduct = (product, onSuccess) => {
   const [formData, setFormData] = useState(product);
   const [variants, setVariants] = useState(product?.product_variants || []);
-  const [variantsToRemove, setVariantsToRemove] = useState([]);
   const { addNotification: showToast } = useNotification();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // Deep copy to prevent state mutation issues
-    setFormData(JSON.parse(JSON.stringify(product)));
-    setVariants(JSON.parse(JSON.stringify(product?.product_variants || [])));
-    setVariantsToRemove([]);
+    setFormData(product);
+    setVariants(product?.product_variants || []);
   }, [product]);
 
   const editProductMutation = useMutation({
-    // --- DEFINITIVE FIX: Explicitly handle each database operation separately ---
-    mutationFn: async ({
-      productData,
-      newVariantsToInsert,
-      existingVariantsToUpdate,
-      removedVariantIds,
-    }) => {
-      // 1. Update the main product details.
-      const { error: productError } = await api.updateProduct(
-        product.id,
-        productData
-      );
+    mutationFn: async ({ productData, variantsData }) => {
+      // 1. Update the main product details
+      const { data: updatedProd, error: productError } =
+        await api.updateProduct(productData.id, productData);
       if (productError) throw productError;
 
-      // 2. Insert any newly created variants.
-      if (newVariantsToInsert.length > 0) {
-        const { error: insertError } = await api.supabase
+      // 2. Delete existing variants for this product
+      // A simple approach is to delete and re-insert.
+      const { error: deleteError } = await api.supabase
+        .from("product_variants")
+        .delete()
+        .eq("product_id", productData.id);
+      if (deleteError) throw deleteError;
+
+      // 3. Insert the updated variants
+      if (variantsData && variantsData.length > 0) {
+        const variantsToInsert = variantsData.map((v) => ({
+          ...v,
+          product_id: productData.id,
+        }));
+        const { error: variantsError } = await api.supabase
           .from("product_variants")
-          .insert(newVariantsToInsert);
-        if (insertError) throw insertError;
+          .insert(variantsToInsert);
+        if (variantsError) throw variantsError;
       }
 
-      // 3. Update any variants that already existed.
-      if (existingVariantsToUpdate.length > 0) {
-        for (const variant of existingVariantsToUpdate) {
-          const { id, ...updateData } = variant; // Separate ID from the rest of the data
-          const { error: updateError } = await api.supabase
-            .from("product_variants")
-            .update(updateData)
-            .eq("id", id); // Use the ID only in the 'eq' filter
-          if (updateError) throw updateError;
-        }
-      }
-
-      // 4. Attempt to delete variants marked for removal.
-      if (removedVariantIds.length > 0) {
-        const { error: deleteError } = await api.supabase
-          .from("product_variants")
-          .delete()
-          .in("id", removedVariantIds);
-
-        if (deleteError && deleteError.code === "23503") {
-          showToast(
-            "Could not delete a variant because it's part of a past sale.",
-            "warning"
-          );
-        } else if (deleteError) {
-          throw deleteError;
-        }
-      }
+      return updatedProd;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -109,7 +82,7 @@ export const useEditProduct = (product, onSuccess) => {
     setVariants((prev) => [
       ...prev,
       {
-        id: `new-${Date.now()}`, // Temporary front-end ID
+        id: `variant-${Date.now()}`,
         unit_type: "piece",
         unit_price: "",
         units_per_variant: 1,
@@ -120,16 +93,9 @@ export const useEditProduct = (product, onSuccess) => {
 
   const removeVariant = (id) => {
     if (variants.length <= 1) return;
-
-    if (typeof id === "number") {
-      setVariantsToRemove((prev) => [...prev, id]);
-    }
-
     const newVariants = variants.filter((v) => v.id !== id);
     if (!newVariants.some((v) => v.is_default)) {
-      if (newVariants.length > 0) {
-        newVariants[0].is_default = true;
-      }
+      newVariants[0].is_default = true;
     }
     setVariants(newVariants);
   };
@@ -149,44 +115,11 @@ export const useEditProduct = (product, onSuccess) => {
       cost_price: parseFloat(formData.cost_price) || 0,
       expireDate: formData.expireDate || null,
     };
+    delete productData.product_variants; // Clean up the object
 
-    // Clean the main product object of fields that should not be updated.
-    delete productData.id;
-    delete productData.product_variants;
-    delete productData.created_at;
-    delete productData.updated_at;
+    const variantsData = variants.map(({ id, ...rest }) => rest);
 
-    // --- DEFINITIVE FIX: Explicitly separate variants into their final forms ---
-    const newVariantsToInsert = variants
-      .filter((v) => typeof v.id === "string" && v.id.startsWith("new-"))
-      .map((v) => ({
-        // Create a clean object with NO ID for the database INSERT.
-        product_id: product.id,
-        unit_type: v.unit_type,
-        unit_price: parseFloat(v.unit_price) || 0,
-        units_per_variant: parseInt(v.units_per_variant, 10) || 1,
-        is_default: v.is_default,
-      }));
-
-    const existingVariantsToUpdate = variants
-      .filter((v) => typeof v.id === "number")
-      .map((v) => ({
-        // Create a clean object WITH an ID for the database UPDATE.
-        id: v.id,
-        product_id: product.id,
-        unit_type: v.unit_type,
-        unit_price: parseFloat(v.unit_price) || 0,
-        units_per_variant: parseInt(v.units_per_variant, 10) || 1,
-        is_default: v.is_default,
-      }));
-    // --- END FIX ---
-
-    editProductMutation.mutate({
-      productData,
-      newVariantsToInsert,
-      existingVariantsToUpdate,
-      removedVariantIds: variantsToRemove,
-    });
+    editProductMutation.mutate({ productData, variantsData });
   };
 
   return {

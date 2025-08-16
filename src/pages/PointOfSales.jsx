@@ -1,3 +1,4 @@
+// src/pages/PointOfSales.jsx
 import React from "react";
 import PropTypes from "prop-types";
 import {
@@ -20,14 +21,10 @@ import SalesHistoryModal from "@/dialogs/SalesHistoryModal";
 import VariantSelectionModal from "@/dialogs/VariantSelectionModal";
 import { usePointOfSale } from "@/hooks/usePointOfSale";
 import { useProducts } from "@/hooks/useProducts.jsx";
+import { formatStock } from "@/utils/formatters";
 
 const PointOfSales = ({ branding }) => {
-  const {
-    data: products,
-    isLoading: productsLoading,
-    isError,
-    refetch,
-  } = useProducts();
+  const { products, isLoading: productsLoading, isError } = useProducts();
 
   const {
     loading: posLoading,
@@ -92,10 +89,7 @@ const PointOfSales = ({ branding }) => {
         <p className="text-gray-600 mb-6">
           There was a problem fetching product data.
         </p>
-        <button
-          onClick={() => refetch()}
-          className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg"
-        >
+        <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-lg">
           <RefreshCw size={16} /> Try Again
         </button>
       </div>
@@ -134,6 +128,7 @@ const PointOfSales = ({ branding }) => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto -m-2 p-2">
+            {/* --- NEW LOW STOCK ALERT SECTION --- */}
             {(lowStockProducts.length > 0 || outOfStockProducts.length > 0) && (
               <div className="mb-4 space-y-2">
                 {outOfStockProducts.length > 0 && (
@@ -159,6 +154,7 @@ const PointOfSales = ({ branding }) => {
                 )}
               </div>
             )}
+            {/* --- END OF NEW SECTION --- */}
 
             {productsLoading ? (
               <div className="flex justify-center items-center h-full">
@@ -167,17 +163,17 @@ const PointOfSales = ({ branding }) => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredProducts.map((med) => {
-                  // Refactor nested ternaries for readability (Sonar rule S3358)
-                  const quantityClass = (() => {
-                    if (med.quantity === 0)
-                      return "border-red-300 bg-red-50/50";
-                    if (med.quantity <= 10) return "border-yellow-300";
-                    return "hover:border-blue-400";
-                  })();
                   return (
                     <div
                       key={med.id}
-                      className={`border rounded-lg transition-all duration-200 hover:shadow-md ${quantityClass}`}
+                      // --- MODIFIED LINE: DYNAMIC BORDERS ---
+                      className={`border rounded-lg transition-all duration-200 hover:shadow-md ${
+                        med.quantity === 0
+                          ? "border-red-300 bg-red-50/50"
+                          : med.quantity <= 10
+                          ? "border-yellow-300"
+                          : "hover:border-blue-400"
+                      }`}
                     >
                       <button
                         onClick={() => handleSelectProduct(med)}
@@ -186,7 +182,7 @@ const PointOfSales = ({ branding }) => {
                             ? "bg-blue-50"
                             : "hover:bg-gray-50"
                         }`}
-                        disabled={med.quantity === 0}
+                        disabled={med.quantity === 0} // <-- MODIFIED LINE: Disable button
                       >
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-semibold text-gray-800 leading-tight">
@@ -199,12 +195,15 @@ const PointOfSales = ({ branding }) => {
                         <p className="text-xs text-gray-500 mb-2">
                           {med.category}
                         </p>
+                        {/* --- MODIFIED LINE: DYNAMIC STOCK TEXT --- */}
                         <p
-                          className={`text-xs mb-3 font-medium ${(() => {
-                            if (med.quantity === 0) return "text-red-600";
-                            if (med.quantity <= 10) return "text-yellow-600";
-                            return "text-gray-500";
-                          })()}`}
+                          className={`text-xs mb-3 font-medium ${
+                            med.quantity === 0
+                              ? "text-red-600"
+                              : med.quantity <= 10
+                              ? "text-yellow-600"
+                              : "text-gray-500"
+                          }`}
                         >
                           {med.quantity > 0
                             ? `${med.quantity} pieces available`

@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// Helper function to convert an image URL to a Base64 string for embedding in the PDF.
 const toBase64 = (url) =>
   fetch(url)
     .then((response) => response.blob())
@@ -15,18 +14,12 @@ const toBase64 = (url) =>
         })
     );
 
-/**
- * Generates a detailed sales receipt PDF.
- * @param {object} saleDetails - The sale object, including items.
- * @param {object} brandingData - The pharmacy's branding info (name, logo URL).
- * @returns {Promise<{success: boolean, error?: string}>}
- */
 export const generateReceiptPDF = async (saleDetails, brandingData) => {
   try {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
     const logoBase64 = await toBase64(brandingData.url);
-    const currencyPrefix = "PHP ";
+    const currencyPrefix = "PHP "; // Use text prefix for guaranteed compatibility
 
     // PDF Header
     doc.addImage(logoBase64, "PNG", 14, 10, 20, 20);
@@ -148,12 +141,6 @@ export const generateReceiptPDF = async (saleDetails, brandingData) => {
   }
 };
 
-/**
- * Generates a comprehensive product inventory report PDF.
- * @param {Array<object>} products - The list of products to include in the report.
- * @param {object} brandingData - The pharmacy's branding info (name, logo URL).
- * @returns {Promise<{success: boolean, error?: string}>}
- */
 export const generateProductPDF = async (products, brandingData) => {
   try {
     const doc = new jsPDF();
