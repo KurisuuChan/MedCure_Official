@@ -1,71 +1,104 @@
-### 💊 MedCure: Your Modern Pharmacy Management System
+<div align="center">
 
-A sleek, intuitive, and highly efficient solution designed to streamline pharmacy operations. MedCure offers a powerful set of tools for managing inventory, accelerating sales, and maintaining secure user data.
+# 💊 MedCure Frontend (Professional Scaffold)
 
------
+Opinionated, production‑ready React + Vite + Tailwind CSS architecture for a pharmacy / inventory & POS web application.
 
-### ✨ Key Features
+_This repository currently contains a clean professional scaffold **not** the full upstream feature set. It’s structured to let you progressively implement: inventory management, point‑of‑sale workflows, notifications, reporting (PDF/CSV), and configurable settings._
 
-  * **Real-time Dashboard:** Gain instant insights into your business with a dynamic dashboard featuring cards for inventory status, available medicines, total profit, and out-of-stock items.
-  * **Intuitive Point of Sales (POS):** A fast and easy-to-use interface for processing sales transactions. It includes features like product search, quantity management, and an integrated discount for PWD/Seniors. You can also view a full sales history and generate official receipts on the fly.
-  * **Robust Inventory Management:** Take full control of your stock with a dedicated management page. You can add, edit, and view product details through modals. The system also supports bulk importing of products via CSV and exporting comprehensive inventory reports as PDFs.
-  * **Financial Overview:** Analyze your pharmacy's financial health with a dedicated page for tracking inventory value, lifetime profit, and monthly profit trends. You can also view profitability by product.
-  * **Secure Authentication:** User logins and management are handled securely via Supabase, a powerful open-source Firebase alternative.
-  * **Customizable Settings:** Personalize the app's appearance and functionality. Update your profile, manage branding (name and logo), and configure security and notification settings.
-  * **Archived Products:** Easily restore products that have been archived from the main inventory.
-  * **Responsive & Modern UI:** A clean, responsive design built with Tailwind CSS and the Lucide React icon library ensures a great user experience on any device.
+![Stack](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=fff) ![Vite](https://img.shields.io/badge/Vite-7-646cff?logo=vite&logoColor=fff) ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-38b2ac?logo=tailwindcss&logoColor=fff) ![React Query](https://img.shields.io/badge/React%20Query-5-ff4154) ![ESLint](https://img.shields.io/badge/ESLint-Configured-4B32C3)
 
------
+</div>
 
-### 🚀 Tech Stack
+## ✨ Current Scaffold Features
 
-  * **Frontend:** React, Vite, Tailwind CSS, React Router
-  * **Backend & Database:** Supabase
-  * **Icons:** Lucide React
-  * **PDF Generation:** `jspdf` and `jspdf-autotable` for generating reports and receipts.
+- Modular layout (`AppShell`) with sidebar navigation & responsive content area.
+- Centralized toast notification system via React context.
+- Mock data API layer isolating future real backend integration (Supabase / REST / GraphQL).
+- Inventory pages: dashboard KPIs, tabular product view, POS placeholder, report & settings placeholders.
+- Sensible file organization (components, hooks, pages, layouts, utils, context).
+- ESLint + React hooks + React Refresh config and path alias `@` → `src`.
+- Tailwind v4 with utility layering and custom animation slot.
+- Deterministic chunk splitting (see `vite.config.js`) for scalable builds.
 
------
+## 🗺️ Roadmap (Suggested Next Steps)
 
-### 🛠️ Getting Started
+| Area          | Next Milestones                                            |
+| ------------- | ---------------------------------------------------------- |
+| Auth          | Integrate Supabase auth hook & route guards                |
+| Inventory     | CRUD modals, CSV import/export, low stock alerts           |
+| POS           | Variant selection, discount engine, receipt PDF generation |
+| Reporting     | Dynamic period filters, PDF & CSV exports                  |
+| Notifications | Persistent system + stock alert history panel              |
+| Settings      | Persist branding + threshold configuration to backend      |
+| Testing       | Add Vitest + React Testing Library coverage                |
 
-Follow these steps to get MedCure up and running on your local machine.
+## 🚀 Quick Start
 
-1.  **Clone the repository:**
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start dev server:
+   ```bash
+   npm run dev
+   ```
+3. Open http://localhost:5173 (default Vite port).
 
-    ```bash
-    git clone https://github.com/bulsu-santiagocs/medcure-official.git
-    cd medcure-official
-    ```
+## 🏗️ Project Structure
 
-2.  **Install dependencies:**
+```
+src/
+  App.jsx
+  main.jsx
+  layouts/        # AppShell & future layout variants
+  pages/          # Route components (Dashboard, Inventory, POS, Reports, Settings)
+  components/     # Reusable UI primitives (Toast, etc.)
+  hooks/          # Data + state hooks (inventory summary, notifications)
+  context/        # Providers (NotificationProvider)
+  utils/          # Helper & mock API modules
+```
 
-    ```bash
-    npm install
-    ```
+## 🔧 Configuration Highlights
 
-3.  **Set up your environment variables:**
+| Tool        | Notes                                                |
+| ----------- | ---------------------------------------------------- |
+| Vite        | Path alias `@` + manualChunks for vendor splitting   |
+| Tailwind    | Using `@tailwindcss/vite` plugin (v4 syntax)         |
+| ESLint      | Enforces hook rules & unused var hygiene             |
+| React Query | Ready for real async data hydration (mock layer now) |
 
-      * Create a `.env` file in the root of the project.
-      * Add your Supabase URL and Anon Key from your Supabase project settings.
+## 🧪 Testing (Planned)
 
-    <!-- end list -->
+Add after core flows are implemented:
 
-    ```
-    VITE_SUPABASE_URL=YOUR_SUPABASE_URL
-    VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-    ```
+```bash
+npm i -D vitest @testing-library/react @testing-library/user-event jsdom
+```
 
------
+Then create a `vitest.config.js` and write tests under `src/__tests__/`.
 
-### 📜 Available Scripts
+## 🛡️ Quality & Extension Ideas
 
-In the project directory, you can run:
+- TypeScript migration for domain safety.
+- Storybook for visual regression of modals/forms.
+- Lighthouse CI for performance budgets.
+- Error boundary + logging (Sentry / OpenTelemetry).
 
-  * `npm run dev`
-    Runs the app in development mode.
-  * `npm run build`
-    Builds the app for production to the `dist` folder.
-  * `npm run preview`
-    Serves the production build locally for a preview.
-  * `npm run lint`
-    Lints the project files for code style issues.
+## 📄 License
+
+Provide your chosen license (MIT recommended) – add a `LICENSE` file.
+
+## 🙌 Contributing
+
+PRs welcome. Keep components small, pure, and accessible. Favor composition over deep prop drilling.
+
+---
+
+### Changelog (Scaffold)
+
+- v0.1.0: Initial professional structure, mock inventory data, routing, notifications.
+
+---
+
+Made with focus on clarity, extensibility & a clean developer experience.
