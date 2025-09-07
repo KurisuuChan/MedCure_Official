@@ -1,1682 +1,712 @@
-import React, { useState } from "react";
-import { 
-  FileText, 
-  Download, 
-  Package, 
-  AlertTriangle, 
-  TrendingUp, 
-  Clock, 
-  DollarSign, 
-  Loader2,
-  Activity,
-  BarChart3,
-  Eye
-} from "lucide-react";
-import { 
-  getSalesReport, 
-  getInventoryReport, 
-  getLowStockReport, 
-  getExpiringProductsReport, 
-  getProductPerformanceReport, 
-  getStockMovementReport 
-} from "../services/reportService";
-import { useNotification } from "../hooks/useNotification";
-
-export default function Reports() {
-  const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState(null);
-  const { showNotification } = useNotification();
-
-  const generateInventoryReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getInventoryReport();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      setReportData({
-        type: "inventory",
-        data: result.data,
-        title: "Current Inventory Report",
-        generatedAt: new Date(),
-      });
-      showNotification("Inventory report generated successfully", "success");
-    } catch (error) {
-      console.error("Inventory report error:", error);
-      showNotification(`Failed to generate inventory report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateLowStockReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getLowStockReport();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      setReportData({
-        type: "lowstock",
-        data: result.data,
-        title: "Low Stock Alert Report",
-        generatedAt: new Date(),
-      });
-      showNotification("Low stock report generated successfully", "success");
-    } catch (error) {
-      console.error("Low stock report error:", error);
-      showNotification(`Failed to generate low stock report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportToCSV = () => {
-    if (!reportData || !reportData.data) {
-      showNotification("No data to export", "warning");
-      return;
-    }
-
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      Object.keys(reportData.data[0] || {}).join(",") + "\n" +
-      reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${reportData.type}_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification("Report exported to CSV", "success");
-  };
-
-  const reportTypes = [
-    {
-      id: "inventory",
-      title: "Inventory Report",
-      description: "Current stock levels and product overview",
-      icon: Package,
-      color: "blue",
-      action: generateInventoryReport,
-    },
-    {
-      id: "lowstock",
-      title: "Low Stock Alert",
-      description: "Products below critical levels",
-      icon: AlertTriangle,
-      color: "amber",
-      action: generateLowStockReport,
-    },
-  ];
-
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
-    amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-  };
-
-  return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Generate comprehensive reports and analytics from your pharmacy operations data.
-        </p>
-      </div>
-
-      {/* Report Types Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reportTypes.map((report) => {
-          const IconComponent = report.icon;
-          return (
-            <div
-              key={report.id}
-              className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[report.color]} rounded-2xl flex items-center justify-center shadow-sm`}>
-                  <IconComponent className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{report.title}</h3>
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                {report.description}
-              </p>
-              
-              <button
-                onClick={report.action}
-                disabled={loading}
-                className={`w-full px-4 py-3 bg-gradient-to-r ${colorClasses[report.color]} text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Generate Report
-                  </>
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Report Preview */}
-      {reportData && (
-        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">
-                Generated on {reportData.generatedAt.toLocaleDateString()}
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setReportData(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                Close Preview
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Report Data Display */}
-          <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-auto">
-            {reportData.data && reportData.data.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
-                        {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportData.data.length > 50 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No data available for the selected criteria.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-  const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState(null);
-  const { showNotification } = useNotification();
-
-  const generateInventoryReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getInventoryReport();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      setReportData({
-        type: "inventory",
-        data: result.data,
-        title: "Current Inventory Report",
-        generatedAt: new Date(),
-      });
-      showNotification("Inventory report generated successfully", "success");
-    } catch (error) {
-      console.error("Inventory report error:", error);
-      showNotification(`Failed to generate inventory report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateLowStockReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getLowStockReport();
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      setReportData({
-        type: "lowstock",
-        data: result.data,
-        title: "Low Stock Alert Report",
-        generatedAt: new Date(),
-      });
-      showNotification("Low stock report generated successfully", "success");
-    } catch (error) {
-      console.error("Low stock report error:", error);
-      showNotification(`Failed to generate low stock report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportToCSV = () => {
-    if (!reportData || !reportData.data) {
-      showNotification("No data to export", "warning");
-      return;
-    }
-
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      Object.keys(reportData.data[0] || {}).join(",") + "\n" +
-      reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${reportData.type}_report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification("Report exported to CSV", "success");
-  };
-
-  return (
-    <div className="space-y-6 p-6">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600">Generate comprehensive reports from your pharmacy operations data.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-              <Package className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">Inventory Report</h3>
-              <p className="text-gray-600 text-sm">Current stock levels and product overview</p>
-            </div>
-          </div>
-          <button
-            onClick={generateInventoryReport}
-            disabled={loading}
-            className="w-full px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Generate Report
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">Low Stock Alert</h3>
-              <p className="text-gray-600 text-sm">Products below critical levels</p>
-            </div>
-          </div>
-          <button
-            onClick={generateLowStockReport}
-            disabled={loading}
-            className="w-full px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <FileText className="w-4 h-4" />
-                Generate Report
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {reportData && (
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">Generated on {reportData.generatedAt.toLocaleDateString()}</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setReportData(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </button>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-auto">
-            {reportData.data && reportData.data.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
-                        {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportData.data.length > 50 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No data available.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-  // Predefined date ranges
-  const predefinedRanges = {
-    today: {
-      startDate: format(new Date(), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-    week: {
-      startDate: format(startOfWeek(new Date()), "yyyy-MM-dd"),
-      endDate: format(endOfWeek(new Date()), "yyyy-MM-dd"),
-    },
-    month: {
-      startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
-      endDate: format(endOfMonth(new Date()), "yyyy-MM-dd"),
-    },
-    last7days: {
-      startDate: format(subDays(new Date(), 7), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-    last30days: {
-      startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-  };
-
-  // Report types configuration
-  const reportTypes = [
-    {
-      id: "sales",
-      title: "Sales Report",
-      description: "Revenue, transactions, and sales analytics",
-      icon: DollarSign,
-      color: "emerald",
-      requiresDateRange: true,
-      action: () => generateSalesReport(),
-    },
-    {
-      id: "inventory",
-      title: "Inventory Report", 
-      description: "Current stock levels and product overview",
-      icon: Package,
-      color: "blue",
-      requiresDateRange: false,
-      action: () => generateInventoryReport(),
-    },
-    {
-      id: "lowstock",
-      title: "Low Stock Alert",
-      description: "Products below critical levels",
-      icon: AlertTriangle,
-      color: "amber", 
-      requiresDateRange: false,
-      action: () => generateLowStockReport(),
-    },
-    {
-      id: "expiring",
-      title: "Expiring Products",
-      description: "Products nearing expiry dates",
-      icon: Clock,
-      color: "red",
-      requiresDateRange: false,
-      action: () => generateExpiringReport(),
-    },
-    {
-      id: "performance",
-      title: "Product Performance",
-      description: "Top selling products and analytics",
-      icon: TrendingUp,
-      color: "purple",
-      requiresDateRange: false,
-      action: () => generatePerformanceReport(),
-    },
-    {
-      id: "stockmovement",
-      title: "Stock Movement",
-      description: "Inventory changes and audit trail",
-      icon: Activity,
-      color: "indigo",
-      requiresDateRange: true,
-      action: () => generateStockMovementReport(),
-    },
-  ];
-
-  // Generate different types of reports
-  const generateSalesReport = async () => {
-    setLoading(true);
-    try {
-      const startDate = new Date(dateRange.startDate);
-      const endDate = new Date(dateRange.endDate);
-      
-      const result = await getSalesReport(startDate, endDate, "daily");
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "sales",
-        data: result.data,
-        title: `Sales Report (${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Sales report generated successfully", "success");
-    } catch (error) {
-      console.error("Sales report error:", error);
-      showNotification(`Failed to generate sales report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateInventoryReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getInventoryReport();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "inventory",
-        data: result.data,
-        title: "Current Inventory Report",
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Inventory report generated successfully", "success");
-    } catch (error) {
-      console.error("Inventory report error:", error);
-      showNotification(`Failed to generate inventory report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateLowStockReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getLowStockReport();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "lowstock",
-        data: result.data,
-        title: "Low Stock Alert Report",
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Low stock report generated successfully", "success");
-    } catch (error) {
-      console.error("Low stock report error:", error);
-      showNotification(`Failed to generate low stock report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateExpiringReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getExpiringProductsReport(30); // 30 days ahead
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "expiring",
-        data: result.data,
-        title: "Expiring Products Report (Next 30 Days)",
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Expiring products report generated successfully", "success");
-    } catch (error) {
-      console.error("Expiring products report error:", error);
-      showNotification(`Failed to generate expiring products report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generatePerformanceReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getProductPerformanceReport(period);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "performance",
-        data: result.data,
-        title: `Product Performance Report (${period})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Performance report generated successfully", "success");
-    } catch (error) {
-      console.error("Performance report error:", error);
-      showNotification(`Failed to generate performance report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateStockMovementReport = async () => {
-    setLoading(true);
-    try {
-      const startDate = new Date(dateRange.startDate);
-      const endDate = new Date(dateRange.endDate);
-      
-      const result = await getStockMovementReport(startDate, endDate);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "stockmovement",
-        data: result.data,
-        title: `Stock Movement Report (${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Stock movement report generated successfully", "success");
-    } catch (error) {
-      console.error("Stock movement report error:", error);
-      showNotification(`Failed to generate stock movement report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle predefined range selection
-  const handleRangeSelect = (rangeKey) => {
-    setDateRange(predefinedRanges[rangeKey]);
-  };
-
-  // Export functionality
-  const exportToPDF = () => {
-    showNotification("PDF export functionality coming soon", "info");
-  };
-
-  const exportToCSV = () => {
-    if (!reportData || !reportData.data) {
-      showNotification("No data to export", "warning");
-      return;
-    }
-
-    // Basic CSV export
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      Object.keys(reportData.data[0] || {}).join(",") + "\n" +
-      reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${reportData.type}_report_${format(new Date(), "yyyy-MM-dd")}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification("Report exported to CSV", "success");
-  };
-
-  return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Generate comprehensive reports and analytics from your pharmacy operations data.
-        </p>
-      </div>
-
-      {/* Date Range Selector */}
-      <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Date Range:</span>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="self-center text-gray-500">to</span>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-wrap">
-            {Object.entries(predefinedRanges).map(([key]) => (
-              <button
-                key={key}
-                onClick={() => handleRangeSelect(key)}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors capitalize"
-              >
-                {key.replace(/(\d+)/, ' $1 ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Period Selector for Performance Report */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Performance Period:</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Report Types Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reportTypes.map((report) => {
-          const IconComponent = report.icon;
-          const colorClasses = {
-            emerald: "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
-            blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
-            amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-            red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
-            purple: "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
-            indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
-          };
-
-          return (
-            <div
-              key={report.id}
-              className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[report.color]} rounded-2xl flex items-center justify-center shadow-sm`}>
-                  <IconComponent className="w-6 h-6 text-white" />
-                </div>
-                {report.requiresDateRange && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    Date Range
-                  </span>
-                )}
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{report.title}</h3>
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                {report.description}
-              </p>
-              
-              <button
-                onClick={report.action}
-                disabled={loading}
-                className={`w-full px-4 py-3 bg-gradient-to-r ${colorClasses[report.color]} text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Generate Report
-                  </>
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Report Preview */}
-      {reportData && (
-        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">
-                Generated on {format(reportData.generatedAt, "MMM d, yyyy 'at' h:mm a")}
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setReportData(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                Close Preview
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export CSV
-              </button>
-              <button
-                onClick={exportToPDF}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export PDF
-              </button>
-            </div>
-          </div>
-
-          {/* Report Data Display */}
-          <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-auto">
-            {reportData.data && reportData.data.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
-                        {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportData.data.length > 50 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No data available for the selected criteria.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { useState, useEffect } from "react";
 import {
-  FileText,
-  Download,
-  Calendar,
+  BarChart3,
   TrendingUp,
-  Package,
-  AlertTriangle,
-  BarChart3,
-  Activity,
+  TrendingDown,
+  Calendar,
+  Download,
   Filter,
-  Loader2,
-  FileSpreadsheet,
-  Eye,
-  Clock,
+  FileText,
   DollarSign,
+  Package,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
-import {
-  getSalesReport,
-  getInventoryReport,
-  getLowStockReport,
-  getExpiringProductsReport,
-  getProductPerformanceReport,
-  getStockMovementReport,
-} from "../services/reportService";
-import { useNotification } from "../hooks/useNotification";
-import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { supabase } from "../lib/supabase";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
 
-export default function Reports() {
-  const [loading, setLoading] = useState(false);
-  const [reportData, setReportData] = useState(null);
+export const Reports = () => {
+  const [loading, setLoading] = useState(true);
+  const [salesData, setSalesData] = useState([]);
+  const [productData, setProductData] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   const [dateRange, setDateRange] = useState({
-    startDate: format(subDays(new Date(), 7), "yyyy-MM-dd"),
-    endDate: format(new Date(), "yyyy-MM-dd"),
+    startDate: new Date(new Date().setDate(new Date().getDate() - 30))
+      .toISOString()
+      .split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
   });
-  const [period, setPeriod] = useState("week");
-  const { showNotification } = useNotification();
+  const [reportType, setReportType] = useState("sales");
 
-  // Predefined date ranges
-  const predefinedRanges = {
-    today: {
-      startDate: format(new Date(), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-    week: {
-      startDate: format(startOfWeek(new Date()), "yyyy-MM-dd"),
-      endDate: format(endOfWeek(new Date()), "yyyy-MM-dd"),
-    },
-    month: {
-      startDate: format(startOfMonth(new Date()), "yyyy-MM-dd"),
-      endDate: format(endOfMonth(new Date()), "yyyy-MM-dd"),
-    },
-    last7days: {
-      startDate: format(subDays(new Date(), 7), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-    last30days: {
-      startDate: format(subDays(new Date(), 30), "yyyy-MM-dd"),
-      endDate: format(new Date(), "yyyy-MM-dd"),
-    },
-  };
+  useEffect(() => {
+    fetchReports();
+  }, [dateRange, reportType]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Report types configuration
-  const reportTypes = [
-    {
-      id: "sales",
-      title: "Sales Report",
-      description: "Revenue, transactions, and sales analytics",
-      icon: DollarSign,
-      color: "emerald",
-      requiresDateRange: true,
-      action: () => generateSalesReport(),
-    },
-    {
-      id: "inventory",
-      title: "Inventory Report", 
-      description: "Current stock levels and product overview",
-      icon: Package,
-      color: "blue",
-      requiresDateRange: false,
-      action: () => generateInventoryReport(),
-    },
-    {
-      id: "lowstock",
-      title: "Low Stock Alert",
-      description: "Products below critical levels",
-      icon: AlertTriangle,
-      color: "amber", 
-      requiresDateRange: false,
-      action: () => generateLowStockReport(),
-    },
-    {
-      id: "expiring",
-      title: "Expiring Products",
-      description: "Products nearing expiry dates",
-      icon: Clock,
-      color: "red",
-      requiresDateRange: false,
-      action: () => generateExpiringReport(),
-    },
-    {
-      id: "performance",
-      title: "Product Performance",
-      description: "Top selling products and analytics",
-      icon: TrendingUp,
-      color: "purple",
-      requiresDateRange: false,
-      action: () => generatePerformanceReport(),
-    },
-    {
-      id: "stockmovement",
-      title: "Stock Movement",
-      description: "Inventory changes and audit trail",
-      icon: Activity,
-      color: "indigo",
-      requiresDateRange: true,
-      action: () => generateStockMovementReport(),
-    },
-  ];
-
-  // Generate different types of reports
-  const generateSalesReport = async () => {
-    setLoading(true);
+  const fetchReports = async () => {
     try {
-      const startDate = new Date(dateRange.startDate);
-      const endDate = new Date(dateRange.endDate);
-      
-      const result = await getSalesReport(startDate, endDate, "daily");
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "sales",
-        data: result.data,
-        title: `Sales Report (${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Sales report generated successfully", "success");
-    } catch (error) {
-      console.error("Sales report error:", error);
-      showNotification(`Failed to generate sales report: ${error.message}`, "error");
+      setLoading(true);
+
+      // Fetch analytics
+      const { data: analyticsData, error: analyticsError } = await supabase.rpc(
+        "get_dashboard_analytics"
+      );
+
+      if (analyticsError) throw analyticsError;
+      setAnalytics(analyticsData);
+
+      // Fetch sales data
+      const { data: sales, error: salesError } = await supabase
+        .from("sales")
+        .select(
+          `
+          *,
+          sale_items (
+            quantity,
+            unit_price,
+            total_price,
+            products (name, category_id)
+          ),
+          cashier:user_profiles!sales_cashier_id_fkey (
+            full_name
+          )
+        `
+        )
+        .gte("sale_date", dateRange.startDate)
+        .lte("sale_date", dateRange.endDate + "T23:59:59")
+        .eq("status", "completed")
+        .order("sale_date", { ascending: false });
+
+      if (salesError) throw salesError;
+      setSalesData(sales || []);
+
+      // Fetch product data
+      const { data: products, error: productsError } = await supabase
+        .from("products")
+        .select(
+          `
+          *,
+          categories (name)
+        `
+        )
+        .eq("is_active", true);
+
+      if (productsError) throw productsError;
+      setProductData(products || []);
+    } catch (err) {
+      console.error("Error fetching reports:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateInventoryReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getInventoryReport();
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "inventory",
-        data: result.data,
-        title: "Current Inventory Report",
-        generatedAt: new Date(),
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(amount || 0);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-PH");
+  };
+
+  // Sales Analytics
+  const getSalesAnalytics = () => {
+    const totalSales = salesData.reduce(
+      (sum, sale) => sum + sale.total_amount,
+      0
+    );
+    const totalTransactions = salesData.length;
+    const averageTransaction =
+      totalTransactions > 0 ? totalSales / totalTransactions : 0;
+
+    // Top selling products
+    const productSales = {};
+    salesData.forEach((sale) => {
+      sale.sale_items.forEach((item) => {
+        const productName = item.products?.name || "Unknown Product";
+        if (!productSales[productName]) {
+          productSales[productName] = { quantity: 0, revenue: 0 };
+        }
+        productSales[productName].quantity += item.quantity;
+        productSales[productName].revenue += item.total_price;
       });
-      
-      showNotification("Inventory report generated successfully", "success");
-    } catch (error) {
-      console.error("Inventory report error:", error);
-      showNotification(`Failed to generate inventory report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
 
-  const generateLowStockReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getLowStockReport();
-      
-      if (result.error) {
-        throw new Error(result.error);
+    const topProducts = Object.entries(productSales)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Payment methods
+    const paymentMethods = {};
+    salesData.forEach((sale) => {
+      const method = sale.payment_method || "cash";
+      if (!paymentMethods[method]) {
+        paymentMethods[method] = { count: 0, amount: 0 };
       }
-      
-      setReportData({
-        type: "lowstock",
-        data: result.data,
-        title: "Low Stock Alert Report",
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Low stock report generated successfully", "success");
-    } catch (error) {
-      console.error("Low stock report error:", error);
-      showNotification(`Failed to generate low stock report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
+      paymentMethods[method].count += 1;
+      paymentMethods[method].amount += sale.total_amount;
+    });
+
+    return {
+      totalSales,
+      totalTransactions,
+      averageTransaction,
+      topProducts,
+      paymentMethods,
+    };
   };
 
-  const generateExpiringReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getExpiringProductsReport(30); // 30 days ahead
-      
-      if (result.error) {
-        throw new Error(result.error);
+  // Inventory Analytics
+  const getInventoryAnalytics = () => {
+    const totalProducts = productData.length;
+    const totalValue = productData.reduce(
+      (sum, product) => sum + product.selling_price * product.stock_quantity,
+      0
+    );
+
+    const lowStockProducts = productData.filter(
+      (p) => p.stock_quantity <= p.min_stock_level
+    );
+
+    const expiredProducts = productData.filter(
+      (p) => new Date(p.expiry_date) <= new Date()
+    );
+
+    const expiringSoonProducts = productData.filter((p) => {
+      const today = new Date();
+      const expiry = new Date(p.expiry_date);
+      const daysUntilExpiry = Math.ceil(
+        (expiry - today) / (1000 * 60 * 60 * 24)
+      );
+      return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+    });
+
+    // Category breakdown
+    const categoryBreakdown = {};
+    productData.forEach((product) => {
+      const categoryName = product.categories?.name || "Uncategorized";
+      if (!categoryBreakdown[categoryName]) {
+        categoryBreakdown[categoryName] = {
+          count: 0,
+          value: 0,
+          stock: 0,
+        };
       }
-      
-      setReportData({
-        type: "expiring",
-        data: result.data,
-        title: "Expiring Products Report (Next 30 Days)",
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Expiring products report generated successfully", "success");
-    } catch (error) {
-      console.error("Expiring products report error:", error);
-      showNotification(`Failed to generate expiring products report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+      categoryBreakdown[categoryName].count += 1;
+      categoryBreakdown[categoryName].value +=
+        product.selling_price * product.stock_quantity;
+      categoryBreakdown[categoryName].stock += product.stock_quantity;
+    });
 
-  const generatePerformanceReport = async () => {
-    setLoading(true);
-    try {
-      const result = await getProductPerformanceReport(period);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "performance",
-        data: result.data,
-        title: `Product Performance Report (${period})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Performance report generated successfully", "success");
-    } catch (error) {
-      console.error("Performance report error:", error);
-      showNotification(`Failed to generate performance report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateStockMovementReport = async () => {
-    setLoading(true);
-    try {
-      const startDate = new Date(dateRange.startDate);
-      const endDate = new Date(dateRange.endDate);
-      
-      const result = await getStockMovementReport(startDate, endDate);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      setReportData({
-        type: "stockmovement",
-        data: result.data,
-        title: `Stock Movement Report (${format(startDate, "MMM d")} - ${format(endDate, "MMM d, yyyy")})`,
-        generatedAt: new Date(),
-      });
-      
-      showNotification("Stock movement report generated successfully", "success");
-    } catch (error) {
-      console.error("Stock movement report error:", error);
-      showNotification(`Failed to generate stock movement report: ${error.message}`, "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle predefined range selection
-  const handleRangeSelect = (rangeKey) => {
-    setDateRange(predefinedRanges[rangeKey]);
-  };
-
-  // Export functionality
-  const exportToPDF = () => {
-    showNotification("PDF export functionality coming soon", "info");
+    return {
+      totalProducts,
+      totalValue,
+      lowStockProducts,
+      expiredProducts,
+      expiringSoonProducts,
+      categoryBreakdown,
+    };
   };
 
   const exportToCSV = () => {
-    if (!reportData || !reportData.data) {
-      showNotification("No data to export", "warning");
-      return;
+    let csvData = "";
+    let filename = "";
+
+    if (reportType === "sales") {
+      const headers = [
+        "Date",
+        "Sale Number",
+        "Customer",
+        "Total Amount",
+        "Payment Method",
+        "Cashier",
+      ];
+      csvData = headers.join(",") + "\n";
+
+      salesData.forEach((sale) => {
+        const row = [
+          formatDate(sale.sale_date),
+          sale.sale_number,
+          sale.customer_name || "Walk-in",
+          sale.total_amount,
+          sale.payment_method,
+          sale.cashier?.full_name || "Unknown",
+        ];
+        csvData += row.join(",") + "\n";
+      });
+
+      filename = `sales-report-${dateRange.startDate}-to-${dateRange.endDate}.csv`;
+    } else {
+      const headers = [
+        "Product Name",
+        "Category",
+        "Stock Quantity",
+        "Min Stock",
+        "Selling Price",
+        "Expiry Date",
+      ];
+      csvData = headers.join(",") + "\n";
+
+      productData.forEach((product) => {
+        const row = [
+          product.name,
+          product.categories?.name || "Uncategorized",
+          product.stock_quantity,
+          product.min_stock_level,
+          product.selling_price,
+          formatDate(product.expiry_date),
+        ];
+        csvData += row.join(",") + "\n";
+      });
+
+      filename = `inventory-report-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
     }
 
-    // Basic CSV export
-    const csvContent = "data:text/csv;charset=utf-8," + 
-      Object.keys(reportData.data[0] || {}).join(",") + "\n" +
-      reportData.data.map(row => Object.values(row).join(",")).join("\n");
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${reportData.type}_report_${format(new Date(), "yyyy-MM-dd")}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification("Report exported to CSV", "success");
+    const blob = new Blob([csvData], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
-  return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Generate comprehensive reports and analytics from your pharmacy operations data.
-        </p>
+  const salesAnalytics = getSalesAnalytics();
+  const inventoryAnalytics = getInventoryAnalytics();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="lg" />
       </div>
+    );
+  }
 
-      {/* Date Range Selector */}
-      <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Date Range:</span>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="self-center text-gray-500">to</span>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-wrap">
-            {Object.entries(predefinedRanges).map(([key]) => (
-              <button
-                key={key}
-                onClick={() => handleRangeSelect(key)}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors capitalize"
-              >
-                {key.replace(/(\d+)/, ' $1 ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Period Selector for Performance Report */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Performance Period:</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Report Types Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reportTypes.map((report) => {
-          const IconComponent = report.icon;
-          const colorClasses = {
-            emerald: "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
-            blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
-            amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-            red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
-            purple: "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
-            indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
-          };
-
-          return (
-            <div
-              key={report.id}
-              className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[report.color]} rounded-2xl flex items-center justify-center shadow-sm`}>
-                  <IconComponent className="w-6 h-6 text-white" />
-                </div>
-                {report.requiresDateRange && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    Date Range
-                  </span>
-                )}
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{report.title}</h3>
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                {report.description}
-              </p>
-              
-              <button
-                onClick={report.action}
-                disabled={loading}
-                className={`w-full px-4 py-3 bg-gradient-to-r ${colorClasses[report.color]} text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Generate Report
-                  </>
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Report Preview */}
-      {reportData && (
-        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">
-                Generated on {format(reportData.generatedAt, "MMM d, yyyy 'at' h:mm a")}
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setReportData(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                Close Preview
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export CSV
-              </button>
-              <button
-                onClick={exportToPDF}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export PDF
-              </button>
-            </div>
-          </div>
-
-          {/* Report Data Display */}
-          <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-auto">
-            {reportData.data && reportData.data.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
-                        {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportData.data.length > 50 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No data available for the selected criteria.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-  return (
-    <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50/30 min-h-screen">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-800">Business Reports</h1>
-        <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-          Generate comprehensive reports and analytics from your pharmacy operations data.
-        </p>
-      </div>
-
-      {/* Date Range Selector */}
-      <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Date Range:</span>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <span className="self-center text-gray-500">to</span>
-              <input
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-wrap">
-            {Object.entries(predefinedRanges).map(([key, range]) => (
-              <button
-                key={key}
-                onClick={() => handleRangeSelect(key)}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors capitalize"
-              >
-                {key.replace(/(\d+)/, ' $1 ')}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Period Selector for Performance Report */}
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-center gap-4">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <span className="font-semibold text-gray-800">Performance Period:</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Report Types Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {reportTypes.map((report) => {
-          const IconComponent = report.icon;
-          const colorClasses = {
-            emerald: "from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700",
-            blue: "from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700",
-            amber: "from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700",
-            red: "from-red-500 to-red-600 hover:from-red-600 hover:to-red-700",
-            purple: "from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700",
-            indigo: "from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700",
-          };
-
-          return (
-            <div
-              key={report.id}
-              className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 bg-gradient-to-br ${colorClasses[report.color]} rounded-2xl flex items-center justify-center shadow-sm`}>
-                  <IconComponent className="w-6 h-6 text-white" />
-                </div>
-                {report.requiresDateRange && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    Date Range
-                  </span>
-                )}
-              </div>
-              
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{report.title}</h3>
-              <p className="text-gray-600 mb-4 text-sm leading-relaxed">
-                {report.description}
-              </p>
-              
-              <button
-                onClick={report.action}
-                disabled={loading}
-                className={`w-full px-4 py-3 bg-gradient-to-r ${colorClasses[report.color]} text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Generate Report
-                  </>
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Report Preview */}
-      {reportData && (
-        <div className="bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-gray-200/50">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">{reportData.title}</h2>
-              <p className="text-gray-600">
-                Generated on {format(reportData.generatedAt, "MMM d, yyyy 'at' h:mm a")}
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setReportData(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Eye className="w-4 h-4" />
-                Close Preview
-              </button>
-              <button
-                onClick={exportToCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <FileSpreadsheet className="w-4 h-4" />
-                Export CSV
-              </button>
-              <button
-                onClick={exportToPDF}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Export PDF
-              </button>
-            </div>
-          </div>
-
-          {/* Report Data Display */}
-          <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-auto">
-            {reportData.data && reportData.data.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      {Object.keys(reportData.data[0]).map((key) => (
-                        <th key={key} className="text-left py-2 px-3 font-semibold text-gray-700 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reportData.data.slice(0, 50).map((row, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-white/50">
-                        {Object.values(row).map((value, valueIndex) => (
-                          <td key={valueIndex} className="py-2 px-3 text-gray-600">
-                            {typeof value === 'number' && value > 1000 
-                              ? value.toLocaleString() 
-                              : String(value)
-                            }
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportData.data.length > 50 && (
-                  <p className="text-center text-gray-500 mt-4">
-                    Showing first 50 of {reportData.data.length} records. Export for complete data.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">No data available for the selected criteria.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-  };
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Reports</h2>
-        <p className="text-sm text-gray-600">
-          Generate analytical PDF / CSV exports (coming soon).
-        </p>
-      </div>
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <h3 className="font-semibold mb-2">Inventory PDF</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Export a snapshot of current stock levels.
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            Reports & Analytics
+          </h1>
+          <p className="text-muted-foreground">
+            Analyze your pharmacy performance and trends
           </p>
-          <button
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-            disabled
-          >
-            Generate (WIP)
-          </button>
         </div>
-        <div className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <h3 className="font-semibold mb-2">Sales Summary</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Period revenue, discounts & average ticket size.
-          </p>
-          <button
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-            disabled
-          >
-            Generate (WIP)
-          </button>
+        <div className="flex items-center gap-4">
+          <Button onClick={fetchReports} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button onClick={exportToCSV} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
       </div>
+
+      {/* Controls */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <select
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+            className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
+          >
+            <option value="sales">Sales Report</option>
+            <option value="inventory">Inventory Report</option>
+          </select>
+        </div>
+
+        {reportType === "sales" && (
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Input
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, startDate: e.target.value }))
+              }
+              className="w-auto"
+            />
+            <span className="text-muted-foreground">to</span>
+            <Input
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) =>
+                setDateRange((prev) => ({ ...prev, endDate: e.target.value }))
+              }
+              className="w-auto"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Sales Report */}
+      {reportType === "sales" && (
+        <>
+          {/* Sales Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Revenue
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(salesAnalytics.totalSales)}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-success" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Transactions
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {salesAnalytics.totalTransactions}
+                  </p>
+                </div>
+                <FileText className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Avg. Transaction
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(salesAnalytics.averageTransaction)}
+                  </p>
+                </div>
+                <TrendingUp className="h-8 w-8 text-accent" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Today's Sales
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(analytics?.sales?.today || 0)}
+                  </p>
+                </div>
+                <BarChart3 className="h-8 w-8 text-warning" />
+              </div>
+            </Card>
+          </div>
+
+          {/* Top Products & Payment Methods */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Top Selling Products
+              </h2>
+              <div className="space-y-3">
+                {salesAnalytics.topProducts
+                  .slice(0, 5)
+                  .map((product, index) => (
+                    <div
+                      key={product.name}
+                      className="flex items-center justify-between p-3 border border-border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline">{index + 1}</Badge>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {product.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {product.quantity} units sold
+                          </p>
+                        </div>
+                      </div>
+                      <p className="font-semibold text-foreground">
+                        {formatCurrency(product.revenue)}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Payment Methods
+              </h2>
+              <div className="space-y-3">
+                {Object.entries(salesAnalytics.paymentMethods).map(
+                  ([method, data]) => (
+                    <div
+                      key={method}
+                      className="flex items-center justify-between p-3 border border-border rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium text-foreground capitalize">
+                          {method}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {data.count} transactions
+                        </p>
+                      </div>
+                      <p className="font-semibold text-foreground">
+                        {formatCurrency(data.amount)}
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
+            </Card>
+          </div>
+
+          {/* Recent Sales Table */}
+          <Card className="overflow-hidden">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-lg font-semibold text-foreground">
+                Recent Sales
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Date
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Sale #
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Customer
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Items
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Amount
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Payment
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Cashier
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {salesData.slice(0, 10).map((sale) => (
+                    <tr
+                      key={sale.id}
+                      className="border-t border-border hover:bg-muted/30"
+                    >
+                      <td className="p-4 text-sm text-foreground">
+                        {formatDate(sale.sale_date)}
+                      </td>
+                      <td className="p-4 text-sm font-medium text-foreground">
+                        {sale.sale_number}
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {sale.customer_name || "Walk-in Customer"}
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {sale.sale_items.length} items
+                      </td>
+                      <td className="p-4 text-sm font-semibold text-foreground">
+                        {formatCurrency(sale.total_amount)}
+                      </td>
+                      <td className="p-4">
+                        <Badge variant="outline" size="sm">
+                          {sale.payment_method}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {sale.cashier?.full_name || "Unknown"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* Inventory Report */}
+      {reportType === "inventory" && (
+        <>
+          {/* Inventory Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Total Products
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {inventoryAnalytics.totalProducts}
+                  </p>
+                </div>
+                <Package className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Inventory Value
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatCurrency(inventoryAnalytics.totalValue)}
+                  </p>
+                </div>
+                <DollarSign className="h-8 w-8 text-success" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Low Stock
+                  </p>
+                  <p className="text-2xl font-bold text-warning">
+                    {inventoryAnalytics.lowStockProducts.length}
+                  </p>
+                </div>
+                <TrendingDown className="h-8 w-8 text-warning" />
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Expired
+                  </p>
+                  <p className="text-2xl font-bold text-destructive">
+                    {inventoryAnalytics.expiredProducts.length}
+                  </p>
+                </div>
+                <AlertTriangle className="h-8 w-8 text-destructive" />
+              </div>
+            </Card>
+          </div>
+
+          {/* Category Breakdown */}
+          <Card className="p-6">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              Category Breakdown
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries(inventoryAnalytics.categoryBreakdown).map(
+                ([category, data]) => (
+                  <div
+                    key={category}
+                    className="p-4 border border-border rounded-lg"
+                  >
+                    <h3 className="font-medium text-foreground">{category}</h3>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Products:</span>
+                        <span className="text-foreground">{data.count}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Stock:</span>
+                        <span className="text-foreground">
+                          {data.stock} units
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Value:</span>
+                        <span className="text-foreground">
+                          {formatCurrency(data.value)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </Card>
+
+          {/* Alert Items */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Low Stock Items
+              </h2>
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {inventoryAnalytics.lowStockProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3 border border-border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {product.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Stock: {product.stock_quantity} / Min:{" "}
+                        {product.min_stock_level}
+                      </p>
+                    </div>
+                    <Badge variant="warning" size="sm">
+                      Low Stock
+                    </Badge>
+                  </div>
+                ))}
+                {inventoryAnalytics.lowStockProducts.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">
+                    No low stock items
+                  </p>
+                )}
+              </div>
+            </Card>
+
+            <Card className="p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Expiring Soon
+              </h2>
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {inventoryAnalytics.expiringSoonProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className="flex items-center justify-between p-3 border border-border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {product.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Expires: {formatDate(product.expiry_date)}
+                      </p>
+                    </div>
+                    <Badge variant="warning" size="sm">
+                      Expiring
+                    </Badge>
+                  </div>
+                ))}
+                {inventoryAnalytics.expiringSoonProducts.length === 0 && (
+                  <p className="text-muted-foreground text-center py-4">
+                    No items expiring soon
+                  </p>
+                )}
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
-}
+};

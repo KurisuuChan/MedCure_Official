@@ -1,256 +1,74 @@
 import { useState, useEffect } from "react";
-import {
-  getProducts,
-  createProduct,
-  updateProduct,
-  archiveProduct,
-  deleteProduct,
-  importProducts,
-} from "../services/productService.js";
-import { useNotification } from "./useNotification.js";
+import { supabase } from "../lib/supabase";
 
-/**
- * Hook for managing product data and operations
- */
-export function useProducts(initialFilters = {}) {
+export const useProducts = () => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState(initialFilters);
-  const { addNotification } = useNotification();
 
-  // Fetch products
-  const fetchProducts = async (filterOverrides = {}) => {
-    setLoading(true);
-    setError(null);
-
+  const fetchProducts = async () => {
     try {
-      const appliedFilters = { ...filters, ...filterOverrides };
-      const { data, error: fetchError } = await getProducts(appliedFilters);
+      setLoading(true);
+      setError(null);
 
-      if (fetchError) {
-        throw new Error(fetchError);
-      }
+      const { data, error: fetchError } = await supabase
+        .from("products")
+        .select(
+          `
+          *,
+          categories (
+            id,
+            name
+          )
+        `
+        )
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
 
-      setProducts(data || []);
+      if (fetchError) throw fetchError;
+
+      // Add health status to each product
+      const productsWithHealth = data.map((product) => ({
+        ...product,
+        health_status: getProductHealthStatus(
+          product.stock_quantity,
+          product.min_stock_level,
+          product.expiry_date
+        ),
+      }));
+
+      setProducts(productsWithHealth);
     } catch (err) {
+      console.error("Error fetching products:", err);
       setError(err.message);
-      addNotification("Failed to load products", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Add new product
-  const addProduct = async (productData) => {
-    setLoading(true);
+  const getProductHealthStatus = (stockQty, minStock, expiryDate) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const daysUntilExpiry = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
 
-    try {
-      const { data, error: createError } = await createProduct(productData);
-
-      if (createError) {
-        throw new Error(createError);
-      }
-
-      setProducts((prev) => [data, ...prev]);
-      addNotification("Product added successfully", "success");
-      return { data, error: null };
-    } catch (err) {
-      const errorMsg = err.message || "Failed to add product";
-      setError(errorMsg);
-      addNotification(errorMsg, "error");
-      return { data: null, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
+    if (daysUntilExpiry <= 0) return "expired";
+    if (daysUntilExpiry <= 30) return "expiring_soon";
+    if (stockQty <= minStock) return "low_stock";
+    return "good";
   };
 
-  // Update product
-  const updateProductData = async (id, updates) => {
-    setLoading(true);
-
-    try {
-      const { data, error: updateError } = await updateProduct(id, updates);
-
-      if (updateError) {
-        throw new Error(updateError);
-      }
-
-      setProducts((prev) =>
-        prev.map((product) => (product.id === id ? data : product))
-      );
-      addNotification("Product updated successfully", "success");
-      return { data, error: null };
-    } catch (err) {
-      const errorMsg = err.message || "Failed to update product";
-      setError(errorMsg);
-      addNotification(errorMsg, "error");
-      return { data: null, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Archive product (soft delete)
-  const archiveProductData = async (id) => {
-    setLoading(true);
-
-    try {
-      const { error: archiveError } = await archiveProduct(id);
-
-      if (archiveError) {
-        throw new Error(archiveError);
-      }
-
-      setProducts((prev) => prev.filter((product) => product.id !== id));
-      addNotification("Product archived successfully", "success");
-      return { error: null };
-    } catch (err) {
-      const errorMsg = err.message || "Failed to archive product";
-      setError(errorMsg);
-      addNotification(errorMsg, "error");
-      return { error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Delete product (hard delete - only for archived products)
-  const removeProduct = async (id) => {
-    setLoading(true);
-
-    try {
-      const { error: deleteError } = await deleteProduct(id);
-
-      if (deleteError) {
-        throw new Error(deleteError);
-      }
-
-      setProducts((prev) => prev.filter((product) => product.id !== id));
-      addNotification("Product deleted successfully", "success");
-      return { error: null };
-    } catch (err) {
-      const errorMsg = err.message || "Failed to delete product";
-      setError(errorMsg);
-      addNotification(errorMsg, "error");
-      return { error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Import products from CSV
-  const importProductsFromCSV = async (productsArray) => {
-    setLoading(true);
-
-    try {
-      const { data, error: importError } = await importProducts(productsArray);
-
-      if (importError) {
-        throw new Error(importError);
-      }
-
-      const { success, errors, total } = data;
-
-      if (success.length > 0) {
-        // Refresh products list
-        await fetchProducts();
-        addNotification(
-          `${success.length} out of ${total} products imported successfully`,
-          "success"
-        );
-      }
-
-      if (errors.length > 0) {
-        console.warn("Import errors:", errors);
-        addNotification(
-          `${errors.length} products failed to import`,
-          "warning"
-        );
-      }
-
-      return { data, error: null };
-    } catch (err) {
-      const errorMsg = err.message || "Failed to import products";
-      setError(errorMsg);
-      addNotification(errorMsg, "error");
-      return { data: null, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Update filters and refetch
-  const updateFilters = (newFilters) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
-  };
-
-  // Apply filters and refetch
-  const applyFilters = (newFilters) => {
-    updateFilters(newFilters);
-    fetchProducts(newFilters);
-  };
-
-  // Clear filters
-  const clearFilters = () => {
-    const clearedFilters = {};
-    setFilters(clearedFilters);
-    fetchProducts(clearedFilters);
-  };
-
-  // Get product by ID
-  const getProductById = (id) => {
-    return products.find((product) => product.id === id);
-  };
-
-  // Get products by category
-  const getProductsByCategory = (category) => {
-    if (category === "all") return products;
-    return products.filter((product) => product.category === category);
-  };
-
-  // Get low stock products
   const getLowStockProducts = () => {
-    return products.filter(
-      (product) =>
-        product.total_stock <= product.critical_level && product.total_stock > 0
-    );
+    return products.filter((p) => p.health_status === "low_stock");
   };
 
-  // Get out of stock products
-  const getOutOfStockProducts = () => {
-    return products.filter((product) => product.total_stock === 0);
+  const getExpiredProducts = () => {
+    return products.filter((p) => p.health_status === "expired");
   };
 
-  // Calculate inventory stats
-  const getInventoryStats = () => {
-    const stats = products.reduce(
-      (acc, product) => {
-        acc.total += 1;
-        acc.totalStock += product.total_stock;
-        acc.totalValue += product.total_stock * product.cost_price;
-
-        if (product.total_stock === 0) {
-          acc.outOfStock += 1;
-        } else if (product.total_stock <= product.critical_level) {
-          acc.lowStock += 1;
-        }
-
-        return acc;
-      },
-      {
-        total: 0,
-        totalStock: 0,
-        totalValue: 0,
-        lowStock: 0,
-        outOfStock: 0,
-      }
-    );
-
-    return stats;
+  const getExpiringSoonProducts = () => {
+    return products.filter((p) => p.health_status === "expiring_soon");
   };
 
-  // Initial load
   useEffect(() => {
     fetchProducts();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -259,29 +77,9 @@ export function useProducts(initialFilters = {}) {
     products,
     loading,
     error,
-    filters,
-
-    // Actions
-    fetchProducts,
-    addProduct,
-    updateProduct: updateProductData,
-    archiveProduct: archiveProductData,
-    removeProduct,
-    importProductsFromCSV,
-
-    // Filter actions
-    updateFilters,
-    applyFilters,
-    clearFilters,
-
-    // Utility functions
-    getProductById,
-    getProductsByCategory,
+    refetch: fetchProducts,
     getLowStockProducts,
-    getOutOfStockProducts,
-    getInventoryStats,
-
-    // Refresh
-    refresh: fetchProducts,
+    getExpiredProducts,
+    getExpiringSoonProducts,
   };
-}
+};

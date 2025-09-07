@@ -1,57 +1,107 @@
 @import "tailwindcss";
 
+/* Custom CSS variables for the pharmacy theme */
 :root {
-  /* Default theme values */
-  --primary-color: #2563eb;
-  --primary-color-rgb: 37, 99, 235;
-  --primary-color-hover: #1d4ed8;
-  --primary-color-light: #3b82f6;
-  --primary-color-dark: #1e40af;
-  --base-font-size: 16px;
+  --primary: #00a8b8;
+  --primary-foreground: #ffffff;
+  --secondary: #e6f7ff;
+  --secondary-foreground: #1a1a1a;
+  --accent: #4ade80;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #00a8b8;
+  --background: #ffffff;
+  --foreground: #1a1a1a;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #f8fafc;
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  font-size: var(--base-font-size);
+/* Dark mode variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #00a8b8;
+    --primary-foreground: #ffffff;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+    --accent: #4ade80;
+    --accent-foreground: #1a1a1a;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --border: #334155;
+    --input: #1e293b;
+    --ring: #00a8b8;
+    --background: #0f172a;
+    --foreground: #f8fafc;
+    --sidebar: #020617;
+    --sidebar-foreground: #f8fafc;
+  }
 }
 
+/* Base styles */
 body {
-  background-color: #f8fafc; /* A very light gray for a subtle texture */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  margin: 0;
+  min-height: 100vh;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
 
-@layer utilities {
-  @keyframes pulse-once {
-    0%,
-    100% {
-      background-color: transparent;
-    }
-    50% {
-      background-color: #fef9c3; /* bg-yellow-100 */
-    }
-  }
-  .animate-pulse-once {
-    animation: pulse-once 2s ease-in-out;
-  }
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
 
-  /* Theme-aware utility classes */
-  .bg-primary {
-    background-color: var(--primary-color);
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Animation utilities */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
   }
-  .bg-primary-hover {
-    background-color: var(--primary-color-hover);
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
-  .text-primary {
-    color: var(--primary-color);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-  .border-primary {
-    border-color: var(--primary-color);
+  to {
+    opacity: 1;
   }
-  .ring-primary {
-    --tw-ring-color: var(--primary-color);
-  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
 }

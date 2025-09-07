@@ -1,1816 +1,502 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
-  Settings as SettingsIcon,
-  Save,
-  Palette,
-  Bell,
+  User,
   Shield,
   Database,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Globe,
+  Bell,
   Eye,
   EyeOff,
-  Download,
-  Upload,
+  Save,
+  UserPlus,
+  Edit,
   Trash2,
-  AlertTriangle,
-  CheckCircle,
-  Users,
-  Building,
-  Calendar,
-  Image,
-  Camera,
-  Zap,
-  Brush,
-  UserCheck,
   RefreshCw,
 } from "lucide-react";
-import BackendStatus from "../components/BackendStatus";
-import {
-  getSettings,
-  updateSettings,
-  resetSettings,
-  exportSettings,
-  importSettings,
-  validateSettings,
-  testSettingsOperations,
-  uploadLogo,
-  updateBranding,
-  updateProfile,
-  uploadAvatar,
-} from "../services/settingsService";
-import { useNotification } from "../hooks/useNotification";
-import { useBranding } from "../hooks/useBranding";
-import { useTheme } from "../hooks/useTheme";
-import { handleImageSrc } from "../utils/imageUtils";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
+import { LoadingSpinner } from "../components/ui/LoadingSpinner";
+import { Button } from "../components/ui/Button";
+import { Input } from "../components/ui/Input";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
 
-export default function Settings() {
-  const [activeTab, setActiveTab] = useState("general");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
-  const { showNotification } = useNotification();
-  const { refreshSettings } = useBranding();
-  const { theme, updateTheme, resetTheme, getThemeClasses } = useTheme();
-
-  const [settings, setSettings] = useState({
-    // General Settings
-    businessName: "MedCure Pharmacy",
-    businessAddress: "123 Health Street, Medical District, City",
-    businessPhone: "+63 912 345 6789",
-    businessEmail: "contact@medcure.com",
-    primaryColor: theme.primaryColor,
-    timezone: theme.timezone,
-    currency: theme.currency,
-    language: theme.language,
-
-    // Branding Settings
-    brandingName: "MedCure",
-    companyLogo: "",
-    logoUrl: "",
-    brandColor: "#2563eb",
-    accentColor: "#3b82f6",
-    headerStyle: "modern",
-    sidebarStyle: "minimal",
-
-    // Profile Settings
-    profileName: "Admin User",
-    profileEmail: "admin@medcure.com",
-    profileRole: "Administrator",
-    profileAvatar: "",
-    profilePhone: "+63 912 345 6789",
-    displayName: "Admin",
-    userInitials: "AU",
-
-    // Notification Settings
-    lowStockThreshold: 10,
-    criticalStockThreshold: 5,
-    expiryAlertDays: 30,
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    dailyReports: true,
-    weeklyReports: true,
-
-    // Security Settings
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-    twoFactorAuth: false,
-    sessionTimeout: 30,
-    passwordExpiry: 90,
-
-    // Backup Settings
-    autoBackup: true,
-    backupFrequency: "daily",
-    backupRetention: 30,
-    cloudBackup: false,
+export const Settings = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [profile, setProfile] = useState({
+    full_name: "",
+    phone: "",
+    address: "",
   });
 
-  const handleSettingChange = (key, value) => {
-    setSettings((prev) => {
-      const newSettings = { ...prev, [key]: value };
+  const isAdmin = user?.role === "admin";
 
-      // Clear any existing validation error for this field
-      if (validationErrors[key]) {
-        setValidationErrors((prevErrors) => {
-          const newErrors = { ...prevErrors };
-          delete newErrors[key];
-          return newErrors;
-        });
-      }
-
-      // If appearance settings changed, also update theme
-      if (["primaryColor", "language", "timezone", "currency"].includes(key)) {
-        updateTheme({ [key]: value });
-      }
-
-      return newSettings;
-    });
-  };
-
-  // Handle theme reset
-  const handleThemeReset = () => {
-    if (confirm("Reset appearance settings to defaults?")) {
-      resetTheme();
-      setSettings((prev) => ({
-        ...prev,
-        primaryColor: "#2563eb",
-        language: "en",
-        timezone: "Asia/Manila",
-        currency: "PHP",
-      }));
-      showNotification("Appearance settings reset to defaults", "success");
-    }
-  };
-
-  const loadSettings = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await getSettings();
-      if (result.success && result.data) {
-        // Use default settings as base, then merge with loaded data
-        const defaultSettings = {
-          // General Settings
-          businessName: "MedCure Pharmacy",
-          businessAddress: "123 Health Street, Medical District, City",
-          businessPhone: "+63 912 345 6789",
-          businessEmail: "contact@medcure.com",
-          primaryColor: "#2563eb",
-          timezone: "Asia/Manila",
-          currency: "PHP",
-          language: "en",
-          // Notification Settings
-          lowStockThreshold: 10,
-          criticalStockThreshold: 5,
-          expiryAlertDays: 30,
-          emailNotifications: true,
-          smsNotifications: false,
-          pushNotifications: true,
-          dailyReports: true,
-          weeklyReports: true,
-          // Security Settings
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-          twoFactorAuth: false,
-          sessionTimeout: 30,
-          passwordExpiry: 90,
-          // Backup Settings
-          autoBackup: true,
-          backupFrequency: "daily",
-          backupRetention: 30,
-          cloudBackup: false,
-        };
-
-        const loadedSettings = { ...defaultSettings, ...result.data };
-        setSettings(loadedSettings);
-      } else {
-        showNotification("Failed to load settings", "error");
-      }
-    } catch (error) {
-      console.error("Error loading settings:", error);
-      showNotification("Error loading settings", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showNotification]);
-
-  // Load settings on component mount
   useEffect(() => {
-    loadSettings();
-  }, [loadSettings]);
+    fetchUserProfile();
+    if (isAdmin) {
+      fetchUsers();
+      fetchCategories();
+    }
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSave = async (section) => {
-    setIsSaving(true);
+  const fetchUserProfile = async () => {
     try {
-      // Validate settings before saving
-      const validation = validateSettings(settings);
-      if (!validation.isValid) {
-        const errorMap = {};
-        validation.errors.forEach((error) => {
-          // Extract field name from error message (simple approach)
-          const field = error.toLowerCase().includes("business name")
-            ? "businessName"
-            : error.toLowerCase().includes("business email")
-            ? "businessEmail"
-            : error.toLowerCase().includes("business phone")
-            ? "businessPhone"
-            : error.toLowerCase().includes("low stock")
-            ? "lowStockThreshold"
-            : error.toLowerCase().includes("critical stock")
-            ? "criticalStockThreshold"
-            : error.toLowerCase().includes("expiry alert")
-            ? "expiryAlertDays"
-            : error.toLowerCase().includes("session timeout")
-            ? "sessionTimeout"
-            : error.toLowerCase().includes("password expiry")
-            ? "passwordExpiry"
-            : error.toLowerCase().includes("backup retention")
-            ? "backupRetention"
-            : "general";
-          errorMap[field] = error;
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setProfile({
+          full_name: data.full_name || "",
+          phone: data.phone || "",
+          address: data.address || "",
         });
-
-        setValidationErrors(errorMap);
-        showNotification(`Validation failed: ${validation.errors[0]}`, "error");
-        return;
       }
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+    }
+  };
 
-      // Clear validation errors on successful validation
-      setValidationErrors({});
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      const result = await updateSettings(settings, section);
-      if (result.success) {
-        showNotification(`${section} settings saved successfully`, "success");
-      } else {
-        showNotification(`Failed to save ${section} settings`, "error");
-      }
-    } catch (error) {
-      console.error(`Error saving ${section} settings:`, error);
-      showNotification(`Error saving ${section} settings`, "error");
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
+
+  const updateProfile = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from("user_profiles")
+        .update(profile)
+        .eq("id", user.id);
+
+      if (error) throw error;
+      alert("Profile updated successfully");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert("Error updating profile: " + err.message);
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleReset = async () => {
-    if (confirm("Are you sure you want to reset all settings to defaults?")) {
-      setIsLoading(true);
-      try {
-        const result = await resetSettings();
-        if (result.success) {
-          setSettings(result.data);
-          showNotification("Settings reset to defaults", "success");
-        } else {
-          showNotification("Failed to reset settings", "error");
-        }
-      } catch (error) {
-        console.error("Error resetting settings:", error);
-        showNotification("Error resetting settings", "error");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handleExport = async () => {
+  const toggleUserStatus = async (userId, currentStatus) => {
     try {
-      const result = await exportSettings();
-      if (result.success) {
-        const blob = new Blob([JSON.stringify(result.data, null, 2)], {
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `medcure-settings-${
-          new Date().toISOString().split("T")[0]
-        }.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showNotification("Settings exported successfully", "success");
-      } else {
-        showNotification("Failed to export settings", "error");
-      }
-    } catch (error) {
-      console.error("Error exporting settings:", error);
-      showNotification("Error exporting settings", "error");
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({ is_active: !currentStatus })
+        .eq("id", userId);
+
+      if (error) throw error;
+      alert("User status updated successfully");
+      fetchUsers();
+    } catch (err) {
+      console.error("Error updating user status:", err);
+      alert("Error updating user status: " + err.message);
     }
   };
 
-  const handleImport = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const deleteCategory = async (categoryId) => {
+    if (!window.confirm("Are you sure you want to delete this category?")) {
+      return;
+    }
 
     try {
-      const text = await file.text();
-      const importData = JSON.parse(text);
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", categoryId);
 
-      const result = await importSettings(importData);
-      if (result.success) {
-        setSettings(result.data);
-        showNotification("Settings imported successfully", "success");
-      } else {
-        showNotification("Failed to import settings", "error");
-      }
-    } catch (error) {
-      console.error("Error importing settings:", error);
-      showNotification(
-        "Error importing settings - Invalid file format",
-        "error"
-      );
-    }
-    // Reset file input
-    event.target.value = "";
-  };
-
-  const handleTestConnection = async () => {
-    console.log("🔧 Starting settings test connection...");
-    setIsTesting(true);
-    try {
-      showNotification("Testing backend connection...", "info");
-
-      console.log("🔧 Calling testSettingsOperations...");
-      const result = await testSettingsOperations();
-      console.log("🔧 Test result:", result);
-
-      if (result.success) {
-        showNotification("Backend connection successful!", "success");
-      } else {
-        showNotification(`Connection test failed: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("Error testing connection:", error);
-      showNotification("Connection test failed", "error");
-    } finally {
-      console.log("🔧 Test connection completed, setting loading to false");
-      setIsTesting(false);
+      if (error) throw error;
+      alert("Category deleted successfully");
+      fetchCategories();
+    } catch (err) {
+      console.error("Error deleting category:", err);
+      alert("Error deleting category: " + err.message);
     }
   };
-
-  // Handle logo upload
-  const handleLogoUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setIsLoading(true);
-      showNotification("Uploading logo...", "info");
-
-      const result = await uploadLogo(file);
-      if (result.success) {
-        handleSettingChange("logoUrl", result.data.url);
-        handleSettingChange("companyLogo", result.data.filename);
-        showNotification("Logo uploaded successfully!", "success");
-        // Refresh the branding context to show changes immediately
-        await refreshSettings();
-      } else {
-        showNotification(`Failed to upload logo: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("Error uploading logo:", error);
-      showNotification("Error uploading logo", "error");
-    } finally {
-      setIsLoading(false);
-      event.target.value = "";
-    }
-  };
-
-  // Handle avatar upload
-  const handleAvatarUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    try {
-      setIsLoading(true);
-      showNotification("Uploading avatar...", "info");
-
-      const result = await uploadAvatar(file);
-      if (result.success) {
-        handleSettingChange("profileAvatar", result.data.url);
-        showNotification("Avatar uploaded successfully!", "success");
-        // Refresh the branding context to show changes immediately
-        await refreshSettings();
-      } else {
-        showNotification(`Failed to upload avatar: ${result.error}`, "error");
-      }
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      showNotification("Error uploading avatar", "error");
-    } finally {
-      setIsLoading(false);
-      event.target.value = "";
-    }
-  };
-
-  // Handle branding save
-  const handleBrandingSave = async () => {
-    try {
-      setIsSaving(true);
-
-      const brandingData = {
-        brandingName: settings.brandingName,
-        companyLogo: settings.companyLogo,
-        logoUrl: settings.logoUrl,
-        brandColor: settings.brandColor,
-        accentColor: settings.accentColor,
-        headerStyle: settings.headerStyle,
-        sidebarStyle: settings.sidebarStyle,
-      };
-
-      const result = await updateBranding(brandingData);
-      if (result.success) {
-        showNotification("Branding settings saved successfully!", "success");
-        // Refresh the branding context to show changes immediately
-        await refreshSettings();
-      } else {
-        showNotification(
-          `Failed to save branding settings: ${result.error}`,
-          "error"
-        );
-      }
-    } catch (error) {
-      console.error("Error saving branding:", error);
-      showNotification("Error saving branding settings", "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Handle profile save
-  const handleProfileSave = async () => {
-    try {
-      setIsSaving(true);
-
-      const profileData = {
-        profileName: settings.profileName,
-        profileEmail: settings.profileEmail,
-        profileRole: settings.profileRole,
-        profileAvatar: settings.profileAvatar,
-        profilePhone: settings.profilePhone,
-        displayName: settings.displayName,
-        userInitials: settings.userInitials,
-      };
-
-      const result = await updateProfile(profileData);
-      if (result.success) {
-        showNotification("Profile settings saved successfully!", "success");
-        // Refresh the branding context to show changes immediately
-        await refreshSettings();
-      } else {
-        showNotification(
-          `Failed to save profile settings: ${result.error}`,
-          "error"
-        );
-      }
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      showNotification("Error saving profile settings", "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Helper function to get input class names with validation styling
-  const getInputClassName = (
-    fieldName,
-    baseClassName = "w-full px-3 py-2 border rounded-lg focus:ring-2 ring-primary focus:border-primary"
-  ) => {
-    if (validationErrors[fieldName]) {
-      return `${baseClassName} border-red-300 focus:border-red-500`;
-    }
-    return `${baseClassName} border-gray-300`;
-  };
-
-  const tabs = [
-    { id: "general", label: "General", icon: SettingsIcon },
-    { id: "branding", label: "Branding", icon: Brush },
-    { id: "profile", label: "Profile", icon: UserCheck },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Security", icon: Shield },
-    { id: "backup", label: "Backup & Data", icon: Database },
-    { id: "backend", label: "Backend Status", icon: Database },
-  ];
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-lg">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+          <p className="text-muted-foreground">
+            Configure system settings and user management
+          </p>
+        </div>
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-gray-100">
-            <SettingsIcon size={32} className="text-gray-600" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800">Settings</h1>
-            <p className="text-gray-500 mt-1">
-              Configure your pharmacy management system
-            </p>
-          </div>
+          <Badge variant="outline" className="px-4 py-2">
+            <Shield className="h-4 w-4 mr-2" />
+            {user?.role}
+          </Badge>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar Navigation */}
-        <div className="lg:w-64">
-          <nav className="space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === tab.id
-                      ? "bg-primary text-white font-semibold shadow-sm"
-                      : "text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  <Icon size={20} />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
+      {/* Profile Settings */}
+      <Card className="p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <User className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">
+            Profile Settings
+          </h2>
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* General Settings */}
-          {activeTab === "general" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  General Settings
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Full Name"
+            value={profile.full_name}
+            onChange={(e) =>
+              setProfile((prev) => ({ ...prev, full_name: e.target.value }))
+            }
+          />
+          <Input
+            label="Email"
+            value={user?.email || ""}
+            disabled
+            className="bg-muted"
+          />
+          <Input
+            label="Phone"
+            value={profile.phone}
+            onChange={(e) =>
+              setProfile((prev) => ({ ...prev, phone: e.target.value }))
+            }
+          />
+          <Input
+            label="Role"
+            value={user?.role || ""}
+            disabled
+            className="bg-muted"
+          />
+        </div>
+
+        <div className="mt-4">
+          <Input
+            label="Address"
+            value={profile.address}
+            onChange={(e) =>
+              setProfile((prev) => ({ ...prev, address: e.target.value }))
+            }
+          />
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <Button onClick={updateProfile} disabled={loading}>
+            {loading ? (
+              <LoadingSpinner size="sm" className="mr-2" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            Update Profile
+          </Button>
+        </div>
+      </Card>
+
+      {/* Admin Only Sections */}
+      {isAdmin && (
+        <>
+          {/* User Management */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Shield className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  User Management
                 </h2>
-                <p className="text-gray-600 mb-6">
-                  Manage your business information and appearance preferences
-                </p>
               </div>
-
-              {/* Business Information */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Building size={20} />
-                  Business Information
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Business Name
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.businessName || ""}
-                      onChange={(e) =>
-                        handleSettingChange("businessName", e.target.value)
-                      }
-                      className={getInputClassName("businessName")}
-                    />
-                    {validationErrors.businessName && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {validationErrors.businessName}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={settings.businessPhone}
-                      onChange={(e) =>
-                        handleSettingChange("businessPhone", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 ring-primary focus:border-primary"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Business Address
-                    </label>
-                    <textarea
-                      value={settings.businessAddress}
-                      onChange={(e) =>
-                        handleSettingChange("businessAddress", e.target.value)
-                      }
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 ring-primary focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      value={settings.businessEmail || ""}
-                      onChange={(e) =>
-                        handleSettingChange("businessEmail", e.target.value)
-                      }
-                      className={getInputClassName("businessEmail")}
-                    />
-                    {validationErrors.businessEmail && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {validationErrors.businessEmail}
-                      </p>
-                    )}
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={fetchUsers} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
               </div>
-
-              {/* Appearance */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Palette size={20} />
-                  Appearance
-                </h3>
-
-                {/* Live Preview */}
-                <div className="mb-6 p-4 bg-white rounded-lg border">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-medium text-gray-700">
-                      Live Preview
-                    </p>
-                    <button
-                      onClick={handleThemeReset}
-                      className="flex items-center gap-1 px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                    >
-                      <RefreshCw size={12} />
-                      Reset
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-lg shadow-sm border"
-                      style={{ backgroundColor: settings.primaryColor }}
-                    ></div>
-                    <div
-                      className="px-4 py-2 rounded-lg text-white text-sm font-medium shadow-sm transition-colors"
-                      style={{
-                        backgroundColor: settings.primaryColor,
-                        boxShadow: `0 1px 3px rgba(${theme.primaryColorRGB}, 0.3)`,
-                      }}
-                    >
-                      Sample Button
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {settings.language === "en"
-                        ? "English"
-                        : settings.language === "fil"
-                        ? "Filipino"
-                        : "Spanish"}{" "}
-                      • {settings.timezone}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Primary Color
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.primaryColor}
-                        onChange={(e) =>
-                          handleSettingChange("primaryColor", e.target.value)
-                        }
-                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.primaryColor}
-                        onChange={(e) =>
-                          handleSettingChange("primaryColor", e.target.value)
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="#2563eb"
-                      />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Changes instantly across the entire app
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Language
-                    </label>
-                    <select
-                      value={settings.language}
-                      onChange={(e) =>
-                        handleSettingChange("language", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="en">English</option>
-                      <option value="fil">Filipino</option>
-                      <option value="es">Spanish</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Interface language preference
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Timezone
-                    </label>
-                    <select
-                      value={settings.timezone}
-                      onChange={(e) =>
-                        handleSettingChange("timezone", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="Asia/Manila">Asia/Manila (UTC+8)</option>
-                      <option value="UTC">UTC (UTC+0)</option>
-                      <option value="America/New_York">
-                        America/New_York (UTC-5)
-                      </option>
-                      <option value="Europe/London">
-                        Europe/London (UTC+0)
-                      </option>
-                      <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
-                      <option value="Australia/Sydney">
-                        Australia/Sydney (UTC+10)
-                      </option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      For date and time display
-                    </p>
-                  </div>
-                </div>
-
-                {/* Additional Currency Setting */}
-                <div className="mt-4 grid sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Currency
-                    </label>
-                    <select
-                      value={settings.currency}
-                      onChange={(e) =>
-                        handleSettingChange("currency", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="PHP">Philippine Peso (₱)</option>
-                      <option value="USD">US Dollar ($)</option>
-                      <option value="EUR">Euro (€)</option>
-                      <option value="GBP">British Pound (£)</option>
-                      <option value="JPY">Japanese Yen (¥)</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      For price display and reports
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleSave("general")}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-primary hover:bg-primary-hover text-white"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save General Settings"}
-              </button>
             </div>
-          )}
 
-          {/* Branding Settings */}
-          {activeTab === "branding" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Branding Settings
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Customize your application branding, logo, and visual identity
-                </p>
-              </div>
-
-              {/* Logo Upload */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Image size={20} />
-                  Company Logo
-                </h3>
-                <div className="flex items-start gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-white">
-                      {settings.logoUrl ? (
-                        <img
-                          src={handleImageSrc(settings.logoUrl, "logo")}
-                          alt="Company Logo"
-                          className="w-full h-full object-contain rounded-lg"
-                        />
-                      ) : (
-                        <div className="text-center">
-                          <Image
-                            size={32}
-                            className="mx-auto text-gray-400 mb-2"
-                          />
-                          <p className="text-xs text-gray-500">No logo</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Logo
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          disabled={isLoading}
-                        />
-                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50">
-                          <Upload size={16} />
-                          Choose Logo
-                        </button>
-                      </div>
-                      {settings.logoUrl && (
-                        <button
-                          onClick={() => {
-                            handleSettingChange("logoUrl", "");
-                            handleSettingChange("companyLogo", "");
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        >
-                          <Trash2 size={16} />
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Recommended size: 200x200px. Supports JPEG, PNG, GIF,
-                      WebP. Max size: 5MB.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Branding Identity */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Brush size={20} />
-                  Brand Identity
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Branding Name
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.brandingName || ""}
-                      onChange={(e) =>
-                        handleSettingChange("brandingName", e.target.value)
-                      }
-                      placeholder="e.g., MedCure"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      This name appears in the header and sidebar
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Brand Color
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.brandColor || "#2563eb"}
-                        onChange={(e) =>
-                          handleSettingChange("brandColor", e.target.value)
-                        }
-                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.brandColor || "#2563eb"}
-                        onChange={(e) =>
-                          handleSettingChange("brandColor", e.target.value)
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Accent Color
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={settings.accentColor || "#3b82f6"}
-                        onChange={(e) =>
-                          handleSettingChange("accentColor", e.target.value)
-                        }
-                        className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={settings.accentColor || "#3b82f6"}
-                        onChange={(e) =>
-                          handleSettingChange("accentColor", e.target.value)
-                        }
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Header Style
-                    </label>
-                    <select
-                      value={settings.headerStyle || "modern"}
-                      onChange={(e) =>
-                        handleSettingChange("headerStyle", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="modern">Modern</option>
-                      <option value="classic">Classic</option>
-                      <option value="minimal">Minimal</option>
-                      <option value="compact">Compact</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Layout Preferences */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Zap size={20} />
-                  Layout Preferences
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sidebar Style
-                    </label>
-                    <select
-                      value={settings.sidebarStyle || "minimal"}
-                      onChange={(e) =>
-                        handleSettingChange("sidebarStyle", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="minimal">Minimal</option>
-                      <option value="expanded">Expanded</option>
-                      <option value="compact">Compact</option>
-                      <option value="icons-only">Icons Only</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleBrandingSave}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-colors ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-primary hover:bg-primary-hover text-white"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save Branding Settings"}
-              </button>
-            </div>
-          )}
-
-          {/* Profile Settings */}
-          {activeTab === "profile" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Profile Settings
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Manage your personal profile information and avatar
-                </p>
-              </div>
-
-              {/* Profile Avatar */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Camera size={20} />
-                  Profile Avatar
-                </h3>
-                <div className="flex items-start gap-6">
-                  <div className="flex-shrink-0">
-                    <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-full flex items-center justify-center bg-white overflow-hidden">
-                      {settings.profileAvatar ? (
-                        <img
-                          src={handleImageSrc(settings.profileAvatar, "avatar")}
-                          alt="Profile Avatar"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-center">
-                          <User
-                            size={24}
-                            className="mx-auto text-gray-400 mb-1"
-                          />
-                          <p className="text-xs text-gray-500">Avatar</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Avatar
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleAvatarUpload}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          disabled={isLoading}
-                        />
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                          <Upload size={16} />
-                          Choose Avatar
-                        </button>
-                      </div>
-                      {settings.profileAvatar && (
-                        <button
-                          onClick={() =>
-                            handleSettingChange("profileAvatar", "")
-                          }
-                          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                        >
-                          <Trash2 size={16} />
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Recommended size: 150x150px. Supports JPEG, PNG, GIF,
-                      WebP. Max size: 2MB.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Information */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <UserCheck size={20} />
-                  Personal Information
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.profileName || ""}
-                      onChange={(e) =>
-                        handleSettingChange("profileName", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Display Name
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.displayName || ""}
-                      onChange={(e) =>
-                        handleSettingChange("displayName", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
-                    </label>
-                    <input
-                      type="email"
-                      value={settings.profileEmail || ""}
-                      onChange={(e) =>
-                        handleSettingChange("profileEmail", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      value={settings.profilePhone || ""}
-                      onChange={(e) =>
-                        handleSettingChange("profilePhone", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      User
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
                       Role
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.profileRole || ""}
-                      onChange={(e) =>
-                        handleSettingChange("profileRole", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      User Initials
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.userInitials || ""}
-                      onChange={(e) =>
-                        handleSettingChange(
-                          "userInitials",
-                          e.target.value.substring(0, 3).toUpperCase()
-                        )
-                      }
-                      maxLength="3"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Maximum 3 characters for avatar display
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={handleProfileSave}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save Profile Settings"}
-              </button>
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Status
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Last Login
+                    </th>
+                    <th className="text-left p-4 font-medium text-foreground">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((userItem) => (
+                    <tr
+                      key={userItem.id}
+                      className="border-t border-border hover:bg-muted/30"
+                    >
+                      <td className="p-4">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {userItem.full_name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {userItem.email}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Badge
+                          variant={
+                            userItem.role === "admin"
+                              ? "destructive"
+                              : userItem.role === "pharmacist"
+                              ? "warning"
+                              : "secondary"
+                          }
+                          size="sm"
+                        >
+                          {userItem.role}
+                        </Badge>
+                      </td>
+                      <td className="p-4">
+                        <Badge
+                          variant={userItem.is_active ? "success" : "secondary"}
+                          size="sm"
+                        >
+                          {userItem.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-sm text-foreground">
+                        {userItem.last_login
+                          ? new Date(userItem.last_login).toLocaleDateString()
+                          : "Never"}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              toggleUserStatus(userItem.id, userItem.is_active)
+                            }
+                            disabled={userItem.id === user.id}
+                          >
+                            {userItem.is_active ? (
+                              <EyeOff className="h-3 w-3" />
+                            ) : (
+                              <Eye className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </Card>
 
-          {/* Notification Settings */}
-          {activeTab === "notifications" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Notification Settings
+          {/* Category Management */}
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Database className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">
+                  Category Management
                 </h2>
-                <p className="text-gray-600 mb-6">
-                  Configure alerts and notification preferences
-                </p>
               </div>
-
-              {/* Stock Alerts */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <AlertTriangle size={20} />
-                  Stock Alerts
-                </h3>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Low Stock Threshold
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={settings.lowStockThreshold}
-                      onChange={(e) =>
-                        handleSettingChange(
-                          "lowStockThreshold",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Alert when stock falls below this number
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Critical Stock Threshold
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={settings.criticalStockThreshold}
-                      onChange={(e) =>
-                        handleSettingChange(
-                          "criticalStockThreshold",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Critical alert threshold
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expiry Alert (Days)
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={settings.expiryAlertDays}
-                      onChange={(e) =>
-                        handleSettingChange(
-                          "expiryAlertDays",
-                          parseInt(e.target.value)
-                        )
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Alert before product expires
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notification Channels */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Bell size={20} />
-                  Notification Channels
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Mail size={20} className="text-blue-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          Email Notifications
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Receive alerts via email
-                        </p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.emailNotifications}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "emailNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Phone size={20} className="text-green-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          SMS Notifications
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Receive alerts via SMS
-                        </p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.smsNotifications}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "smsNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <Bell size={20} className="text-purple-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          Push Notifications
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Browser push notifications
-                        </p>
-                      </div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.pushNotifications}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "pushNotifications",
-                            e.target.checked
-                          )
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleSave("notifications")}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save Notification Settings"}
-              </button>
+              <Button onClick={() => setShowAddCategory(true)} size="sm">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
             </div>
-          )}
 
-          {/* Security Settings */}
-          {activeTab === "security" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Security Settings
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Manage password and authentication settings
-                </p>
-              </div>
-
-              {/* Password Change */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Shield size={20} />
-                  Change Password
-                </h3>
-                <div className="space-y-4 max-w-md">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Current Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={settings.currentPassword}
-                        onChange={(e) =>
-                          handleSettingChange("currentPassword", e.target.value)
-                        }
-                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? (
-                          <EyeOff size={18} />
-                        ) : (
-                          <Eye size={18} />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={settings.newPassword}
-                      onChange={(e) =>
-                        handleSettingChange("newPassword", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={settings.confirmPassword}
-                      onChange={(e) =>
-                        handleSettingChange("confirmPassword", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Options */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Users size={20} />
-                  Security Options
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className="p-4 border border-border rounded-lg"
+                >
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-gray-800">
-                        Two-Factor Authentication
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Add an extra layer of security
+                      <h3 className="font-medium text-foreground">
+                        {category.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {category.description}
                       </p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.twoFactorAuth}
-                        onChange={(e) =>
-                          handleSettingChange("twoFactorAuth", e.target.checked)
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Session Timeout (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="240"
-                        value={settings.sessionTimeout}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "sessionTimeout",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Password Expiry (days)
-                      </label>
-                      <input
-                        type="number"
-                        min="30"
-                        max="365"
-                        value={settings.passwordExpiry}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "passwordExpiry",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteCategory(category.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-
-              <button
-                onClick={() => handleSave("security")}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save Security Settings"}
-              </button>
+              ))}
             </div>
-          )}
+          </Card>
 
-          {/* Backup Settings */}
-          {activeTab === "backup" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Backup & Data Management
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Configure data backup and export options
-                </p>
-              </div>
-
-              {/* Backup Configuration */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Database size={20} />
-                  Automatic Backup
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        Enable Auto Backup
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Automatically backup data at scheduled intervals
-                      </p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.autoBackup}
-                        onChange={(e) =>
-                          handleSettingChange("autoBackup", e.target.checked)
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Backup Frequency
-                      </label>
-                      <select
-                        value={settings.backupFrequency}
-                        onChange={(e) =>
-                          handleSettingChange("backupFrequency", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="hourly">Every Hour</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Retention Period (days)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="365"
-                        value={settings.backupRetention}
-                        onChange={(e) =>
-                          handleSettingChange(
-                            "backupRetention",
-                            parseInt(e.target.value)
-                          )
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Manual Backup & Export */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Download size={20} />
-                  Manual Operations
-                </h3>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <button
-                    onClick={handleExport}
-                    disabled={isLoading || isSaving}
-                    className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download size={20} className="text-blue-500" />
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        Create Backup Now
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Export current settings
-                      </p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleReset}
-                    disabled={isLoading || isSaving}
-                    className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={20} className="text-red-500" />
-                    <div>
-                      <p className="font-medium text-red-800">Reset Settings</p>
-                      <p className="text-sm text-red-500">
-                        Restore all defaults
-                      </p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={handleExport}
-                    disabled={isLoading || isSaving}
-                    className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download size={20} className="text-purple-500" />
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        Export Settings
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Download settings as JSON
-                      </p>
-                    </div>
-                  </button>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleImport}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                      disabled={isLoading || isSaving}
-                    />
-                    <button className="flex items-center gap-2 p-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 text-left w-full disabled:opacity-50 disabled:cursor-not-allowed">
-                      <Upload size={20} className="text-green-500" />
-                      <div>
-                        <p className="font-medium text-gray-800">
-                          Import Settings
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Upload settings JSON file
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* System Reset Section */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-red-800 mb-4 flex items-center gap-2">
-                  <AlertTriangle size={20} />
-                  System Reset
-                </h3>
-                <p className="text-red-700 mb-4 text-sm">
-                  Reset your system to a fresh state. This is useful for
-                  development, testing, or when you need to start over with
-                  clean data.
-                </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => window.open("/system-reset", "_blank")}
-                    className="flex items-center gap-2 p-4 bg-white border border-red-300 rounded-lg hover:bg-red-50 text-left w-full transition-colors"
-                  >
-                    <RefreshCw size={20} className="text-red-500" />
-                    <div>
-                      <p className="font-medium text-red-800">
-                        Open System Reset Tool
-                      </p>
-                      <p className="text-sm text-red-600">
-                        Access comprehensive reset options and tools
-                      </p>
-                    </div>
-                  </button>
-                  <div className="text-xs text-red-600 bg-red-100 p-3 rounded">
-                    <strong>Console Commands Available:</strong> Type{" "}
-                    <code>MedCureReset.help()</code> in browser console for
-                    quick reset commands.
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleSave("backup")}
-                disabled={isSaving || isLoading}
-                className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold ${
-                  isSaving || isLoading
-                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                    : "bg-blue-600 text-white hover:bg-blue-700"
-                }`}
-              >
-                <Save size={18} />
-                {isSaving ? "Saving..." : "Save Backup Settings"}
-              </button>
+          {/* System Information */}
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Bell className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">
+                System Information
+              </h2>
             </div>
-          )}
 
-          {/* Backend Status Tab */}
-          {activeTab === "backend" && (
-            <div className="space-y-6">
-              <div className="bg-white p-6 rounded-lg border-l-4 border-blue-500">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <Database size={20} />
-                    Settings Backend Test
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">
+                    Database Status
                   </h3>
-                  <button
-                    onClick={handleTestConnection}
-                    disabled={isTesting}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
-                      isTesting
-                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    <CheckCircle size={16} />
-                    {isTesting ? "Testing..." : "Test Connection"}
-                  </button>
+                  <Badge variant="success" size="sm">
+                    Connected
+                  </Badge>
                 </div>
-                <p className="text-gray-600 text-sm">
-                  Test the settings backend connection to ensure your settings
-                  can be saved and retrieved properly.
-                </p>
-              </div>
-
-              {/* Settings Analytics */}
-              <div className="bg-white p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <Settings size={20} />
-                  Settings Configuration Summary
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="font-medium text-blue-800">
-                      Business Info
-                    </div>
-                    <div className="text-blue-600 mt-1">
-                      {(settings.businessName || "").length > 0 ? "✓" : "✗"}{" "}
-                      Name: {settings.businessName || "Not set"}
-                    </div>
-                    <div className="text-blue-600">
-                      {(settings.businessEmail || "").length > 0 ? "✓" : "✗"}{" "}
-                      Email: {settings.businessEmail || "Not set"}
-                    </div>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <div className="font-medium text-green-800">
-                      Stock Alerts
-                    </div>
-                    <div className="text-green-600 mt-1">
-                      Low Stock: {settings.lowStockThreshold || 0} items
-                    </div>
-                    <div className="text-green-600">
-                      Critical: {settings.criticalStockThreshold || 0} items
-                    </div>
-                  </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <div className="font-medium text-purple-800">Security</div>
-                    <div className="text-purple-600 mt-1">
-                      2FA: {settings.twoFactorAuth ? "Enabled" : "Disabled"}
-                    </div>
-                    <div className="text-purple-600">
-                      Session: {settings.sessionTimeout || 30} minutes
-                    </div>
-                  </div>
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">
+                    Total Users
+                  </h3>
+                  <p className="text-2xl font-bold text-foreground">
+                    {users.length}
+                  </p>
                 </div>
               </div>
-
-              <BackendStatus />
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">
+                    System Version
+                  </h3>
+                  <p className="text-foreground">Medcure Pharmacy v1.0.0</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">
+                    Last Updated
+                  </h3>
+                  <p className="text-foreground">
+                    {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
+          </Card>
+        </>
+      )}
+
+      {/* Add Category Modal */}
+      {showAddCategory && (
+        <CategoryModal
+          onSave={fetchCategories}
+          onCancel={() => setShowAddCategory(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Category Modal Component
+const CategoryModal = ({ onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.from("categories").insert([formData]);
+
+      if (error) throw error;
+      alert("Category created successfully");
+      onSave();
+      onCancel();
+    } catch (err) {
+      console.error("Error creating category:", err);
+      alert("Error creating category: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-card rounded-lg p-6 w-full max-w-md m-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
+          Add New Category
+        </h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Input
+            label="Category Name"
+            value={formData.name}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, name: e.target.value }))
+            }
+            required
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={formData.description}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, description: e.target.value }))
+            }
+            className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+            rows={3}
+          />
+          <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+              Create Category
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
-}
+};
