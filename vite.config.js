@@ -10,6 +10,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.js"],
     globals: true,
   },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react/jsx-runtime"],
+  },
   build: {
     target: "esnext",
     commonjsOptions: {
@@ -18,18 +21,30 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
+        // Ensure proper chunk loading order
+        inlineDynamicImports: false,
         manualChunks: (id) => {
           // Group node_modules by category
           if (id.includes("node_modules")) {
-            // Core React libraries - MUST stay together and load first
-            if (id.includes("react/") || id.includes("react-dom/")) {
-              return "vendor-react";
+            // Core React libraries + UI libraries that depend on React
+            // CRITICAL: lucide-react MUST be in the same chunk as React
+            // because it uses React.forwardRef internally
+            if (
+              id.includes("node_modules/react") ||
+              id.includes("node_modules/scheduler") ||
+              id.includes("node_modules/lucide-react")
+            ) {
+              // Exclude React-based libraries that can be separated
+              if (
+                !id.includes("react-router") &&
+                !id.includes("react-hook-form") &&
+                !id.includes("react-chartjs") &&
+                !id.includes("@tanstack/react-query")
+              ) {
+                return "vendor-react";
+              }
             }
-            // Scheduler is part of React and must be in the same chunk
-            if (id.includes("scheduler/")) {
-              return "vendor-react";
-            }
-            // Chart libraries - split these more granularly
+            // Chart libraries
             if (id.includes("chart.js") || id.includes("react-chartjs")) {
               return "vendor-charts";
             }
@@ -60,12 +75,8 @@ export default defineConfig({
             ) {
               return "vendor-pdf";
             }
-            // UI libraries
-            if (
-              id.includes("lucide-react") ||
-              id.includes("@headlessui") ||
-              id.includes("tailwind")
-            ) {
+            // Other UI libraries (not lucide-react, that's with React now)
+            if (id.includes("@headlessui") || id.includes("tailwind")) {
               return "vendor-ui";
             }
             // Router
@@ -84,42 +95,23 @@ export default defineConfig({
             return "vendor-misc";
           }
 
-          // Group our application code more granularly
-          if (id.includes("/src/services/")) {
-            // Split services by domain
-            if (id.includes("/src/services/domains/analytics/")) {
-              return "app-services-analytics";
+          // SIMPLIFIED: Don't split application code aggressively
+          // This prevents React from becoming undefined in app chunks
+          // Only split by major feature areas
+          if (id.includes("/src/")) {
+            // Services layer
+            if (id.includes("/src/services/")) {
+              return "app-services";
             }
-            if (id.includes("/src/services/domains/inventory/")) {
-              return "app-services-inventory";
+            // Large page bundles
+            if (id.includes("/src/pages/")) {
+              return "app-pages";
             }
-            if (id.includes("/src/services/domains/auth/")) {
-              return "app-services-auth";
+            // Feature modules
+            if (id.includes("/src/features/")) {
+              return "app-features";
             }
-            return "app-services-core";
-          }
-          if (id.includes("/src/components/")) {
-            // Split large component groups
-            if (id.includes("/src/components/admin/")) {
-              return "app-components-admin";
-            }
-            if (id.includes("/src/components/ui/")) {
-              return "app-components-ui";
-            }
-            return "app-components";
-          }
-          if (id.includes("/src/pages/")) {
-            return "app-pages";
-          }
-          if (id.includes("/src/features/")) {
-            // Split features by domain
-            if (id.includes("/src/features/pos/")) {
-              return "app-features-pos";
-            }
-            if (id.includes("/src/features/inventory/")) {
-              return "app-features-inventory";
-            }
-            return "app-features";
+            // Everything else (components, utils, etc.) stays in main chunk
           }
         },
       },
