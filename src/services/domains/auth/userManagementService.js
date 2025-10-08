@@ -8,7 +8,7 @@ export class UserManagementService {
     EMPLOYEE: "employee", // Employee with basic access
   };
 
-  // Permission constants - Only permissions that exist in the system
+  // Permission constants - Complete list of all system features
   static PERMISSIONS = {
     // User Management (only Admin)
     CREATE_USERS: "create_users",
@@ -32,27 +32,44 @@ export class UserManagementService {
     VIEW_SALES_REPORTS: "view_sales_reports",
     MANAGE_DISCOUNTS: "manage_discounts",
 
-    // Financial Reports
+    // Transaction History
+    VIEW_TRANSACTION_HISTORY: "view_transaction_history",
+    EXPORT_TRANSACTIONS: "export_transactions",
+    REFUND_TRANSACTIONS: "refund_transactions",
+
+    // Analytics & Reports
+    VIEW_ANALYTICS: "view_analytics",
+    GENERATE_REPORTS: "generate_reports",
+    EXPORT_REPORTS: "export_reports",
     VIEW_FINANCIAL_REPORTS: "view_financial_reports",
-    MANAGE_PRICING: "manage_pricing",
 
     // Customer Management
     VIEW_CUSTOMERS: "view_customers",
     MANAGE_CUSTOMERS: "manage_customers",
+    VIEW_CUSTOMER_HISTORY: "view_customer_history",
 
-    // System
+    // System Settings & Configuration
+    VIEW_SYSTEM_SETTINGS: "view_system_settings",
+    MANAGE_SYSTEM_SETTINGS: "manage_system_settings",
+    MANAGE_PRICING: "manage_pricing",
+
+    // Backup & Security
+    CREATE_BACKUP: "create_backup",
+    RESTORE_BACKUP: "restore_backup",
     VIEW_ACTIVITY_LOGS: "view_activity_logs",
+    VIEW_AUDIT_TRAILS: "view_audit_trails",
   };
 
-  // Role-Permission mapping - Accurate 3-tier system
+  // Role-Permission mapping - Accurate 3-tier system with complete feature coverage
   static ROLE_PERMISSIONS = {
     // ADMIN: Full system access - ALL permissions (super admin)
     [this.ROLES.ADMIN]: Object.values(this.PERMISSIONS),
 
-    // PHARMACIST: Inventory, sales, financial, and customer management
+    // PHARMACIST: Inventory, sales, analytics, customer management (no user management or system settings)
     [this.ROLES.PHARMACIST]: [
       // Can view users but cannot manage them
       this.PERMISSIONS.VIEW_USERS,
+
       // Full inventory management
       this.PERMISSIONS.CREATE_PRODUCTS,
       this.PERMISSIONS.EDIT_PRODUCTS,
@@ -60,25 +77,54 @@ export class UserManagementService {
       this.PERMISSIONS.VIEW_INVENTORY,
       this.PERMISSIONS.MANAGE_STOCK,
       this.PERMISSIONS.MANAGE_BATCHES,
+
       // Full sales operations
       this.PERMISSIONS.PROCESS_SALES,
       this.PERMISSIONS.HANDLE_RETURNS,
       this.PERMISSIONS.VOID_TRANSACTIONS,
       this.PERMISSIONS.VIEW_SALES_REPORTS,
       this.PERMISSIONS.MANAGE_DISCOUNTS,
-      // Financial access
+
+      // Transaction History
+      this.PERMISSIONS.VIEW_TRANSACTION_HISTORY,
+      this.PERMISSIONS.EXPORT_TRANSACTIONS,
+      this.PERMISSIONS.REFUND_TRANSACTIONS,
+
+      // Analytics & Reports
+      this.PERMISSIONS.VIEW_ANALYTICS,
+      this.PERMISSIONS.GENERATE_REPORTS,
+      this.PERMISSIONS.EXPORT_REPORTS,
       this.PERMISSIONS.VIEW_FINANCIAL_REPORTS,
-      this.PERMISSIONS.MANAGE_PRICING,
+
       // Customer management
       this.PERMISSIONS.VIEW_CUSTOMERS,
       this.PERMISSIONS.MANAGE_CUSTOMERS,
+      this.PERMISSIONS.VIEW_CUSTOMER_HISTORY,
+
+      // System Settings (view only, no manage)
+      this.PERMISSIONS.VIEW_SYSTEM_SETTINGS,
+      this.PERMISSIONS.MANAGE_PRICING,
+
+      // Activity logs (read only)
+      this.PERMISSIONS.VIEW_ACTIVITY_LOGS,
+      this.PERMISSIONS.VIEW_AUDIT_TRAILS,
     ],
 
-    // EMPLOYEE: Basic sales and inventory view only
+    // EMPLOYEE: Basic sales, inventory view, customer lookup (no management capabilities)
     [this.ROLES.EMPLOYEE]: [
+      // Inventory (view only)
       this.PERMISSIONS.VIEW_INVENTORY,
+
+      // Sales operations (basic)
       this.PERMISSIONS.PROCESS_SALES,
+      this.PERMISSIONS.VIEW_SALES_REPORTS,
+
+      // Transaction History (view only)
+      this.PERMISSIONS.VIEW_TRANSACTION_HISTORY,
+
+      // Customer (view only)
       this.PERMISSIONS.VIEW_CUSTOMERS,
+      this.PERMISSIONS.VIEW_CUSTOMER_HISTORY,
     ],
   };
 
