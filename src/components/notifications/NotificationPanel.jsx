@@ -138,14 +138,18 @@ const NotificationPanel = ({ onClose }) => {
       if (!result.success) {
         // Rollback on failure
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notificationId ? { ...n, is_read: false } : n))
+          prev.map((n) =>
+            n.id === notificationId ? { ...n, is_read: false } : n
+          )
         );
         alert(`Failed to mark notification as read. Please try again.`);
       }
     } catch (error) {
       // Rollback on error
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: false } : n))
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: false } : n
+        )
       );
       alert(`Failed to mark notification as read. Please try again.`);
     } finally {
@@ -193,8 +197,12 @@ const NotificationPanel = ({ onClose }) => {
 
     setProcessingItems((prev) => new Set([...prev, notificationId]));
 
-    const dismissedNotification = notifications.find((n) => n.id === notificationId);
-    const dismissedIndex = notifications.findIndex((n) => n.id === notificationId);
+    const dismissedNotification = notifications.find(
+      (n) => n.id === notificationId
+    );
+    const dismissedIndex = notifications.findIndex(
+      (n) => n.id === notificationId
+    );
 
     // Optimistic update
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
@@ -342,14 +350,17 @@ const NotificationPanel = ({ onClose }) => {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+    if (diffMins < 60)
+      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 
     return notifDate.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: notifDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+      year:
+        notifDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
     });
   };
 
@@ -528,12 +539,20 @@ const NotificationPanel = ({ onClose }) => {
             `}</style>
           </div>
         ) : notifications.length === 0 ? (
-          <div style={{ padding: "60px 20px", textAlign: "center", color: "#6b7280" }}>
+          <div
+            style={{
+              padding: "60px 20px",
+              textAlign: "center",
+              color: "#6b7280",
+            }}
+          >
             <Info size={48} color="#d1d5db" style={{ marginBottom: "16px" }} />
             <p style={{ margin: 0, fontSize: "15px", fontWeight: "500" }}>
               No notifications
             </p>
-            <p style={{ margin: "8px 0 0", fontSize: "13px" }}>You're all caught up!</p>
+            <p style={{ margin: "8px 0 0", fontSize: "13px" }}>
+              You're all caught up!
+            </p>
           </div>
         ) : (
           notifications.map((notification) => (
@@ -543,7 +562,9 @@ const NotificationPanel = ({ onClose }) => {
               style={{
                 padding: "16px 20px",
                 borderBottom: "1px solid #f3f4f6",
-                cursor: notification.metadata?.actionUrl ? "pointer" : "default",
+                cursor: notification.metadata?.actionUrl
+                  ? "pointer"
+                  : "default",
                 backgroundColor: notification.is_read ? "white" : "#f0f9ff",
                 transition: "background-color 0.2s",
                 position: "relative",
@@ -608,7 +629,14 @@ const NotificationPanel = ({ onClose }) => {
               </div>
 
               {/* Actions */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  flexShrink: 0,
+                }}
+              >
                 {!notification.is_read && (
                   <button
                     onClick={(e) => handleMarkAsRead(notification.id, e)}
@@ -616,7 +644,9 @@ const NotificationPanel = ({ onClose }) => {
                     style={{
                       background: "transparent",
                       border: "none",
-                      cursor: processingItems.has(notification.id) ? "wait" : "pointer",
+                      cursor: processingItems.has(notification.id)
+                        ? "wait"
+                        : "pointer",
                       padding: "4px",
                       borderRadius: "4px",
                       display: "flex",
@@ -635,7 +665,9 @@ const NotificationPanel = ({ onClose }) => {
                   style={{
                     background: "transparent",
                     border: "none",
-                    cursor: processingItems.has(notification.id) ? "wait" : "pointer",
+                    cursor: processingItems.has(notification.id)
+                      ? "wait"
+                      : "pointer",
                     padding: "4px",
                     borderRadius: "4px",
                     display: "flex",
@@ -681,7 +713,9 @@ const NotificationPanel = ({ onClose }) => {
           >
             Previous
           </button>
-          <span style={{ fontSize: "13px", color: "#6b7280" }}>Page {page}</span>
+          <span style={{ fontSize: "13px", color: "#6b7280" }}>
+            Page {page}
+          </span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasMore}

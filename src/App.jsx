@@ -70,9 +70,7 @@ const queryClient = new QueryClient({
 function NotificationProviderWrapper({ children }) {
   const { user } = useAuth();
   return (
-    <NotificationProvider userId={user?.id}>
-      {children}
-    </NotificationProvider>
+    <NotificationProvider userId={user?.id}>{children}</NotificationProvider>
   );
 }
 

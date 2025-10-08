@@ -156,9 +156,7 @@ const NotificationBell = () => {
       {/* Notification Panel */}
       {isPanelOpen && (
         <div ref={panelRef}>
-          <NotificationPanel
-            onClose={() => setIsPanelOpen(false)}
-          />
+          <NotificationPanel onClose={() => setIsPanelOpen(false)} />
         </div>
       )}
 

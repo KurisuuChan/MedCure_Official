@@ -23,7 +23,14 @@
  * @date 2025-10-09
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { notificationService } from "../services/notifications/NotificationService";
 import { logger } from "../utils/logger";
 
@@ -70,7 +77,10 @@ export const NotificationProvider = ({ children, userId }) => {
 
       try {
         setIsLoading(true);
-        const result = await notificationService.getUserNotifications(userId, options);
+        const result = await notificationService.getUserNotifications(
+          userId,
+          options
+        );
         if (isMountedRef.current) {
           setNotifications(result.notifications);
           setIsLoading(false);
@@ -78,7 +88,10 @@ export const NotificationProvider = ({ children, userId }) => {
         }
         return result;
       } catch (error) {
-        logger.error("[NotificationContext] Failed to load notifications:", error);
+        logger.error(
+          "[NotificationContext] Failed to load notifications:",
+          error
+        );
         if (isMountedRef.current) {
           setIsLoading(false);
         }
@@ -112,7 +125,10 @@ export const NotificationProvider = ({ children, userId }) => {
       );
 
       try {
-        const result = await notificationService.markAsRead(notificationId, userId);
+        const result = await notificationService.markAsRead(
+          notificationId,
+          userId
+        );
         if (result.success) {
           setLastUpdate(Date.now());
           return result;
@@ -176,7 +192,8 @@ export const NotificationProvider = ({ children, userId }) => {
 
       // Find notification
       const notification = notifications.find((n) => n.id === notificationId);
-      if (!notification) return { success: false, error: "Notification not found" };
+      if (!notification)
+        return { success: false, error: "Notification not found" };
 
       // Save state for rollback
       const oldNotifications = [...notifications];
@@ -189,7 +206,10 @@ export const NotificationProvider = ({ children, userId }) => {
       }
 
       try {
-        const result = await notificationService.dismiss(notificationId, userId);
+        const result = await notificationService.dismiss(
+          notificationId,
+          userId
+        );
         if (result.success) {
           setLastUpdate(Date.now());
           return result;
@@ -262,20 +282,26 @@ export const NotificationProvider = ({ children, userId }) => {
     loadNotifications();
 
     // Subscribe to real-time updates
-    const unsubscribe = notificationService.subscribeToNotifications(userId, async (payload) => {
-      logger.debug("[NotificationContext] Real-time update received:", payload.eventType);
+    const unsubscribe = notificationService.subscribeToNotifications(
+      userId,
+      async (payload) => {
+        logger.debug(
+          "[NotificationContext] Real-time update received:",
+          payload.eventType
+        );
 
-      // Debounce multiple rapid updates
-      setTimeout(async () => {
-        if (isMountedRef.current) {
-          await loadUnreadCount();
-          // Only reload notifications if they're currently loaded
-          if (notifications.length > 0) {
-            await loadNotifications();
+        // Debounce multiple rapid updates
+        setTimeout(async () => {
+          if (isMountedRef.current) {
+            await loadUnreadCount();
+            // Only reload notifications if they're currently loaded
+            if (notifications.length > 0) {
+              await loadNotifications();
+            }
           }
-        }
-      }, 100);
-    });
+        }, 100);
+      }
+    );
 
     subscriptionRef.current = unsubscribe;
 
@@ -318,7 +344,9 @@ export const NotificationProvider = ({ children, userId }) => {
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error("useNotifications must be used within a NotificationProvider");
+    throw new Error(
+      "useNotifications must be used within a NotificationProvider"
+    );
   }
   return context;
 };
