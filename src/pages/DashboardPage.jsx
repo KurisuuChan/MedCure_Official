@@ -15,7 +15,6 @@ import {
   BarChart3,
   Stethoscope,
   Heart,
-  Bell,
   ChevronRight,
   Eye,
   ArrowUpRight,
@@ -26,7 +25,6 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { DashboardService } from "../services/domains/analytics/dashboardService";
-import { useNotifications } from "../contexts/NotificationContext";
 import { formatCurrency, formatNumber } from "../utils/formatting";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import SalesChart from "../components/charts/SalesChart";
@@ -63,7 +61,6 @@ ChartJS.register(
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const { unreadCount: alertCount } = useNotifications(); // Get dynamic alert count from context
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -196,26 +193,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-6 lg:mt-0 flex items-center space-x-3">
-              <button
-                onClick={() => navigate("/notifications")}
-                className={`${
-                  alertCount > 0
-                    ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
-                    : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
-                } px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 border relative`}
-                aria-label={`${alertCount} alerts`}
-              >
-                <Bell className={`h-4 w-4 ${alertCount > 0 ? "animate-pulse" : ""}`} />
-                <span className="font-medium">
-                  {alertCount > 0 ? `${alertCount} Alert${alertCount > 1 ? "s" : ""}` : "No Alerts"}
-                </span>
-                {alertCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {alertCount > 9 ? "9+" : alertCount}
-                  </span>
-                )}
-              </button>
+            <div className="mt-6 lg:mt-0">
               <button
                 onClick={loadDashboardData}
                 disabled={isLoading}
