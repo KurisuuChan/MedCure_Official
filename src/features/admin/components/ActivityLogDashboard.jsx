@@ -80,6 +80,7 @@ const ActivityLogDashboard = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [viewMode, setViewMode] = useState("list");
+  const [groupSimilar, setGroupSimilar] = useState(true); // Smart grouping enabled by default
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -224,11 +225,14 @@ const ActivityLogDashboard = () => {
     ipFilter,
   ]);
 
+  // Apply smart grouping before pagination
+  const processedActivities = groupSimilarActivities(filteredActivities);
+
   // Pagination calculations
-  const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
+  const totalPages = Math.ceil(processedActivities.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+  const paginatedActivities = processedActivities.slice(startIndex, endIndex);
 
   // Security analysis
   const securityAlerts = filteredActivities.filter(
@@ -387,6 +391,82 @@ const ActivityLogDashboard = () => {
     });
     return grouped;
   };
+
+  // Smart grouping function to reduce repetitive activities
+  const groupSimilarActivities = useCallback(
+    (activities) => {
+      if (!groupSimilar || activities.length === 0) return activities;
+
+      const timeWindow = 10 * 60 * 1000; // 10 minutes
+      const minGroupSize = 3;
+      const grouped = [];
+      let currentGroup = null;
+
+      const sortedActivities = [...activities].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      sortedActivities.forEach((activity, index) => {
+        if (index === 0) {
+          currentGroup = {
+            ...activity,
+            count: 1,
+            items: [activity],
+            firstTime: activity.created_at,
+            lastTime: activity.created_at,
+            isGrouped: false,
+          };
+          return;
+        }
+
+        const prevActivity = sortedActivities[index - 1];
+        const isSameType =
+          activity.activity_type === prevActivity.activity_type;
+        const isSameUser = activity.user_id === prevActivity.user_id;
+        const timeDiff = Math.abs(
+          new Date(activity.created_at) - new Date(prevActivity.created_at)
+        );
+        const withinWindow = timeDiff < timeWindow;
+
+        if (isSameType && isSameUser && withinWindow && currentGroup) {
+          currentGroup.count++;
+          currentGroup.items.push(activity);
+          currentGroup.lastTime = activity.created_at;
+          currentGroup.isGrouped = currentGroup.count >= minGroupSize;
+        } else {
+          // Push previous group
+          if (currentGroup.count >= minGroupSize) {
+            grouped.push({ ...currentGroup, isGrouped: true });
+          } else {
+            // Don't group, push individual items
+            grouped.push(...currentGroup.items);
+          }
+
+          // Start new group
+          currentGroup = {
+            ...activity,
+            count: 1,
+            items: [activity],
+            firstTime: activity.created_at,
+            lastTime: activity.created_at,
+            isGrouped: false,
+          };
+        }
+      });
+
+      // Handle last group
+      if (currentGroup) {
+        if (currentGroup.count >= minGroupSize) {
+          grouped.push({ ...currentGroup, isGrouped: true });
+        } else {
+          grouped.push(...currentGroup.items);
+        }
+      }
+
+      return grouped;
+    },
+    [groupSimilar]
+  );
 
   // Effects
   useEffect(() => {
@@ -644,13 +724,31 @@ const ActivityLogDashboard = () => {
         </div>
 
         {/* Advanced Filters Toggle */}
-        <button
-          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className="mt-4 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
-        >
-          <Filter className="h-4 w-4" />
-          {showAdvancedFilters ? "Hide" : "Show"} Advanced Filters
-        </button>
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            <Filter className="h-4 w-4" />
+            {showAdvancedFilters ? "Hide" : "Show"} Advanced Filters
+          </button>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="groupSimilarToggle"
+              checked={groupSimilar}
+              onChange={(e) => setGroupSimilar(e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label
+              htmlFor="groupSimilarToggle"
+              className="text-sm text-gray-700 cursor-pointer"
+            >
+              Group similar activities (reduces clutter)
+            </label>
+          </div>
+        </div>
 
         {/* Advanced Filters */}
         {showAdvancedFilters && (
@@ -852,14 +950,14 @@ const ActivityLogDashboard = () => {
         {/* List View */}
         {viewMode === "list" && (
           <div className="space-y-3">
-            {paginatedActivities.map((activity) => (
+            {paginatedActivities.map((activity, idx) => (
               <div
-                key={activity.id}
+                key={activity.id || `activity-${idx}`}
                 role="button"
                 tabIndex={0}
                 className={`p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer ${getActivityColor(
                   activity.activity_type
-                )}`}
+                )} ${activity.isGrouped ? "border-l-4 border-l-blue-500" : ""}`}
                 onClick={() => {
                   setSelectedActivity(activity);
                   setShowDetailsModal(true);
@@ -882,6 +980,11 @@ const ActivityLogDashboard = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-semibold text-gray-900">
                           {activity.activity_type.replace(/_/g, " ")}
+                          {activity.isGrouped && activity.count > 1 && (
+                            <span className="ml-2 px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full font-bold">
+                              ×{activity.count}
+                            </span>
+                          )}
                         </p>
                         {getSeverityBadge(activity.activity_type)}
                         {activity.metadata?.success !== undefined && (
@@ -897,7 +1000,9 @@ const ActivityLogDashboard = () => {
                         )}
                       </div>
                       <p className="text-sm text-gray-700 mb-2">
-                        {activity.description}
+                        {activity.isGrouped && activity.count > 1
+                          ? `${activity.description} (${activity.count} times)`
+                          : activity.description}
                       </p>
                       <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
@@ -911,13 +1016,26 @@ const ActivityLogDashboard = () => {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          <span>{formatDate(activity.created_at)}</span>
+                          {activity.isGrouped && activity.count > 1 ? (
+                            <span>
+                              {formatDate(activity.firstTime)} -{" "}
+                              {formatDate(activity.lastTime)}
+                            </span>
+                          ) : (
+                            <span>{formatDate(activity.created_at)}</span>
+                          )}
                         </span>
                         <span className="flex items-center gap-1">
                           <Globe className="h-3 w-3" />
                           <span>{activity.ip_address}</span>
                         </span>
                       </div>
+                      {activity.isGrouped && activity.count > 1 && (
+                        <div className="mt-2 text-xs text-blue-600 font-medium">
+                          📋 Click to view all {activity.count} activities in
+                          this group
+                        </div>
+                      )}
                     </div>
                   </div>
 

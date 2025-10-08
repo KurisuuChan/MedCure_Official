@@ -26,7 +26,9 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { DashboardService } from "../services/domains/analytics/dashboardService";
+import { notificationService } from "../services/notifications/NotificationService";
 import { formatCurrency, formatNumber } from "../utils/formatting";
+import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import SalesChart from "../components/charts/SalesChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
@@ -62,9 +64,11 @@ ChartJS.register(
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // Get current user for notifications
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [alertCount, setAlertCount] = useState(0); // Dynamic alert count
 
   // OPTIMIZATION: Use useCallback to memoize the data loading function
   const loadDashboardData = useCallback(async () => {
@@ -98,6 +102,37 @@ export default function DashboardPage() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Load alert/notification count
+  useEffect(() => {
+    const loadAlertCount = async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Get unread notifications count as alerts
+        const count = await notificationService.getUnreadCount(user.id);
+        setAlertCount(count);
+      } catch (error) {
+        console.error("❌ [Dashboard] Error loading alert count:", error);
+        setAlertCount(0);
+      }
+    };
+
+    loadAlertCount();
+
+    // Subscribe to real-time updates
+    if (user?.id) {
+      const unsubscribe = notificationService.subscribeToNotifications(
+        user.id,
+        async () => {
+          const count = await notificationService.getUnreadCount(user.id);
+          setAlertCount(count);
+        }
+      );
+
+      return () => unsubscribe();
+    }
+  }, [user?.id]);
 
   // BEST PRACTICE: Centralize state rendering logic
   if (isLoading) {
@@ -195,9 +230,24 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-6 lg:mt-0 flex items-center space-x-3">
-              <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 border border-gray-200">
-                <Bell className="h-4 w-4" />
-                <span>3 Alerts</span>
+              <button
+                onClick={() => navigate("/notifications")}
+                className={`${
+                  alertCount > 0
+                    ? "bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
+                } px-4 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 border relative`}
+                aria-label={`${alertCount} alerts`}
+              >
+                <Bell className={`h-4 w-4 ${alertCount > 0 ? "animate-pulse" : ""}`} />
+                <span className="font-medium">
+                  {alertCount > 0 ? `${alertCount} Alert${alertCount > 1 ? "s" : ""}` : "No Alerts"}
+                </span>
+                {alertCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                    {alertCount > 9 ? "9+" : alertCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={loadDashboardData}

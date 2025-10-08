@@ -1076,16 +1076,20 @@ export class UserManagementService {
   static getMockActivityLogs(limit = 100) {
     const activities = [];
     const now = new Date();
-    const activityTypes = [
-      "login",
-      "logout",
-      "USER_CREATED",
-      "USER_UPDATED",
-      "USER_DEACTIVATED",
-      "SESSION_STARTED",
-      "SESSION_ENDED",
-      "PASSWORD_RESET_REQUESTED",
-      "PERMISSION_CHANGED",
+
+    // Better weighted distribution to avoid spam
+    const activityPool = [
+      ...Array(15).fill("login"),
+      ...Array(18).fill("SESSION_STARTED"),
+      ...Array(15).fill("USER_UPDATED"),
+      ...Array(12).fill("logout"),
+      ...Array(10).fill("SESSION_ENDED"),
+      ...Array(8).fill("PERMISSION_CHANGED"),
+      ...Array(7).fill("USER_CREATED"),
+      ...Array(5).fill("PASSWORD_RESET_REQUESTED"),
+      ...Array(5).fill("BULK_USER_UPDATE"),
+      ...Array(3).fill("USER_DEACTIVATED"),
+      ...Array(2).fill("LOGIN_ATTEMPT"),
     ];
 
     const mockUsers = [
@@ -1107,27 +1111,69 @@ export class UserManagementService {
         email: "jane@medcure.com",
         role: "employee",
       },
+      {
+        id: "4",
+        name: "Maria Garcia",
+        email: "maria@medcure.com",
+        role: "cashier",
+      },
+      {
+        id: "5",
+        name: "Robert Chen",
+        email: "robert@medcure.com",
+        role: "pharmacist",
+      },
     ];
 
+    // Shuffle activity pool for randomness
+    const shuffled = [...activityPool].sort(() => Math.random() - 0.5);
+
+    let lastActivity = null;
+    let consecutiveCount = 0;
+
     for (let i = 0; i < limit; i++) {
+      let activityType = shuffled[i % shuffled.length];
+
+      // Prevent more than 2 consecutive identical activities (anti-spam)
+      if (activityType === lastActivity) {
+        consecutiveCount++;
+        if (consecutiveCount >= 2) {
+          // Force a different activity type
+          const alternativeIndex = (i + 7) % shuffled.length;
+          activityType = shuffled[alternativeIndex];
+          consecutiveCount = 0;
+        }
+      } else {
+        consecutiveCount = 0;
+      }
+
+      lastActivity = activityType;
+
       const user = mockUsers[Math.floor(Math.random() * mockUsers.length)];
-      const activityType =
-        activityTypes[Math.floor(Math.random() * activityTypes.length)];
+
+      // More realistic time distribution
+      const hourOffset = Math.floor(Math.random() * 168); // Last 7 days
+      const minuteOffset = Math.floor(Math.random() * 60);
       const date = new Date(
-        now.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000
+        now.getTime() - (hourOffset * 60 * 60 * 1000 + minuteOffset * 60 * 1000)
       );
 
       activities.push({
-        id: i + 1,
+        id: `activity_${i + 1}`,
         user_id: user.id,
         activity_type: activityType,
         description: this.formatActivityDescription(activityType),
-        ip_address: `192.168.1.${Math.floor(Math.random() * 255)}`,
+        ip_address: `192.168.${Math.floor(Math.random() * 3)}.${Math.floor(
+          Math.random() * 255
+        )}`,
         user_agent:
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         created_at: date.toISOString(),
         metadata: {
-          success: Math.random() > 0.1,
+          success:
+            activityType === "LOGIN_ATTEMPT"
+              ? Math.random() > 0.3
+              : Math.random() > 0.05,
           details: "System generated activity",
         },
         user_name: user.name,
