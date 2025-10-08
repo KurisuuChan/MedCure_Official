@@ -1,5 +1,5 @@
 // Enhanced Toast System with Actions and Rich Content
-import React, { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X, Clock, Zap } from "lucide-react";
 
 const EnhancedToastContext = createContext();

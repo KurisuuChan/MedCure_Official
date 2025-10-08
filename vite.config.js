@@ -12,13 +12,21 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         manualChunks: (id) => {
           // Group node_modules by category
           if (id.includes("node_modules")) {
-            // Core React libraries
-            if (id.includes("react") || id.includes("react-dom")) {
+            // Core React libraries - MUST stay together and load first
+            if (id.includes("react/") || id.includes("react-dom/")) {
+              return "vendor-react";
+            }
+            // Scheduler is part of React and must be in the same chunk
+            if (id.includes("scheduler/")) {
               return "vendor-react";
             }
             // Chart libraries - split these more granularly
@@ -116,6 +124,6 @@ export default defineConfig({
         },
       },
     },
-    chunkSizeWarningLimit: 500, // Lower the warning limit to catch issues earlier
+    chunkSizeWarningLimit: 500,
   },
 });
