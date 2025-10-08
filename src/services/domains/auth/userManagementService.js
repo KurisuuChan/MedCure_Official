@@ -358,58 +358,47 @@ export class UserManagementService {
     }
   }
 
-  // Delete user permanently (cascade to related records)
+  // Delete user (soft delete - deactivate instead of permanent deletion)
   static async deleteUser(userId) {
     try {
       console.log("🗑️ [UserManagement] Starting user deletion:", userId);
 
-      // Delete related records in order (to avoid foreign key constraint violations)
+      // ✅ FIXED: Use soft delete instead of hard delete to avoid foreign key constraint violations
+      // This preserves referential integrity with sales, audit_log, and other related tables
 
-      // 1. Delete from audit_log
-      console.log("🗑️ [UserManagement] Deleting audit_log records...");
-      const { error: auditError } = await supabase
-        .from("audit_log")
-        .delete()
-        .eq("user_id", userId);
-
-      if (auditError) {
-        console.warn("⚠️ Error deleting audit_log records:", auditError);
-        // Continue anyway - table might not exist or be empty
-      } else {
-        console.log("✅ [UserManagement] audit_log records deleted");
-      }
-
-      // 2. Delete from user_activity_logs (if exists)
-      console.log("🗑️ [UserManagement] Deleting user_activity_logs records...");
-      const { error: activityError } = await supabase
-        .from("user_activity_logs")
-        .delete()
-        .eq("user_id", userId);
-
-      if (activityError) {
-        console.warn("⚠️ Error deleting user activity logs:", activityError);
-        // Continue anyway - table might not exist or be empty
-      } else {
-        console.log("✅ [UserManagement] user_activity_logs records deleted");
-      }
-
-      // 3. Finally, delete the user
-      console.log("🗑️ [UserManagement] Deleting user record...");
+      console.log("🔄 [UserManagement] Deactivating user (soft delete)...");
       const { data, error } = await supabase
         .from("users")
-        .delete()
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", userId)
         .select()
         .single();
 
       if (error) {
-        console.error("❌ [UserManagement] Failed to delete user:", error);
-        throw error;
+        console.error("❌ [UserManagement] Failed to deactivate user:", error);
+
+        // Provide helpful error messages
+        if (error.code === "PGRST116") {
+          throw new Error("User not found");
+        } else if (error.message.includes("foreign key")) {
+          throw new Error(
+            "Cannot delete user: User has associated records in the system"
+          );
+        } else {
+          throw new Error(`Failed to delete user: ${error.message}`);
+        }
       }
 
       console.log(
-        `✅ [UserManagement] User ${userId} and all related records deleted successfully`
+        `✅ [UserManagement] User ${userId} successfully deactivated (soft deleted)`
       );
+      console.log(
+        `📧 Deactivated user: ${data.email} (${data.first_name} ${data.last_name})`
+      );
+
       return data;
     } catch (error) {
       console.error("❌ [UserManagement] Error deleting user:", error);
@@ -420,6 +409,302 @@ export class UserManagementService {
         code: error.code,
       });
       throw error;
+    }
+  }
+
+  // Activate user (reactivate deactivated user)
+  static async activateUser(userId) {
+    try {
+      console.log("✅ [UserManagement] Reactivating user:", userId);
+
+      // First, check if user exists and is currently deactivated
+      const { data: userData, error: fetchError } = await supabase
+        .from("users")
+        .select("id, email, first_name, last_name, is_active, role")
+        .eq("id", userId)
+        .single();
+
+      if (fetchError) {
+        console.error("❌ [UserManagement] User not found:", fetchError);
+        throw new Error("User not found");
+      }
+
+      if (userData.is_active) {
+        console.warn("⚠️ [UserManagement] User is already active");
+        throw new Error("User is already active");
+      }
+
+      console.log(`🔄 Reactivating user: ${userData.email}`);
+
+      // Reactivate the user
+      const { data, error } = await supabase
+        .from("users")
+        .update({
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("❌ [UserManagement] Failed to reactivate user:", error);
+        throw new Error(`Failed to reactivate user: ${error.message}`);
+      }
+
+      console.log(
+        `✅ [UserManagement] User ${userId} successfully reactivated`
+      );
+      console.log(
+        `📧 Reactivated user: ${data.email} (${data.first_name} ${data.last_name})`
+      );
+
+      return data;
+    } catch (error) {
+      console.error("❌ [UserManagement] Error reactivating user:", error);
+      console.error("Error details:", {
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code,
+      });
+      throw error;
+    }
+  }
+
+  // Hard delete user (permanent deletion - only for deactivated users)
+  // Cascade is always true to clean up logs and movements (sales are always protected)
+  static async hardDeleteUser(userId, options = { cascade: true }) {
+    try {
+      console.log("🗑️ [UserManagement] Starting HARD deletion:", userId);
+      console.log("⚙️ [UserManagement] Delete options:", options);
+
+      // First, check if user exists and is deactivated
+      const { data: userData, error: fetchError } = await supabase
+        .from("users")
+        .select("id, email, first_name, last_name, is_active")
+        .eq("id", userId)
+        .single();
+
+      if (fetchError) {
+        console.error("❌ [UserManagement] User not found:", fetchError);
+        throw new Error("User not found");
+      }
+
+      // Safety check: Only allow hard delete of deactivated users
+      if (userData.is_active) {
+        console.error("❌ [UserManagement] Cannot hard delete active user");
+        throw new Error(
+          "Cannot permanently delete an active user. Please deactivate the user first."
+        );
+      }
+
+      console.log(
+        "⚠️ [UserManagement] PERMANENTLY deleting user (hard delete)..."
+      );
+      console.log(
+        "📧 User to delete:",
+        `${userData.email} (${userData.first_name} ${userData.last_name})`
+      );
+
+      // If cascade is enabled, delete related records first
+      if (options.cascade) {
+        console.log(
+          "🔄 [UserManagement] CASCADE delete enabled - removing related records..."
+        );
+
+        try {
+          // Delete stock movements
+          const { error: stockError } = await supabase
+            .from("stock_movements")
+            .delete()
+            .eq("user_id", userId);
+
+          if (stockError) {
+            console.warn("⚠️ Could not delete stock movements:", stockError);
+          } else {
+            console.log("✅ Deleted stock movements");
+          }
+
+          // Delete audit logs
+          const { error: auditError } = await supabase
+            .from("audit_log")
+            .delete()
+            .eq("user_id", userId);
+
+          if (auditError) {
+            console.warn("⚠️ Could not delete audit logs:", auditError);
+          } else {
+            console.log("✅ Deleted audit logs");
+          }
+
+          // Delete user activity logs
+          const { error: logsError } = await supabase
+            .from("user_activity_logs")
+            .delete()
+            .eq("user_id", userId);
+
+          if (logsError) {
+            console.warn("⚠️ Could not delete activity logs:", logsError);
+          } else {
+            console.log("✅ Deleted user activity logs");
+          }
+
+          // Note: Sales records should NOT be deleted as they are business-critical
+          // Instead, you might want to reassign them to a "deleted user" account
+          console.log("ℹ️ Sales records will remain (business data integrity)");
+        } catch (cascadeError) {
+          console.error("❌ Error during cascade delete:", cascadeError);
+          throw new Error(
+            `Failed to delete related records: ${cascadeError.message}`
+          );
+        }
+      }
+
+      // Perform hard delete
+      const { error: deleteError } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", userId);
+
+      if (deleteError) {
+        console.error(
+          "❌ [UserManagement] Failed to hard delete user:",
+          deleteError
+        );
+        console.error("❌ Error code:", deleteError.code);
+        console.error("❌ Error details:", deleteError.details);
+        console.error("❌ Error hint:", deleteError.hint);
+
+        // Provide helpful error messages with specific table information
+        if (
+          deleteError.code === "23503" ||
+          deleteError.code === "409" ||
+          deleteError.message.toLowerCase().includes("foreign key") ||
+          deleteError.message.toLowerCase().includes("conflict")
+        ) {
+          // Foreign key constraint violation
+
+          // Try to identify which tables have references
+          let errorDetails = "";
+          if (deleteError.details) {
+            errorDetails = ` Details: ${deleteError.details}`;
+          } else if (deleteError.hint) {
+            errorDetails = ` Hint: ${deleteError.hint}`;
+          }
+
+          throw new Error(
+            `Cannot permanently delete user: This user has associated records in the database.\n\n` +
+              `The user has sales records that must be preserved for business compliance.\n\n` +
+              `Blocked by:\n` +
+              `• Sales/Transactions (sales table) - PROTECTED\n\n` +
+              `Recommendation:\n` +
+              `• Keep user deactivated instead of deleting\n` +
+              `• Sales data must remain for financial/audit purposes\n` +
+              `• Use the Reactivate button if user needs to be restored${errorDetails}`
+          );
+        } else {
+          throw new Error(
+            `Failed to permanently delete user: ${deleteError.message}`
+          );
+        }
+      }
+
+      console.log(
+        `✅ [UserManagement] User ${userId} PERMANENTLY deleted (hard delete)`
+      );
+      console.log(
+        `📧 Deleted user: ${userData.email} (${userData.first_name} ${userData.last_name})`
+      );
+
+      return userData;
+    } catch (error) {
+      console.error("❌ [UserManagement] Error hard deleting user:", error);
+      console.error("Error details:", {
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code,
+      });
+      throw error;
+    }
+  }
+
+  // Check what records are associated with a user (for safe deletion planning)
+  static async getUserAssociatedRecords(userId) {
+    try {
+      console.log(
+        "🔍 [UserManagement] Checking associated records for user:",
+        userId
+      );
+
+      const associations = {
+        sales: 0,
+        stockMovements: 0,
+        activityLogs: 0,
+        auditLogs: 0,
+        canDelete: true,
+        blockingTables: [],
+      };
+
+      // Check sales records
+      const { count: salesCount, error: salesError } = await supabase
+        .from("sales")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (!salesError && salesCount) {
+        associations.sales = salesCount;
+        if (salesCount > 0) {
+          associations.canDelete = false;
+          associations.blockingTables.push(`sales (${salesCount} records)`);
+        }
+      }
+
+      // Check stock movements
+      const { count: stockCount, error: stockError } = await supabase
+        .from("stock_movements")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (!stockError && stockCount) {
+        associations.stockMovements = stockCount;
+        // Stock movements can be deleted with cascade, so don't block
+      }
+
+      // Check activity logs
+      const { count: logsCount, error: logsError } = await supabase
+        .from("user_activity_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (!logsError && logsCount) {
+        associations.activityLogs = logsCount;
+      }
+
+      // Check audit logs
+      const { count: auditCount, error: auditError } = await supabase
+        .from("audit_log")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      if (!auditError && auditCount) {
+        associations.auditLogs = auditCount;
+      }
+
+      console.log("📊 Associated records:", associations);
+      return associations;
+    } catch (error) {
+      console.error("❌ Error checking associated records:", error);
+      return {
+        sales: 0,
+        stockMovements: 0,
+        activityLogs: 0,
+        auditLogs: 0,
+        canDelete: false,
+        blockingTables: ["Error checking - assume not safe to delete"],
+        error: error.message,
+      };
     }
   }
 

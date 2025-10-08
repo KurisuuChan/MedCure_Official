@@ -29,7 +29,7 @@ import { DashboardService } from "../services/domains/analytics/dashboardService
 import { formatCurrency, formatNumber } from "../utils/formatting";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import SalesChart from "../components/charts/SalesChart";
-import VerticalBarChart from '../components/charts/VerticalBarChart';
+import VerticalBarChart from "../components/charts/VerticalBarChart";
 import StandardizedProductDisplay from "../components/ui/StandardizedProductDisplay";
 import {
   Chart as ChartJS,
@@ -219,42 +219,48 @@ export default function DashboardPage() {
             title="Revenue Today"
             value={formatCurrency(dashboardData.totalSales || 0)}
             icon={TrendingUp}
-            trend={8.2}
+            trend={
+              dashboardData.growthPercentages?.revenue
+                ? Number(dashboardData.growthPercentages.revenue.toFixed(1))
+                : 0
+            }
             trendText="vs yesterday"
             color="green"
             href="/transaction-history"
-            onClick={() => navigate('/transaction-history')}
+            onClick={() => navigate("/transaction-history")}
           />
           <MemoizedCleanMetricCard
             title="Total Products"
             value={formatNumber(dashboardData.totalProducts || 0)}
             icon={Package}
-            trend={2.1}
-            trendText="this month"
+            trend={null}
+            trendText="inventory count"
             color="blue"
             href="/inventory"
-            onClick={() => navigate('/inventory')}
+            onClick={() => navigate("/inventory")}
           />
           <MemoizedCleanMetricCard
             title="Low Stock Alert"
             value={formatNumber(dashboardData.lowStockCount || 0)}
             icon={AlertTriangle}
-            trend={-5.3}
-            trendText="improvement"
+            trend={null}
+            trendText="items need restock"
             color="amber"
             isAlert={true}
             href="/inventory"
-            onClick={() => navigate('/inventory', { state: { filter: 'low-stock' } })}
+            onClick={() =>
+              navigate("/inventory", { state: { filter: "low-stock" } })
+            }
           />
           <MemoizedCleanMetricCard
             title="Active Users"
             value={formatNumber(dashboardData.activeUsers || 0)}
             icon={Users}
-            trend={12.5}
-            trendText="growth rate"
+            trend={null}
+            trendText="system users"
             color="purple"
-            href="/management"
-            onClick={() => navigate('/management')}
+            href="/user-management"
+            onClick={() => navigate("/user-management")}
           />
         </section>
 
@@ -263,8 +269,12 @@ export default function DashboardPage() {
           <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Sales Overview</h2>
-                <p className="text-sm text-gray-600">Comprehensive sales analytics and trends</p>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Sales Overview
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Comprehensive sales analytics and trends
+                </p>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -332,16 +342,18 @@ export default function DashboardPage() {
           </div>
 
           {/* Inventory Analysis */}
-          <div 
-            onClick={() => navigate('/inventory')}
+          <div
+            onClick={() => navigate("/inventory")}
             className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-fit"
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && navigate('/inventory')}
+            onKeyDown={(e) => e.key === "Enter" && navigate("/inventory")}
           >
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Inventory Analysis</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Inventory Analysis
+                </h3>
                 <p className="text-sm text-gray-600">Stock value by category</p>
               </div>
               <div className="p-2 bg-green-100 rounded-lg">
@@ -349,25 +361,30 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="h-56">
-              {dashboardData.categoryAnalysis && dashboardData.categoryAnalysis.length > 0 ? (
+              {dashboardData.categoryAnalysis &&
+              dashboardData.categoryAnalysis.length > 0 ? (
                 <Doughnut
                   data={{
-                    labels: dashboardData.categoryAnalysis.map(cat => cat.name),
+                    labels: dashboardData.categoryAnalysis.map(
+                      (cat) => cat.name
+                    ),
                     datasets: [
                       {
-                        data: dashboardData.categoryAnalysis.map(cat => parseFloat(cat.percentage)),
+                        data: dashboardData.categoryAnalysis.map((cat) =>
+                          parseFloat(cat.percentage)
+                        ),
                         backgroundColor: [
-                          'rgba(59, 130, 246, 0.8)',   // Blue
-                          'rgba(16, 185, 129, 0.8)',   // Green
-                          'rgba(245, 158, 11, 0.8)',   // Amber
-                          'rgba(139, 92, 246, 0.8)',   // Purple
-                          'rgba(236, 72, 153, 0.8)',   // Pink
-                          'rgba(107, 114, 128, 0.8)',  // Gray
-                          'rgba(239, 68, 68, 0.8)',    // Red
-                          'rgba(20, 184, 166, 0.8)',   // Teal
+                          "rgba(59, 130, 246, 0.8)", // Blue
+                          "rgba(16, 185, 129, 0.8)", // Green
+                          "rgba(245, 158, 11, 0.8)", // Amber
+                          "rgba(139, 92, 246, 0.8)", // Purple
+                          "rgba(236, 72, 153, 0.8)", // Pink
+                          "rgba(107, 114, 128, 0.8)", // Gray
+                          "rgba(239, 68, 68, 0.8)", // Red
+                          "rgba(20, 184, 166, 0.8)", // Teal
                         ].slice(0, dashboardData.categoryAnalysis.length),
                         borderWidth: 2,
-                        borderColor: '#ffffff',
+                        borderColor: "#ffffff",
                       },
                     ],
                   }}
@@ -377,18 +394,18 @@ export default function DashboardPage() {
                     layout: {
                       padding: {
                         top: 10,
-                        bottom: 10
-                      }
+                        bottom: 10,
+                      },
                     },
                     plugins: {
                       legend: {
-                        position: 'bottom',
+                        position: "bottom",
                         labels: {
                           padding: 10,
                           usePointStyle: true,
                           boxWidth: 12,
                           font: {
-                            size: 12
+                            size: 12,
                           },
                           generateLabels: (chart) => {
                             const data = chart.data;
@@ -404,7 +421,8 @@ export default function DashboardPage() {
                       tooltip: {
                         callbacks: {
                           label: (context) => {
-                            const category = dashboardData.categoryAnalysis[context.dataIndex];
+                            const category =
+                              dashboardData.categoryAnalysis[context.dataIndex];
                             return [
                               `${category.name}: ${category.percentage}%`,
                               `Value: ${formatCurrency(category.value)}`,
@@ -431,39 +449,55 @@ export default function DashboardPage() {
         {/* Top Products - Full Width */}
         <section className="w-full">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div 
-              onClick={() => navigate('/inventory')}
+            <div
+              onClick={() => navigate("/inventory")}
               className="flex items-center justify-between mb-6 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded-lg transition-colors"
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && navigate('/inventory')}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/inventory")}
             >
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Top Products</h3>
-                <p className="text-sm text-gray-600">Best selling items this month</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Top Products
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Best selling items this month
+                </p>
               </div>
               <div className="p-2 bg-purple-100 rounded-lg">
                 <BarChart3 className="h-5 w-5 text-purple-600" />
               </div>
             </div>
-            
+
             {/* Vertical Bar Chart */}
             <div className="px-4 py-2">
               <VerticalBarChart
-                data={dashboardData.topProducts && dashboardData.topProducts.length > 0 ? 
-                  dashboardData.topProducts.map((product) => ({
-                    value: parseFloat(product.revenue || 0),  // Ensure numeric value for sales amount
-                    label: product.brand_name || product.generic_name || 'Unknown',
-                    sublabel: `${product.sales || 0} units sold`,  // Show units as sublabel
-                    formattedValue: `₱${parseFloat(product.revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`  // Formatted peso amount
-                  })) : []
+                data={
+                  dashboardData.topProducts &&
+                  dashboardData.topProducts.length > 0
+                    ? dashboardData.topProducts.map((product) => ({
+                        value: parseFloat(product.revenue || 0), // Ensure numeric value for sales amount
+                        label:
+                          product.brand_name ||
+                          product.generic_name ||
+                          "Unknown",
+                        sublabel: `${product.sales || 0} units sold`, // Show units as sublabel
+                        formattedValue: `₱${parseFloat(
+                          product.revenue || 0
+                        ).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`, // Formatted peso amount
+                      }))
+                    : []
                 }
                 maxHeight={280}
-                colors={['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE']}
+                colors={["#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE", "#EDE9FE"]}
               />
-              
+
               {/* No data fallback */}
-              {(!dashboardData.topProducts || dashboardData.topProducts.length === 0) && (
+              {(!dashboardData.topProducts ||
+                dashboardData.topProducts.length === 0) && (
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-12 w-12 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">No sales data available</p>
@@ -606,41 +640,51 @@ function CleanMetricCard({
     amber: "bg-amber-600",
     purple: "bg-purple-600",
   };
-  
+
   const handleClick = () => {
     if (onClick) {
       onClick();
     }
   };
-  
+
   return (
     <div
       onClick={handleClick}
       className={`bg-white rounded-xl shadow-sm border p-6 transition-all duration-200 ${
         isAlert ? "border-amber-200 bg-amber-50/20" : "border-gray-200"
-      } ${href || onClick ? 'cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]' : 'hover:shadow-md'}`}
+      } ${
+        href || onClick
+          ? "cursor-pointer hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+          : "hover:shadow-md"
+      }`}
       role={href || onClick ? "button" : undefined}
       tabIndex={href || onClick ? 0 : undefined}
-      onKeyDown={href || onClick ? (e) => e.key === 'Enter' && handleClick() : undefined}
+      onKeyDown={
+        href || onClick ? (e) => e.key === "Enter" && handleClick() : undefined
+      }
     >
       <div className="flex items-center justify-between mb-4">
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
           <IconComponent className="h-5 w-5 text-white" />
         </div>
-        {trend && (
+        {trend !== null && trend !== undefined && (
           <div
             className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
               trend > 0
                 ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+                : trend < 0
+                ? "bg-red-100 text-red-700"
+                : "bg-gray-100 text-gray-700"
             }`}
           >
             {trend > 0 ? (
               <TrendingUp className="h-3 w-3" />
-            ) : (
+            ) : trend < 0 ? (
               <TrendingDown className="h-3 w-3" />
+            ) : (
+              <Activity className="h-3 w-3" />
             )}
-            <span>{Math.abs(trend)}%</span>
+            <span>{Math.abs(trend).toFixed(1)}%</span>
           </div>
         )}
       </div>
@@ -662,7 +706,7 @@ function CleanActionCard({
   badge,
 }) {
   const navigate = useNavigate();
-  
+
   const colorClasses = {
     blue: "bg-blue-600",
     green: "bg-green-600",
@@ -670,14 +714,14 @@ function CleanActionCard({
     gray: "bg-gray-600",
     orange: "bg-orange-600",
   };
-  
+
   return (
     <div
       onClick={() => navigate(href)}
       className="relative block group bg-white hover:bg-gray-50 rounded-lg p-4 border border-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer"
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && navigate(href)}
+      onKeyDown={(e) => e.key === "Enter" && navigate(href)}
     >
       <div className="flex items-center space-x-3">
         {badge && (

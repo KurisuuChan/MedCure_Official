@@ -18,11 +18,14 @@ import {
   CreateUserModal,
   EditUserModal,
   DeleteConfirmationModal,
+  ActivationConfirmationModal,
   ResetPasswordModal,
   SuccessModal,
 } from "../../../components/modals/UserModals";
+import { useToast } from "../../../components/ui/Toast";
 
 const UserManagementDashboard = () => {
+  const { success: showSuccess, error: showError } = useToast();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +36,7 @@ const UserManagementDashboard = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState(false);
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState(null);
@@ -185,40 +189,211 @@ const UserManagementDashboard = () => {
   const handleDeleteUser = async (userId) => {
     const user = users.find((u) => u.id === userId);
     if (user) {
+      // Check if user is already inactive
+      if (!user.is_active) {
+        showError("This user is already deactivated", {
+          duration: 3000,
+        });
+        return;
+      }
       setSelectedUser(user);
       setShowDeleteModal(true);
     }
   };
 
+  const handleHardDeleteUser = async (userId) => {
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      // First, check what records are associated with this user
+      try {
+        console.log("🔍 Checking associated records before deletion...");
+        const associations =
+          await UserManagementService.getUserAssociatedRecords(userId);
+        console.log("📊 Association check result:", associations);
+
+        if (!associations.canDelete && associations.blockingTables.length > 0) {
+          showError(
+            `Cannot delete user: Has ${associations.blockingTables.join(
+              ", "
+            )}. ` + `These records must be deleted or reassigned first.`,
+            {
+              duration: 8000,
+            }
+          );
+          return;
+        }
+
+        // Proceed with deletion modal
+        setSelectedUser(user);
+        setShowDeleteModal(true);
+      } catch (error) {
+        console.error("Error checking associations:", error);
+        showError(
+          "Could not verify if user can be safely deleted. Please check console.",
+          {
+            duration: 5000,
+          }
+        );
+      }
+    }
+  };
+
   const confirmDeleteUser = async () => {
-    if (!selectedUser) return;
+    if (!selectedUser) {
+      console.warn("⚠️ No user selected for deletion");
+      return;
+    }
 
     try {
-      console.log(
-        "🗑️ [UserManagementDashboard] Deleting user:",
-        selectedUser.id
-      );
-      await UserManagementService.deleteUser(selectedUser.id);
-      console.log("✅ [UserManagementDashboard] User deleted successfully");
+      console.log("🗑️ [UserManagementDashboard] Starting deletion process");
+      console.log("📋 Selected user:", {
+        id: selectedUser.id,
+        email: selectedUser.email,
+        name: `${selectedUser.first_name} ${selectedUser.last_name}`,
+        role: selectedUser.role,
+        is_active: selectedUser.is_active,
+      });
+
+      // Determine if this is a hard delete (for inactive users) or soft delete (for active users)
+      const isHardDelete = !selectedUser.is_active;
+
+      if (isHardDelete) {
+        console.log(
+          "⚠️ Performing HARD DELETE (permanent) with cascade cleanup..."
+        );
+        await UserManagementService.hardDeleteUser(selectedUser.id, {
+          cascade: true, // Always cascade delete logs and movements
+        });
+        console.log("✅ [UserManagementDashboard] User permanently deleted");
+      } else {
+        console.log(
+          "🔄 Calling UserManagementService.deleteUser (soft delete)..."
+        );
+        await UserManagementService.deleteUser(selectedUser.id);
+        console.log(
+          "✅ [UserManagementDashboard] User deactivated successfully"
+        );
+      }
 
       setShowDeleteModal(false);
       setSelectedUser(null);
       setError(null);
 
+      console.log("🔄 Reloading users and stats...");
       await loadUsers();
       await loadUserStats();
 
-      alert(
-        `User ${selectedUser.first_name} ${selectedUser.last_name} has been permanently deleted.`
-      );
+      // ✅ Show success toast notification
+      if (isHardDelete) {
+        showSuccess(
+          `User ${selectedUser.first_name} ${selectedUser.last_name} has been permanently deleted`,
+          {
+            duration: 4000,
+          }
+        );
+      } else {
+        showSuccess(
+          `User ${selectedUser.first_name} ${selectedUser.last_name} has been successfully deactivated`,
+          {
+            duration: 4000,
+          }
+        );
+      }
     } catch (error) {
       console.error("❌ [UserManagementDashboard] Error deleting user:", error);
-      let errorMessage = "Failed to delete user";
-      if (error.message) {
-        errorMessage = `Failed to delete user: ${error.message}`;
-      }
-      setError(errorMessage);
+      console.error("❌ Error name:", error.name);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+      console.error("❌ Full error object:", JSON.stringify(error, null, 2));
+
+      // ✅ Show error toast notification
+      showError(
+        error.message || "Failed to delete user. Check console for details.",
+        {
+          duration: 5000,
+        }
+      );
+
       setShowDeleteModal(false);
+    }
+  };
+
+  // Handle reactivate user
+  const handleActivateUser = async (user) => {
+    console.log("✅ [UserManagementDashboard] Initiating user reactivation");
+    console.log("📋 User to reactivate:", {
+      id: user.id,
+      email: user.email,
+      name: `${user.first_name} ${user.last_name}`,
+      role: user.role,
+      is_active: user.is_active,
+    });
+
+    // Check if user is already active
+    if (user.is_active) {
+      console.warn("⚠️ User is already active");
+      showError("This user is already active", { duration: 3000 });
+      return;
+    }
+
+    setSelectedUser(user);
+    setShowActivateModal(true);
+  };
+
+  // Confirm reactivate user
+  const confirmActivateUser = async () => {
+    if (!selectedUser) {
+      console.warn("⚠️ No user selected for reactivation");
+      return;
+    }
+
+    try {
+      console.log("✅ [UserManagementDashboard] Starting reactivation process");
+      console.log("📋 Selected user:", {
+        id: selectedUser.id,
+        email: selectedUser.email,
+        name: `${selectedUser.first_name} ${selectedUser.last_name}`,
+        role: selectedUser.role,
+        is_active: selectedUser.is_active,
+      });
+
+      await UserManagementService.activateUser(selectedUser.id);
+      console.log("✅ [UserManagementDashboard] User reactivated successfully");
+
+      setShowActivateModal(false);
+      setSelectedUser(null);
+      setError(null);
+
+      console.log("🔄 Reloading users and stats...");
+      await loadUsers();
+      await loadUserStats();
+
+      // ✅ Show success toast notification
+      showSuccess(
+        `User ${selectedUser.first_name} ${selectedUser.last_name} has been successfully reactivated`,
+        {
+          duration: 4000,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "❌ [UserManagementDashboard] Error reactivating user:",
+        error
+      );
+      console.error("❌ Error name:", error.name);
+      console.error("❌ Error message:", error.message);
+      console.error("❌ Error stack:", error.stack);
+
+      // ✅ Show error toast notification
+      showError(
+        error.message ||
+          "Failed to reactivate user. Check console for details.",
+        {
+          duration: 5000,
+        }
+      );
+
+      setShowActivateModal(false);
     }
   };
 
@@ -488,18 +663,42 @@ const UserManagementDashboard = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr
+                  key={user.id}
+                  className={`hover:bg-gray-50 ${
+                    !user.is_active ? "bg-gray-50 opacity-60" : ""
+                  }`}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
+                      <div
+                        className={`h-10 w-10 rounded-full ${
+                          user.is_active ? "bg-blue-100" : "bg-gray-200"
+                        } flex items-center justify-center`}
+                      >
+                        <span
+                          className={`text-sm font-medium ${
+                            user.is_active ? "text-blue-600" : "text-gray-400"
+                          }`}
+                        >
                           {user.first_name?.[0]}
                           {user.last_name?.[0]}
                         </span>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.first_name} {user.last_name}
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`text-sm font-medium ${
+                              user.is_active ? "text-gray-900" : "text-gray-500"
+                            }`}
+                          >
+                            {user.first_name} {user.last_name}
+                          </div>
+                          {!user.is_active && (
+                            <span className="inline-flex px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                              Deactivated
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500">
                           {user.email}
@@ -541,21 +740,43 @@ const UserManagementDashboard = () => {
                           setShowEditModal(true);
                         }}
                         className="text-blue-600 hover:text-blue-900"
+                        title="Edit user"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleResetPassword(user.email)}
                         className="text-yellow-600 hover:text-yellow-900"
+                        title="Reset password"
                       >
                         <Key className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {user.is_active ? (
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="text-red-600 hover:text-red-900 cursor-pointer"
+                          title="Deactivate user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleActivateUser(user)}
+                            className="text-green-600 hover:text-green-900 cursor-pointer"
+                            title="Reactivate user"
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleHardDeleteUser(user.id)}
+                            className="text-red-800 hover:text-red-950 cursor-pointer"
+                            title="Permanently delete user"
+                          >
+                            <Trash2 className="h-4 w-4 fill-current" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -594,6 +815,18 @@ const UserManagementDashboard = () => {
             setSelectedUser(null);
           }}
           onConfirm={confirmDeleteUser}
+        />
+      )}
+
+      {/* Activation Confirmation Modal */}
+      {showActivateModal && selectedUser && (
+        <ActivationConfirmationModal
+          user={selectedUser}
+          onClose={() => {
+            setShowActivateModal(false);
+            setSelectedUser(null);
+          }}
+          onConfirm={confirmActivateUser}
         />
       )}
 
