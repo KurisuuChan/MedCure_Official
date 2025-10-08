@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * NotificationPanel - Dropdown Notification List Panel (Context-Based)
+ * NotificationPanel - Dropdown Notification List Panel
  * ============================================================================
  *
  * A React component that displays:
@@ -47,22 +47,17 @@ const NotificationPanel = ({ onClose }) => {
   const navigate = useNavigate();
   const panelRef = useRef(null);
   const closeButtonRef = useRef(null);
-
+  
   // Use notification context
   const {
-    markAsRead: contextMarkAsRead,
-    markAllAsRead: contextMarkAllAsRead,
-    dismissNotification: contextDismissNotification,
-    dismissAll: contextDismissAll,
+    notifications: contextNotifications,
+    isLoading: contextIsLoading,
+    markAsRead,
+    markAllAsRead,
+    dismissNotification,
+    dismissAll,
     loadNotifications,
   } = useNotifications();
-
-  // Local state for pagination
-  const [notifications, setNotifications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
 
   // Loading states for actions
   const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
@@ -104,11 +99,13 @@ const NotificationPanel = ({ onClose }) => {
     }
   };
 
-  // Load notifications for current page
+  // Load notifications
   useEffect(() => {
-    const loadPage = async () => {
+    if (!userId) return;
+
+    const loadNotifications = async () => {
       setIsLoading(true);
-      const result = await loadNotifications({
+      const result = await notificationService.getUserNotifications(userId, {
         limit: ITEMS_PER_PAGE,
         offset: (page - 1) * ITEMS_PER_PAGE,
       });
@@ -118,37 +115,90 @@ const NotificationPanel = ({ onClose }) => {
       setIsLoading(false);
     };
 
-    loadPage();
-  }, [page, loadNotifications]);
+    loadNotifications();
+  }, [userId, page]);
 
-  // ✅ Handle mark as read - Uses context (automatic sync!)
+  // Subscribe to real-time updates with debouncing
+  useEffect(() => {
+    if (!userId) return;
+
+    let debounceTimer = null;
+    let isSubscribed = true;
+
+    const debouncedReload = () => {
+      // Clear previous timer
+      if (debounceTimer) clearTimeout(debounceTimer);
+
+      // Set new timer
+      debounceTimer = setTimeout(async () => {
+        if (!isSubscribed) return;
+
+        // Reload current page
+        const result = await notificationService.getUserNotifications(userId, {
+          limit: ITEMS_PER_PAGE,
+          offset: (page - 1) * ITEMS_PER_PAGE,
+        });
+
+        if (isSubscribed) {
+          setNotifications(result.notifications);
+          setHasMore(result.hasMore);
+        }
+      }, 500); // 500ms debounce
+    };
+
+    const unsubscribe = notificationService.subscribeToNotifications(
+      userId,
+      debouncedReload
+    );
+
+    return () => {
+      isSubscribed = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      unsubscribe();
+    };
+  }, [userId, page]);
+
+  // ✅ Handle mark as read with OPTIMISTIC UI UPDATE
   const handleMarkAsRead = async (notificationId, e) => {
     e.stopPropagation();
 
+    // Add to processing set
     setProcessingItems((prev) => new Set([...prev, notificationId]));
 
-    // Optimistic UI update
+    // ✅ OPTIMISTIC UPDATE: Update UI immediately
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
+      prev.map((n) =>
+        n.id === notificationId ? { ...n, is_read: true } : n
+      )
     );
 
     try {
-      const result = await contextMarkAsRead(notificationId);
+      const result = await notificationService.markAsRead(
+        notificationId,
+        userId
+      );
 
       if (!result.success) {
-        // Rollback on failure
+        // ✅ ROLLBACK: Revert optimistic update on failure
         setNotifications((prev) =>
-          prev.map((n) => (n.id === notificationId ? { ...n, is_read: false } : n))
+          prev.map((n) =>
+            n.id === notificationId ? { ...n, is_read: false } : n
+          )
         );
+        logger.error("Failed to mark as read:", result.error);
         alert(`Failed to mark notification as read. Please try again.`);
       }
     } catch (error) {
-      // Rollback on error
+      // ✅ ROLLBACK: Revert on error
       setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: false } : n))
+        prev.map((n) =>
+          n.id === notificationId ? { ...n, is_read: false } : n
+        )
       );
+      logger.error("Error marking as read:", error);
       alert(`Failed to mark notification as read. Please try again.`);
     } finally {
+      // Remove from processing set
       setProcessingItems((prev) => {
         const next = new Set(prev);
         next.delete(notificationId);
@@ -157,83 +207,96 @@ const NotificationPanel = ({ onClose }) => {
     }
   };
 
-  // ✅ Handle mark all as read - Uses context (automatic sync!)
+  // ✅ Handle mark all as read with OPTIMISTIC UI UPDATE
   const handleMarkAllAsRead = async () => {
     setIsMarkingAllAsRead(true);
 
+    // Save original state for rollback
     const originalNotifications = [...notifications];
 
-    // Optimistic update
+    // ✅ OPTIMISTIC UPDATE: Update UI immediately
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
     try {
-      const result = await contextMarkAllAsRead();
+      const result = await notificationService.markAllAsRead(userId);
 
       if (result.success) {
+        // Show success feedback
         if (result.count > 0) {
           logger.success(`Marked ${result.count} notification(s) as read`);
         }
       } else {
-        // Rollback on failure
+        // ✅ ROLLBACK: Restore original state on failure
         setNotifications(originalNotifications);
+        logger.error("Failed to mark all as read:", result.error);
         alert(`Failed to mark all notifications as read. Please try again.`);
       }
     } catch (error) {
-      // Rollback on error
+      // ✅ ROLLBACK: Restore original state on error
       setNotifications(originalNotifications);
+      logger.error("Unexpected error marking all as read:", error);
       alert(`Failed to mark all notifications as read. Please try again.`);
     } finally {
       setIsMarkingAllAsRead(false);
     }
   };
 
-  // ✅ Handle dismiss - Uses context (automatic sync!)
+  // ✅ Handle dismiss with OPTIMISTIC UI UPDATE
   const handleDismiss = async (notificationId, e) => {
     e.stopPropagation();
 
+    // Add to processing set
     setProcessingItems((prev) => new Set([...prev, notificationId]));
 
+    // Save dismissed notification for rollback
     const dismissedNotification = notifications.find((n) => n.id === notificationId);
     const dismissedIndex = notifications.findIndex((n) => n.id === notificationId);
 
-    // Optimistic update
+    // ✅ OPTIMISTIC UPDATE: Remove from UI immediately
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
 
     try {
-      const result = await contextDismissNotification(notificationId);
+      const result = await notificationService.dismiss(notificationId, userId);
 
       if (result.success) {
         // Check if page is now empty
         const remainingCount = notifications.length - 1;
         if (remainingCount === 0 && page > 1) {
+          // Go to previous page if current page is empty
           setPage((prev) => prev - 1);
         } else if (remainingCount === 0 && page === 1) {
-          // Reload page 1
-          const reloadResult = await loadNotifications({
-            limit: ITEMS_PER_PAGE,
-            offset: 0,
-          });
+          // Reload page 1 to check for more notifications
+          const reloadResult = await notificationService.getUserNotifications(
+            userId,
+            {
+              limit: ITEMS_PER_PAGE,
+              offset: 0,
+            }
+          );
           setNotifications(reloadResult.notifications);
           setHasMore(reloadResult.hasMore);
         }
       } else {
-        // Rollback on failure
+        // ✅ ROLLBACK: Restore dismissed notification on failure
         setNotifications((prev) => {
           const newNotifications = [...prev];
           newNotifications.splice(dismissedIndex, 0, dismissedNotification);
           return newNotifications;
         });
+        logger.error("Failed to dismiss:", result.error);
         alert(`Failed to dismiss notification. Please try again.`);
       }
     } catch (error) {
-      // Rollback on error
+      // ✅ ROLLBACK: Restore dismissed notification on error
       setNotifications((prev) => {
         const newNotifications = [...prev];
         newNotifications.splice(dismissedIndex, 0, dismissedNotification);
         return newNotifications;
       });
+      logger.error("Error dismissing notification:", error);
       alert(`Failed to dismiss notification. Please try again.`);
     } finally {
+      // Remove from processing set
       setProcessingItems((prev) => {
         const next = new Set(prev);
         next.delete(notificationId);
@@ -242,8 +305,9 @@ const NotificationPanel = ({ onClose }) => {
     }
   };
 
-  // ✅ Handle dismiss all - Uses context (automatic sync!)
+  // ✅ Handle dismiss all with OPTIMISTIC UI UPDATE
   const handleDismissAll = async () => {
+    // Confirmation dialog
     const count = notifications.length;
     const confirmMessage =
       count > 0
@@ -251,39 +315,43 @@ const NotificationPanel = ({ onClose }) => {
         : "Are you sure you want to clear all notifications?";
 
     if (!window.confirm(confirmMessage)) {
-      return;
+      return; // User canceled
     }
 
     setIsDismissingAll(true);
 
+    // Save original state for rollback
     const originalNotifications = [...notifications];
     const originalPage = page;
     const originalHasMore = hasMore;
 
-    // Optimistic update
+    // ✅ OPTIMISTIC UPDATE: Clear UI immediately
     setNotifications([]);
     setPage(1);
     setHasMore(false);
 
     try {
-      const result = await contextDismissAll();
+      const result = await notificationService.dismissAll(userId);
 
       if (result.success) {
+        // Show success feedback
         if (result.count > 0) {
           logger.success(`Cleared ${result.count} notification(s)`);
         }
       } else {
-        // Rollback on failure
+        // ✅ ROLLBACK: Restore original state on failure
         setNotifications(originalNotifications);
         setPage(originalPage);
         setHasMore(originalHasMore);
+        logger.error("Failed to dismiss all:", result.error);
         alert(`Failed to clear all notifications. Please try again.`);
       }
     } catch (error) {
-      // Rollback on error
+      // ✅ ROLLBACK: Restore original state on error
       setNotifications(originalNotifications);
       setPage(originalPage);
       setHasMore(originalHasMore);
+      logger.error("Unexpected error dismissing all:", error);
       alert(`Failed to clear all notifications. Please try again.`);
     } finally {
       setIsDismissingAll(false);
@@ -294,7 +362,7 @@ const NotificationPanel = ({ onClose }) => {
   const handleNotificationClick = async (notification) => {
     // Mark as read
     if (!notification.is_read) {
-      await contextMarkAsRead(notification.id);
+      await notificationService.markAsRead(notification.id, userId);
     }
 
     // Navigate if action URL exists
@@ -306,6 +374,7 @@ const NotificationPanel = ({ onClose }) => {
 
   // Get icon based on notification type
   const getNotificationIcon = (notification) => {
+    // First check type (error, warning, success, info)
     switch (notification.type) {
       case NOTIFICATION_TYPE.ERROR:
         return <AlertCircle size={20} color="#ef4444" />;
@@ -318,6 +387,7 @@ const NotificationPanel = ({ onClose }) => {
         break;
     }
 
+    // Then check category
     switch (notification.category) {
       case NOTIFICATION_CATEGORY.INVENTORY:
         return <Package size={20} color="#2563eb" />;
@@ -332,7 +402,7 @@ const NotificationPanel = ({ onClose }) => {
     }
   };
 
-  // Format timestamp
+  // Format timestamp (e.g., "5 minutes ago", "2 hours ago")
   const formatTimestamp = (timestamp) => {
     const now = new Date();
     const notifDate = new Date(timestamp);
@@ -342,23 +412,26 @@ const NotificationPanel = ({ onClose }) => {
     const diffDays = Math.floor(diffMs / 86400000);
 
     if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+    if (diffMins < 60)
+      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 
     return notifDate.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
-      year: notifDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+      year:
+        notifDate.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
     });
   };
 
   // Get priority badge color
   const getPriorityColor = (priority) => {
-    if (priority <= 1) return "#ef4444";
-    if (priority === 2) return "#f59e0b";
-    if (priority === 3) return "#2563eb";
-    return "#6b7280";
+    if (priority <= 1) return "#ef4444"; // Critical
+    if (priority === 2) return "#f59e0b"; // High
+    if (priority === 3) return "#2563eb"; // Medium
+    return "#6b7280"; // Low/Info
   };
 
   return (
@@ -506,7 +579,13 @@ const NotificationPanel = ({ onClose }) => {
       )}
 
       {/* Notification List */}
-      <div style={{ flex: 1, overflowY: "auto", maxHeight: "450px" }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          maxHeight: "450px",
+        }}
+      >
         {isLoading ? (
           <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <div
@@ -528,12 +607,20 @@ const NotificationPanel = ({ onClose }) => {
             `}</style>
           </div>
         ) : notifications.length === 0 ? (
-          <div style={{ padding: "60px 20px", textAlign: "center", color: "#6b7280" }}>
+          <div
+            style={{
+              padding: "60px 20px",
+              textAlign: "center",
+              color: "#6b7280",
+            }}
+          >
             <Info size={48} color="#d1d5db" style={{ marginBottom: "16px" }} />
             <p style={{ margin: 0, fontSize: "15px", fontWeight: "500" }}>
               No notifications
             </p>
-            <p style={{ margin: "8px 0 0", fontSize: "13px" }}>You're all caught up!</p>
+            <p style={{ margin: "8px 0 0", fontSize: "13px" }}>
+              You're all caught up!
+            </p>
           </div>
         ) : (
           notifications.map((notification) => (
@@ -543,7 +630,9 @@ const NotificationPanel = ({ onClose }) => {
               style={{
                 padding: "16px 20px",
                 borderBottom: "1px solid #f3f4f6",
-                cursor: notification.metadata?.actionUrl ? "pointer" : "default",
+                cursor: notification.metadata?.actionUrl
+                  ? "pointer"
+                  : "default",
                 backgroundColor: notification.is_read ? "white" : "#f0f9ff",
                 transition: "background-color 0.2s",
                 position: "relative",
@@ -602,13 +691,25 @@ const NotificationPanel = ({ onClose }) => {
                 >
                   {notification.message}
                 </div>
-                <div style={{ fontSize: "12px", color: "#9ca3af" }}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    color: "#9ca3af",
+                  }}
+                >
                   {formatTimestamp(notification.created_at)}
                 </div>
               </div>
 
               {/* Actions */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  flexShrink: 0,
+                }}
+              >
                 {!notification.is_read && (
                   <button
                     onClick={(e) => handleMarkAsRead(notification.id, e)}
@@ -616,7 +717,9 @@ const NotificationPanel = ({ onClose }) => {
                     style={{
                       background: "transparent",
                       border: "none",
-                      cursor: processingItems.has(notification.id) ? "wait" : "pointer",
+                      cursor: processingItems.has(notification.id)
+                        ? "wait"
+                        : "pointer",
                       padding: "4px",
                       borderRadius: "4px",
                       display: "flex",
@@ -635,7 +738,9 @@ const NotificationPanel = ({ onClose }) => {
                   style={{
                     background: "transparent",
                     border: "none",
-                    cursor: processingItems.has(notification.id) ? "wait" : "pointer",
+                    cursor: processingItems.has(notification.id)
+                      ? "wait"
+                      : "pointer",
                     padding: "4px",
                     borderRadius: "4px",
                     display: "flex",
@@ -681,7 +786,9 @@ const NotificationPanel = ({ onClose }) => {
           >
             Previous
           </button>
-          <span style={{ fontSize: "13px", color: "#6b7280" }}>Page {page}</span>
+          <span style={{ fontSize: "13px", color: "#6b7280" }}>
+            Page {page}
+          </span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={!hasMore}

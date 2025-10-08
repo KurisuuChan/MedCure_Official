@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AuthProvider } from "./providers/AuthProvider";
 import { SettingsProvider } from "./contexts/SettingsContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { useAuth } from "./hooks/useAuth";
 import { notificationService } from "./services/notifications/NotificationService.js";
 import { supabase } from "./config/supabase.js";
@@ -64,6 +65,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Wrapper to provide userId to NotificationProvider
+function NotificationProviderWrapper({ children }) {
+  const { user } = useAuth();
+  return (
+    <NotificationProvider userId={user?.id}>
+      {children}
+    </NotificationProvider>
+  );
+}
 
 function AppContent() {
   const { isLoadingAuth, user } = useAuth();
@@ -350,11 +361,13 @@ function App() {
         <Router>
           <SettingsProvider>
             <AuthProvider>
-              <ToastProvider>
-                <div className="App">
-                  <AppContent />
-                </div>
-              </ToastProvider>
+              <NotificationProviderWrapper>
+                <ToastProvider>
+                  <div className="App">
+                    <AppContent />
+                  </div>
+                </ToastProvider>
+              </NotificationProviderWrapper>
             </AuthProvider>
           </SettingsProvider>
         </Router>
