@@ -1,276 +1,210 @@
-# Medcure Pharmacy Management System
+# 🏥 MedCure-Pro: Professional Pharmacy Management System
 
-A modern, full-stack pharmacy management system built with React, Vite, Tailwind CSS, and Supabase.
+## 📋 System Overview
 
-## 🚀 Features
+MedCure-Pro is an enterprise-grade Point of Sale (POS) system specifically designed for pharmaceutical operations. Built with React and Supabase, it provides real-time inventory management, transaction processing, and comprehensive reporting capabilities.
 
-### Core Functionality
+## ✨ Key Features
 
-- **Dashboard** - Overview of pharmacy operations with analytics
-- **Inventory Management** - Product management with health status indicators
-- **Point of Sale (POS)** - Transaction processing with offline capabilities
-- **Reports** - Sales analytics and business insights
-- **User Management** - Role-based access control
+### 🎯 **Core POS Functionality**
 
-### Key Highlights
+- **Real-time Stock Management**: Live inventory tracking with automatic deduction
+- **Multi-unit Support**: Handle pieces, sheets, and boxes with automatic conversion
+- **Professional Transaction Processing**: Two-phase commit (create → complete)
+- **PWD/Senior Discounts**: Automated discount application with ID validation
 
-- **Role-Based Access Control (RBAC)** - Admin, Pharmacist, and Cashier roles
-- **Offline-First POS** - Continues working without internet connection
-- **Real-time Analytics** - Live dashboard with sales and inventory data
-- **Responsive Design** - Works perfectly on desktop, tablet, and mobile
-- **Modern UI** - Clean, professional interface with Tailwind CSS
+### 💼 **Transaction Management**
 
-## 🛠️ Technology Stack
+- **Edit Transactions**: Modify completed transactions within 24 hours
+- **Undo System**: Complete transaction reversal with stock restoration
+- **Audit Trail**: Full transaction history with edit reasons and timestamps
+- **Status Management**: Pending → Completed → Cancelled workflow
 
-### Frontend
+### 📊 **Advanced Analytics**
 
-- **React 19** - Modern React with latest features
-- **Vite** - Ultra-fast build tool and dev server
-- **Tailwind CSS 4** - Utility-first CSS framework
-- **React Router** - Client-side routing
-- **TanStack Query** - Server state management
-- **Zustand** - Lightweight state management
-- **Lucide React** - Beautiful icons
+- **Revenue Tracking**: Daily, monthly, and yearly revenue reports
+- **Stock Analytics**: Low stock alerts and movement tracking
+- **Performance Metrics**: Transaction counts and average sale values
+- **Real-time Dashboard**: Live business metrics and KPIs
 
-### Backend
+### 🔒 **Security & Compliance**
 
-- **Supabase** - Backend-as-a-Service
-- **PostgreSQL** - Robust relational database
-- **Row Level Security (RLS)** - Database-level security
-- **Real-time subscriptions** - Live data updates
+- **Row Level Security (RLS)**: Database-level access control
+- **User Authentication**: Secure login with role-based permissions
+- **Audit Logging**: Complete trail of all system changes
+- **Data Validation**: Comprehensive input validation and error handling
 
-### Development Tools
+## 🏗️ **Technical Architecture**
 
-- **ESLint** - Code linting
-- **React Query Devtools** - Development debugging
-- **Hot Module Replacement** - Instant development feedback
+### **Frontend Stack**
 
-## 📦 Installation
+- **React 18**: Modern component-based UI framework
+- **Vite**: Fast build tool and development server
+- **Tailwind CSS**: Utility-first styling framework
+- **Lucide React**: Professional icon library
 
-### Prerequisites
+### **Backend Infrastructure**
 
-- Node.js (v18 or higher)
+- **Supabase**: PostgreSQL database with real-time capabilities
+- **Row Level Security**: Database-level security policies
+- **Stored Procedures**: Business logic implemented in PostgreSQL
+- **Real-time Subscriptions**: Live data updates across clients
+
+### **Key Services**
+
+- `unifiedTransactionService.js`: Core transaction processing
+- `analyticsService.js`: Revenue and performance analytics
+- `reportingService.js`: Business intelligence reports
+- `posStore.js`: Real-time inventory state management
+
+## 🚀 **Installation & Setup**
+
+### **Prerequisites**
+
+- Node.js 18+
 - npm or yarn
-- Supabase account
+- Supabase account and project
 
-### Setup Steps
+### **Environment Configuration**
 
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd medcure-pharmacy
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Update `.env` with your Supabase credentials:
-
-   ```env
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. **Set up the database**
-
-   - Create a new Supabase project
-   - Run the `database_setup.sql` script in the Supabase SQL editor
-   - Create test user accounts in Supabase Auth:
-     - admin@medcure.com (password: medcure123)
-     - pharmacist@medcure.com (password: medcure123)
-     - cashier@medcure.com (password: medcure123)
-
-5. **Start the development server**
-
-   ```bash
-   npm run dev
-   ```
-
-6. **Open your browser**
-   - Navigate to `http://localhost:5173`
-   - Log in with one of the test accounts
-
-## 🗃️ Database Schema
-
-### Core Tables
-
-- **categories** - Product categories
-- **products** - Inventory items with stock tracking
-- **user_profiles** - Extended user information with roles
-- **sales** - Transaction records
-- **sale_items** - Individual items within transactions
-- **audit_logs** - System activity tracking
-
-### Key Features
-
-- **Automatic batch number generation**
-- **Stock level tracking with alerts**
-- **Expiry date monitoring**
-- **Atomic transaction processing**
-- **Complete audit trail**
-
-## 🎯 User Roles & Permissions
-
-### Admin
-
-- Full system access
-- User management
-- All inventory operations
-- Sales voiding and refunds
-- System settings
-
-### Pharmacist
-
-- Inventory management
-- Product operations
-- Sales processing
-- Sales voiding
-- Reports access
-
-### Cashier
-
-- Point of sale operations
-- Basic inventory viewing
-- Customer transactions
-- Limited dashboard access
-
-## 🖥️ Page Structure
-
-```
-src/
-├── components/
-│   ├── layout/
-│   │   ├── FullLayout.jsx
-│   │   ├── Sidebar.jsx
-│   │   └── Header.jsx
-│   ├── ui/
-│   │   ├── Button.jsx
-│   │   ├── Input.jsx
-│   │   ├── Card.jsx
-│   │   ├── Badge.jsx
-│   │   └── LoadingSpinner.jsx
-│   └── ProtectedRoute.jsx
-├── contexts/
-│   └── AuthContext.jsx
-├── hooks/
-│   └── useAuth.js
-├── lib/
-│   └── supabase.js
-├── pages/
-│   ├── Dashboard.jsx
-│   ├── Management.jsx
-│   ├── POS.jsx
-│   ├── Reports.jsx
-│   ├── Settings.jsx
-│   └── LoginPage.jsx
-└── App.jsx
-```
-
-## 🔧 Development Guidelines
-
-### Code Style
-
-- Use functional components with hooks
-- Follow React best practices
-- Implement proper error handling
-- Use TypeScript-style JSDoc comments
-
-### State Management
-
-- Server state: TanStack Query
-- UI state: Zustand stores
-- Authentication: React Context
-
-### Styling
-
-- Utility-first approach with Tailwind
-- Custom CSS variables for theming
-- Responsive design mobile-first
-- Consistent component patterns
-
-## 🚀 Deployment
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Deploy to Vercel/Netlify
-
-1. Connect your GitHub repository
-2. Set environment variables
-3. Deploy automatically on push
-
-### Environment Variables for Production
+Create `.env.local` file:
 
 ```env
-VITE_SUPABASE_URL=your_production_supabase_url
-VITE_SUPABASE_ANON_KEY=your_production_anon_key
-VITE_APP_NAME=Medcure Pharmacy
-VITE_APP_VERSION=1.0.0
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## 📈 Future Enhancements
+### **Database Setup**
 
-### Planned Features
+1. Execute `database/FINAL_OPTIMIZED_SCHEMA.sql` in Supabase SQL Editor
+2. This creates all tables, functions, and security policies
+3. Import initial product data if needed
 
-- **Supplier Management** - Track vendor information
-- **Purchase Orders** - Inventory replenishment workflow
-- **Multi-location Support** - Manage multiple pharmacy branches
-- **Barcode Scanning** - Quick product identification
-- **Advanced Analytics** - Profit tracking and forecasting
-- **API Integration** - Connect with external systems
+### **Development Server**
 
-### Technical Improvements
+```bash
+npm install
+npm run dev
+```
 
-- **Progressive Web App (PWA)** - Offline functionality
-- **Real-time Notifications** - Live system alerts
-- **Advanced Testing** - Unit and integration tests
-- **Performance Monitoring** - Analytics and error tracking
-- **Multi-language Support** - Internationalization
+## 💡 **Core Workflows**
 
-## 🤝 Contributing
+### **1. Sale Processing**
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+```
+Add Products to Cart → Apply Discounts → Process Payment → Complete Transaction
+```
 
-## 📝 License
+### **2. Transaction Editing**
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```
+Select Transaction → Edit Items/Quantities → Provide Reason → Save Changes
+```
 
-## 💬 Support
+### **3. Stock Management**
 
-For support and questions:
+```
+Real-time Stock Check → Prevent Overselling → Auto-deduct on Sale → Restore on Undo
+```
 
-- Create an issue in the GitHub repository
-- Contact the development team
-- Check the documentation
+## 📈 **Business Benefits**
+
+### **Operational Efficiency**
+
+- ⚡ **Fast Processing**: Optimized checkout workflow
+- 🎯 **Error Prevention**: Real-time stock validation
+- 📱 **User-friendly**: Intuitive interface design
+- 🔄 **Real-time Updates**: Live inventory synchronization
+
+### **Financial Control**
+
+- 💰 **Accurate Revenue**: Automated discount calculations
+- 📊 **Comprehensive Reports**: Detailed sales analytics
+- 🔍 **Audit Trail**: Complete transaction history
+- ⚖️ **Compliance**: PWD/Senior discount regulations
+
+### **Inventory Management**
+
+- 📦 **Multi-unit Tracking**: Pieces, sheets, boxes
+- ⚠️ **Low Stock Alerts**: Proactive inventory monitoring
+- 🔄 **FIFO Support**: Batch inventory management
+- 📈 **Movement History**: Complete stock audit trail
+
+## 🔧 **Professional Features**
+
+### **Transaction Edit/Undo System**
+
+- **Edit Window**: 24-hour modification period
+- **Stock Management**: Automatic stock restoration on edits
+- **Audit Compliance**: Mandatory edit reasons and user tracking
+- **Price Accuracy**: Real-time revenue calculation updates
+
+### **Revenue Analytics**
+
+- **Accurate Calculations**: Excludes cancelled transactions
+- **Real-time Reporting**: Live dashboard updates
+- **Historical Analysis**: Trend tracking and comparisons
+- **Performance Metrics**: KPIs and business intelligence
+
+### **Error Handling**
+
+- **Graceful Degradation**: System continues operating during errors
+- **User Feedback**: Clear error messages and guidance
+- **Data Integrity**: Transaction rollback on failures
+- **Recovery Procedures**: Automatic system recovery
+
+## 🎯 **Production Deployment**
+
+### **Performance Optimization**
+
+- Database indexes for fast queries
+- Optimized component rendering
+- Efficient state management
+- Real-time subscription optimization
+
+### **Security Measures**
+
+- Row Level Security (RLS) policies
+- Input validation and sanitization
+- Secure authentication flow
+- API endpoint protection
+
+### **Monitoring & Maintenance**
+
+- Error logging and tracking
+- Performance monitoring
+- Database maintenance procedures
+- Regular backup strategies
+
+## 📞 **Support & Maintenance**
+
+### **System Health Checks**
+
+- Daily revenue reconciliation
+- Stock level monitoring
+- User activity tracking
+- Error rate monitoring
+
+### **Regular Maintenance**
+
+- Database optimization
+- Security updates
+- Performance tuning
+- Feature enhancements
 
 ---
 
-**Built with ❤️ for modern pharmacy management**+ Vite
+## 🎉 **Capstone Project: Complete & Production Ready**
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+MedCure-Pro is a fully operational, enterprise-grade pharmacy management system developed as a comprehensive capstone project. Features complete POS functionality, real-time inventory management, and professional-grade reporting capabilities. The system demonstrates full-stack development expertise and is optimized for pharmaceutical operations with industry compliance.
 
-Currently, two official plugins are available:
+### **Academic Achievement**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Capstone Project**: ✅ 100% Complete
+- **System Status**: ✅ Production Ready
+- **Build Status**: ✅ Successful
+- **Demo Ready**: ✅ Fully Functional
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**Project Version**: v2.0 (Final Capstone Submission)  
+**Completion Date**: December 2024  
+**Status**: 🎓 **CAPSTONE COMPLETE**
