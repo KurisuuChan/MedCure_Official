@@ -95,27 +95,12 @@ export default defineConfig({
             return "vendor-misc";
           }
 
-          // SIMPLIFIED: Don't split application code aggressively
-          // This prevents React from becoming undefined in app chunks
-          // Only split by major feature areas
-          if (id.includes("/src/")) {
-            // Services layer
-            if (id.includes("/src/services/")) {
-              return "app-services";
-            }
-            // Large page bundles
-            if (id.includes("/src/pages/")) {
-              return "app-pages";
-            }
-            // Feature modules
-            if (id.includes("/src/features/")) {
-              return "app-features";
-            }
-            // Everything else (components, utils, etc.) stays in main chunk
-          }
+          // DON'T SPLIT APPLICATION CODE
+          // Let Vite automatically bundle app code to prevent React being undefined
+          // Only node_modules are manually chunked above
         },
       },
     },
-    chunkSizeWarningLimit: 500,
+    chunkSizeWarningLimit: 1000,
   },
 });

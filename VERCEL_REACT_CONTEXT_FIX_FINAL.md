@@ -3,6 +3,7 @@
 ## Problem Summary
 
 Your Vercel deployment was failing with React errors:
+
 ```
 Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
 Uncaught TypeError: Cannot read properties of undefined (reading 'forwardRef')
@@ -13,6 +14,7 @@ Uncaught TypeError: Cannot read properties of undefined (reading 'forwardRef')
 The issue was caused by **aggressive code splitting** in the Vite build configuration. When React and your UI components were split into separate chunks, the chunk loading order wasn't guaranteed, causing React to be `undefined` when components tried to use `createContext`, `forwardRef`, and other React APIs.
 
 Specifically:
+
 1. **Aggressive app code splitting**: Components were split into `app-components-ui`, `app-components-admin`, etc.
 2. **React dependencies in separate chunks**: Libraries like `lucide-react` that internally use React APIs were in different chunks
 3. **Inconsistent import patterns**: Mix of default imports (`import React from 'react'`) and named imports (`import { createContext } from 'react'`)
@@ -23,18 +25,20 @@ Specifically:
 ### 1. **Simplified Application Code Splitting** (Primary Fix)
 
 **Changed from:**
+
 ```javascript
 // Over-aggressive splitting
 if (id.includes("/src/components/ui/")) {
-  return "app-components-ui";  // ❌ This caused React to be undefined
+  return "app-components-ui"; // ❌ This caused React to be undefined
 }
 ```
 
 **Changed to:**
+
 ```javascript
 // Simplified splitting - components stay in main bundle
 if (id.includes("/src/services/")) {
-  return "app-services";  // ✅ Only split by major areas
+  return "app-services"; // ✅ Only split by major areas
 }
 ```
 
@@ -48,7 +52,7 @@ This ensures that your React components are bundled together with proper React r
 if (
   id.includes("node_modules/react") ||
   id.includes("node_modules/scheduler") ||
-  id.includes("node_modules/lucide-react")  // ✅ Stays with React
+  id.includes("node_modules/lucide-react") // ✅ Stays with React
 ) {
   return "vendor-react";
 }
@@ -81,6 +85,7 @@ export {
 ## Build Output Comparison
 
 ### Before (Broken):
+
 ```
 dist/assets/app-components-ui-BXMYERUT.js    87.55 kB  ❌ React undefined here
 dist/assets/vendor-react-r40bnVtZ.js        186.57 kB
@@ -88,6 +93,7 @@ dist/assets/vendor-ui-B043D4W9.js            37.55 kB  ❌ forwardRef error
 ```
 
 ### After (Fixed):
+
 ```
 dist/assets/index-DvivCVpo.js                41.36 kB  ✅ Components in main bundle
 dist/assets/vendor-react-CKRg8rYK.js        224.21 kB  ✅ React + lucide together
@@ -134,11 +140,15 @@ git push origin main
 ### 3. Deploy to Vercel
 
 #### Option A: Automatic Deployment
+
 Vercel should auto-deploy on push. Monitor the deployment at:
+
 - https://vercel.com/[your-username]/[your-project]
 
 #### Option B: Manual Redeploy
+
 If automatic deployment doesn't trigger:
+
 1. Go to Vercel Dashboard
 2. Select your project
 3. Click "Deployments" tab
@@ -148,6 +158,7 @@ If automatic deployment doesn't trigger:
 ### 4. Clear Vercel Build Cache (If Issues Persist)
 
 If you still see errors:
+
 1. Vercel Dashboard → Your Project
 2. Settings → General
 3. Scroll to "Build & Development Settings"
@@ -177,7 +188,7 @@ After deployment, verify:
 ```
 vendor-react.js     - React, React-DOM, Scheduler, lucide-react
 vendor-router.js    - React Router
-vendor-charts.js    - Chart.js libraries  
+vendor-charts.js    - Chart.js libraries
 vendor-supabase.js  - Supabase client
 vendor-misc.js      - Other dependencies
 app-services.js     - Service layer code
@@ -189,6 +200,7 @@ index.js            - Main app + UI components
 ## Performance Notes
 
 The warning about chunks larger than 500 kB is **informational only** and doesn't indicate an error. The bundles are:
+
 - Gzip compressed for production (much smaller over network)
 - Split logically to allow parallel loading
 - Cached by browsers after first load
@@ -196,6 +208,7 @@ The warning about chunks larger than 500 kB is **informational only** and doesn'
 ## Additional Configuration Files
 
 ### vercel.json
+
 ```json
 {
   "buildCommand": "npm run build",
@@ -211,6 +224,7 @@ The warning about chunks larger than 500 kB is **informational only** and doesn'
 ```
 
 ### .npmrc
+
 ```
 strict-peer-dependencies=false
 auto-install-peers=true
@@ -222,20 +236,24 @@ node-linker=hoisted
 ### If errors persist after deployment:
 
 1. **Check environment variables** in Vercel:
+
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
    - Any other `VITE_` prefixed variables
 
 2. **Check Vercel build logs**:
+
    - Look for build errors
    - Verify all dependencies installed
    - Check for missing files
 
 3. **Test production build locally**:
+
    ```bash
    npm run build
    npm run preview
    ```
+
    If it works locally but not on Vercel, it's likely an environment variable issue.
 
 4. **Compare local and production builds**:
@@ -250,11 +268,12 @@ node-linker=hoisted
 ✅ No `app-components-ui` chunk in build output  
 ✅ `vendor-react` chunk includes lucide-react  
 ✅ Vercel deployment succeeds  
-✅ Production site loads without React errors  
+✅ Production site loads without React errors
 
 ## Support
 
 If issues continue:
+
 1. Check Vercel deployment logs
 2. Compare local `dist/` output with deployed version
 3. Verify all chunks are loading in browser Network tab
