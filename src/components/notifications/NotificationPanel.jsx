@@ -36,6 +36,7 @@ import {
   Settings,
   ChevronDown,
 } from "lucide-react";
+import ConfirmationModal from "../ui/ConfirmationModal";
 import {
   NOTIFICATION_TYPE,
   NOTIFICATION_CATEGORY,
@@ -68,6 +69,9 @@ const NotificationPanel = ({ onClose }) => {
   const [isMarkingAllAsRead, setIsMarkingAllAsRead] = useState(false);
   const [isDismissingAll, setIsDismissingAll] = useState(false);
   const [processingItems, setProcessingItems] = useState(new Set());
+
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // ✅ Auto-focus close button when panel opens (accessibility)
   useEffect(() => {
@@ -251,16 +255,13 @@ const NotificationPanel = ({ onClose }) => {
   };
 
   // ✅ Handle dismiss all - Uses context (automatic sync!)
-  const handleDismissAll = async () => {
-    const count = notifications.length;
-    const confirmMessage =
-      count > 0
-        ? `Are you sure you want to clear all ${count} notification(s)? This action cannot be undone.`
-        : "Are you sure you want to clear all notifications?";
+  const handleDismissAll = () => {
+    setShowConfirmModal(true);
+  };
 
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+  // Handle confirm dismiss all
+  const handleConfirmDismissAll = async () => {
+    setShowConfirmModal(false);
 
     setIsDismissingAll(true);
 
@@ -292,6 +293,7 @@ const NotificationPanel = ({ onClose }) => {
       setNotifications(originalNotifications);
       setPage(originalPage);
       setHasMore(originalHasMore);
+      console.error("Error clearing notifications:", error);
       alert(`Failed to clear all notifications. Please try again.`);
     } finally {
       setIsDismissingAll(false);
@@ -738,6 +740,23 @@ const NotificationPanel = ({ onClose }) => {
           </button>
         </div>
       )}
+
+      {/* Confirmation Modal for Clear All */}
+      <ConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={handleConfirmDismissAll}
+        title="Clear All Notifications"
+        message={
+          notifications.length > 0
+            ? `Are you sure you want to clear all ${notifications.length} notification(s)? This action cannot be undone.`
+            : "Are you sure you want to clear all notifications? This action cannot be undone."
+        }
+        confirmText="Clear All"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={isDismissingAll}
+      />
     </div>
   );
 };
