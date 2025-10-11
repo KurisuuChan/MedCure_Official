@@ -225,6 +225,82 @@ const ActivityLogDashboard = () => {
     ipFilter,
   ]);
 
+  // Smart grouping function to reduce repetitive activities
+  const groupSimilarActivities = useCallback(
+    (activities) => {
+      if (!groupSimilar || activities.length === 0) return activities;
+
+      const timeWindow = 10 * 60 * 1000; // 10 minutes
+      const minGroupSize = 3;
+      const grouped = [];
+      let currentGroup = null;
+
+      const sortedActivities = [...activities].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      );
+
+      sortedActivities.forEach((activity, index) => {
+        if (index === 0) {
+          currentGroup = {
+            ...activity,
+            count: 1,
+            items: [activity],
+            firstTime: activity.created_at,
+            lastTime: activity.created_at,
+            isGrouped: false,
+          };
+          return;
+        }
+
+        const prevActivity = sortedActivities[index - 1];
+        const isSameType =
+          activity.activity_type === prevActivity.activity_type;
+        const isSameUser = activity.user_id === prevActivity.user_id;
+        const timeDiff = Math.abs(
+          new Date(activity.created_at) - new Date(prevActivity.created_at)
+        );
+        const withinWindow = timeDiff < timeWindow;
+
+        if (isSameType && isSameUser && withinWindow && currentGroup) {
+          currentGroup.count++;
+          currentGroup.items.push(activity);
+          currentGroup.lastTime = activity.created_at;
+          currentGroup.isGrouped = currentGroup.count >= minGroupSize;
+        } else {
+          // Push previous group
+          if (currentGroup.count >= minGroupSize) {
+            grouped.push({ ...currentGroup, isGrouped: true });
+          } else {
+            // Don't group, push individual items
+            grouped.push(...currentGroup.items);
+          }
+
+          // Start new group
+          currentGroup = {
+            ...activity,
+            count: 1,
+            items: [activity],
+            firstTime: activity.created_at,
+            lastTime: activity.created_at,
+            isGrouped: false,
+          };
+        }
+      });
+
+      // Handle last group
+      if (currentGroup) {
+        if (currentGroup.count >= minGroupSize) {
+          grouped.push({ ...currentGroup, isGrouped: true });
+        } else {
+          grouped.push(...currentGroup.items);
+        }
+      }
+
+      return grouped;
+    },
+    [groupSimilar]
+  );
+
   // Apply smart grouping before pagination
   const processedActivities = groupSimilarActivities(filteredActivities);
 
@@ -391,82 +467,6 @@ const ActivityLogDashboard = () => {
     });
     return grouped;
   };
-
-  // Smart grouping function to reduce repetitive activities
-  const groupSimilarActivities = useCallback(
-    (activities) => {
-      if (!groupSimilar || activities.length === 0) return activities;
-
-      const timeWindow = 10 * 60 * 1000; // 10 minutes
-      const minGroupSize = 3;
-      const grouped = [];
-      let currentGroup = null;
-
-      const sortedActivities = [...activities].sort(
-        (a, b) => new Date(b.created_at) - new Date(a.created_at)
-      );
-
-      sortedActivities.forEach((activity, index) => {
-        if (index === 0) {
-          currentGroup = {
-            ...activity,
-            count: 1,
-            items: [activity],
-            firstTime: activity.created_at,
-            lastTime: activity.created_at,
-            isGrouped: false,
-          };
-          return;
-        }
-
-        const prevActivity = sortedActivities[index - 1];
-        const isSameType =
-          activity.activity_type === prevActivity.activity_type;
-        const isSameUser = activity.user_id === prevActivity.user_id;
-        const timeDiff = Math.abs(
-          new Date(activity.created_at) - new Date(prevActivity.created_at)
-        );
-        const withinWindow = timeDiff < timeWindow;
-
-        if (isSameType && isSameUser && withinWindow && currentGroup) {
-          currentGroup.count++;
-          currentGroup.items.push(activity);
-          currentGroup.lastTime = activity.created_at;
-          currentGroup.isGrouped = currentGroup.count >= minGroupSize;
-        } else {
-          // Push previous group
-          if (currentGroup.count >= minGroupSize) {
-            grouped.push({ ...currentGroup, isGrouped: true });
-          } else {
-            // Don't group, push individual items
-            grouped.push(...currentGroup.items);
-          }
-
-          // Start new group
-          currentGroup = {
-            ...activity,
-            count: 1,
-            items: [activity],
-            firstTime: activity.created_at,
-            lastTime: activity.created_at,
-            isGrouped: false,
-          };
-        }
-      });
-
-      // Handle last group
-      if (currentGroup) {
-        if (currentGroup.count >= minGroupSize) {
-          grouped.push({ ...currentGroup, isGrouped: true });
-        } else {
-          grouped.push(...currentGroup.items);
-        }
-      }
-
-      return grouped;
-    },
-    [groupSimilar]
-  );
 
   // Effects
   useEffect(() => {
