@@ -1019,8 +1019,12 @@ export const SuccessModal = ({
   title = "Success!",
   message = "Operation completed successfully.",
   user = null,
+  isUpdate = false, // New prop to differentiate update vs create
 }) => {
   if (!isOpen) return null;
+
+  // Determine if this is an update based on title or explicit prop
+  const isUserUpdate = isUpdate || title.includes("Updated");
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -1086,12 +1090,21 @@ export const SuccessModal = ({
               <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-green-800">
                 <p className="font-medium mb-1">What's Next:</p>
-                <ul className="space-y-1 text-green-700">
-                  <li>• User account is now active</li>
-                  <li>• Credentials have been created successfully</li>
-                  <li>• User can log in immediately</li>
-                  <li>• User will appear in the user list</li>
-                </ul>
+                {isUserUpdate ? (
+                  <ul className="space-y-1 text-green-700">
+                    <li>• User information has been updated</li>
+                    <li>• Changes are effective immediately</li>
+                    <li>• User can continue using their account</li>
+                    <li>• Updated details will reflect in the user list</li>
+                  </ul>
+                ) : (
+                  <ul className="space-y-1 text-green-700">
+                    <li>• User account is now active</li>
+                    <li>• Credentials have been created successfully</li>
+                    <li>• User can log in immediately</li>
+                    <li>• User will appear in the user list</li>
+                  </ul>
+                )}
               </div>
             </div>
           </div>

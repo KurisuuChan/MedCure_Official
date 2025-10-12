@@ -866,9 +866,18 @@ const UserManagementDashboard = () => {
           onClose={() => {
             setShowSuccessModal(false);
             setSuccessModalData(null);
+            setSuccessModalType("create");
           }}
-          title="User Created Successfully!"
-          message="The new user account has been created and is ready to use."
+          title={
+            successModalType === "create"
+              ? "User Created Successfully!"
+              : "User Updated Successfully!"
+          }
+          message={
+            successModalType === "create"
+              ? "The new user account has been created and is ready to use."
+              : "The user account has been updated with the new information."
+          }
           user={successModalData}
         />
       )}
