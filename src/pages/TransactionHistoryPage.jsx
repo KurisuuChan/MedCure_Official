@@ -26,6 +26,9 @@ import {
   X,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "../utils/formatting";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { format } from "date-fns";
 
 const TransactionHistoryPage = () => {
   const navigate = useNavigate();
@@ -200,6 +203,185 @@ const TransactionHistoryPage = () => {
     );
   };
 
+  // Print Transaction Report to PDF
+  const handlePrintReport = () => {
+    try {
+      if (filteredTransactions.length === 0) {
+        alert("No transactions to print");
+        return;
+      }
+
+      console.log("📊 [Print Report] Generating PDF for", filteredTransactions.length, "transactions");
+
+      const doc = new jsPDF();
+      doc.setLanguage("en-US");
+      
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Professional color scheme
+      const colors = {
+        primary: [37, 99, 235], // Blue-600
+        text: [17, 24, 39], // Gray-900
+        lightGray: [243, 244, 246], // Gray-100
+        success: [34, 197, 94], // Green-500
+        warning: [234, 179, 8], // Yellow-500
+        danger: [239, 68, 68], // Red-500
+      };
+
+      // Header Section
+      doc.setFillColor(...colors.primary);
+      doc.rect(0, 0, pageWidth, 35, "F");
+
+      // Company Logo/Name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont(undefined, "bold");
+      doc.text("MedCure Pharmacy", 14, 15);
+
+      // Report Title
+      doc.setFontSize(12);
+      doc.setFont(undefined, "normal");
+      doc.text("TRANSACTION HISTORY REPORT", 14, 25);
+
+      // Generation Date and Filters
+      doc.setFontSize(9);
+      doc.text(
+        `Generated: ${format(new Date(), "MMM dd, yyyy HH:mm")}`,
+        pageWidth - 14,
+        15,
+        { align: "right" }
+      );
+      doc.text(
+        `Filter: ${dateFilter.toUpperCase()} | Status: ${statusFilter.toUpperCase()}`,
+        pageWidth - 14,
+        22,
+        { align: "right" }
+      );
+
+      let yPosition = 45;
+
+      // Summary Section
+      doc.setFillColor(...colors.lightGray);
+      doc.rect(14, yPosition, pageWidth - 28, 8, "F");
+      doc.setTextColor(...colors.text);
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("SUMMARY", 16, yPosition + 5.5);
+      yPosition += 12;
+
+      // Calculate summary metrics
+      const completedTransactions = filteredTransactions.filter(t => t.status === 'completed');
+      const totalRevenue = completedTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+      const totalDiscount = completedTransactions.reduce((sum, t) => sum + (t.discount_amount || 0), 0);
+      const totalRefunded = filteredTransactions.filter(t => t.status === 'refunded').length;
+
+      const summaryMetrics = [
+        ["Total Transactions", filteredTransactions.length],
+        ["Completed Transactions", completedTransactions.length],
+        ["Total Revenue", `P ${totalRevenue.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`],
+        ["Total Discounts", `P ${totalDiscount.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`],
+        ["Refunded Transactions", totalRefunded],
+      ];
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Metric", "Value"]],
+        body: summaryMetrics,
+        theme: "plain",
+        headStyles: {
+          fillColor: colors.primary,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 10,
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: colors.text,
+        },
+        alternateRowStyles: {
+          fillColor: colors.lightGray,
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      // Transaction Details Table
+      yPosition = doc.lastAutoTable.finalY + 10;
+
+      doc.setFillColor(...colors.lightGray);
+      doc.rect(14, yPosition, pageWidth - 28, 8, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("TRANSACTION DETAILS", 16, yPosition + 5.5);
+      yPosition += 10;
+
+      const transactionData = filteredTransactions.map((t) => [
+        format(new Date(t.created_at), "MMM dd, yyyy HH:mm"),
+        t.id.substring(0, 8).toUpperCase(),
+        t.customer_name || "Walk-in",
+        t.sale_items?.length || 0,
+        `P ${(t.total_amount || 0).toFixed(2)}`,
+        t.status.charAt(0).toUpperCase() + t.status.slice(1),
+      ]);
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [["Date/Time", "ID", "Customer", "Items", "Amount", "Status"]],
+        body: transactionData,
+        theme: "plain",
+        headStyles: {
+          fillColor: colors.primary,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 9,
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: colors.text,
+        },
+        alternateRowStyles: {
+          fillColor: colors.lightGray,
+        },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { cellWidth: 35 },
+          1: { cellWidth: 20 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 15 },
+          4: { cellWidth: 25 },
+          5: { cellWidth: 25 },
+        },
+      });
+
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(128, 128, 128);
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+        doc.text(
+          "MedCure Pharmacy - Transaction History Report",
+          14,
+          doc.internal.pageSize.getHeight() - 10
+        );
+      }
+
+      // Save the PDF
+      const fileName = `Transaction_Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.pdf`;
+      doc.save(fileName);
+      
+      console.log("✅ [Print Report] PDF generated successfully:", fileName);
+    } catch (error) {
+      console.error("❌ [Print Report] Error generating PDF:", error);
+      alert("Failed to generate report. Please try again.");
+    }
+  };
+
   // Action Handlers
   const handleViewReceipt = (transaction) => {
     console.log(
@@ -361,15 +543,7 @@ const TransactionHistoryPage = () => {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => {
-                if (filteredTransactions.length === 0) {
-                  alert("No transactions to print");
-                  return;
-                }
-                alert(
-                  `Print Report: ${filteredTransactions.length} transactions would be printed as a detailed report`
-                );
-              }}
+              onClick={handlePrintReport}
               className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               title="Print transaction report"
             >

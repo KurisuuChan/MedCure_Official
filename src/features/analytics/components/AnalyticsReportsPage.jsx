@@ -15,6 +15,15 @@ import { ReportsService } from "../../../services/domains/analytics/auditReports
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Currency formatter utility - PDF-safe version without special symbols
+const formatCurrency = (amount) => {
+  if (amount == null || isNaN(amount)) return "P 0.00";
+  const formatted = Number(amount)
+    .toFixed(2)
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `P ${formatted}`;
+};
+
 // Utility to create helpful no-data messages
 const createNoDataMessage = (dateRange, reportType = "sales") => {
   const { startDate, endDate } = dateRange;
@@ -370,7 +379,14 @@ const AnalyticsReportsPage = () => {
   // Export to PDF - Professional and Modern Design
   const exportToPDF = (reportData, reportName) => {
     try {
+      console.log("📊 [PDF Export] Starting export for:", reportName);
+      console.log("📊 [PDF Export] Report data:", reportData);
+      
       const doc = new jsPDF();
+      
+      // Set the document to use UTF-8 encoding for special characters
+      doc.setLanguage("en-US");
+      
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -426,12 +442,7 @@ const AnalyticsReportsPage = () => {
         // Key Metrics in Grid
         const metrics = [
           ["Total Products", reportData.totalProducts || 0],
-          [
-            "Total Value",
-            `₱${(reportData.totalValue || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
-          ],
+          ["Total Value", formatCurrency(reportData.totalValue || 0)],
           ["Low Stock Items", reportData.lowStockCount || 0],
           ["Out of Stock", reportData.outOfStock || 0],
           ["Normal Stock", reportData.normalStock || 0],
@@ -464,6 +475,7 @@ const AnalyticsReportsPage = () => {
           reportData.topValueProducts &&
           reportData.topValueProducts.length > 0
         ) {
+          console.log("📊 [PDF Export] Top Value Products:", reportData.topValueProducts);
           yPosition = doc.lastAutoTable.finalY + 10;
 
           doc.setFillColor(...colors.lightGray);
@@ -475,13 +487,17 @@ const AnalyticsReportsPage = () => {
 
           const productData = reportData.topValueProducts
             .slice(0, 10)
-            .map((p) => [
-              p.brand_name || p.generic_name || "N/A",
-              p.stock_in_pieces || 0,
-              `₱${(
-                (p.selling_price || 0) * (p.stock_in_pieces || 0)
-              ).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
-            ]);
+            .map((p) => {
+              const price = Number(p.price_per_piece) || 0;
+              const stock = Number(p.stock_in_pieces) || 0;
+              const totalValue = price * stock;
+              console.log("📊 [PDF Export] Processing product:", p.brand_name, "Price:", price, "Stock:", stock, "Total:", totalValue);
+              return [
+                p.brand_name || p.generic_name || "N/A",
+                stock,
+                formatCurrency(totalValue),
+              ];
+            });
 
           autoTable(doc, {
             startY: yPosition,
@@ -515,31 +531,14 @@ const AnalyticsReportsPage = () => {
         yPosition += 12;
 
         const metrics = [
-          [
-            "Total Sales",
-            `₱${(reportData.totalSales || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
-          ],
+          ["Total Sales", formatCurrency(reportData.totalSales || 0)],
           ["Total Transactions", reportData.transactionCount || 0],
           [
             "Average Transaction",
-            `₱${(reportData.averageTransaction || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
+            formatCurrency(reportData.averageTransaction || 0),
           ],
-          [
-            "Total Cost",
-            `₱${(reportData.totalCost || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
-          ],
-          [
-            "Gross Profit",
-            `₱${(reportData.grossProfit || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
-          ],
+          ["Total Cost", formatCurrency(reportData.totalCost || 0)],
+          ["Gross Profit", formatCurrency(reportData.grossProfit || 0)],
           ["Profit Margin", `${(reportData.profitMargin || 0).toFixed(2)}%`],
         ];
 
@@ -575,13 +574,13 @@ const AnalyticsReportsPage = () => {
           doc.text("TOP SELLING PRODUCTS", 16, yPosition + 5.5);
           yPosition += 10;
 
-          const productData = reportData.topProducts.slice(0, 10).map((p) => [
-            p.productName || "N/A",
-            p.quantitySold || 0,
-            `₱${(p.revenue || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-            })}`,
-          ]);
+          const productData = reportData.topProducts
+            .slice(0, 10)
+            .map((p) => [
+              p.productName || "N/A",
+              p.quantitySold || 0,
+              formatCurrency(p.revenue || 0),
+            ]);
 
           autoTable(doc, {
             startY: yPosition,

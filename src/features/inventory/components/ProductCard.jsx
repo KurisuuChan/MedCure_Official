@@ -93,12 +93,12 @@ export default function ProductCard({
   );
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden">
       {/* Header with Status Badge */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-start justify-between mb-3">
+        <div className="flex items-start justify-between gap-3 mb-3">
           {/* Status Badge */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
             {product.is_archived && (
               <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                 <Archive className="h-3 w-3 mr-1" />
@@ -115,24 +115,24 @@ export default function ProductCard({
           </div>
 
           {showActions && (
-            <div className="flex items-center gap-1 ml-2">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <button
                 onClick={() => onView(product)}
-                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-150"
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md hover:scale-110 transition-all duration-200"
                 title="View Details"
               >
                 <Eye className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onEdit(product)}
-                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors duration-150"
+                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md hover:scale-110 transition-all duration-200"
                 title="Edit Product"
               >
                 <Edit className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onDelete(product)}
-                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors duration-150"
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md hover:scale-110 transition-all duration-200"
                 title="Delete Product"
               >
                 <Trash2 className="h-4 w-4" />
@@ -142,16 +142,16 @@ export default function ProductCard({
         </div>
 
         {/* Product Name */}
-        <h3 className="font-bold text-gray-900 text-base leading-tight mb-1.5">
+        <h3 className="font-bold text-gray-900 text-base leading-tight mb-1 line-clamp-1">
           {product.brand_name || product.brand || "Unknown Brand"}
         </h3>
-        <p className="text-sm text-gray-600 font-normal mb-2 leading-snug">
+        <p className="text-sm text-gray-600 font-medium mb-2 leading-snug line-clamp-1">
           {product.generic_name || product.name || "Unknown Generic"}
         </p>
 
         {/* Dosage Strength */}
         {product.dosage_strength && (
-          <p className="text-xs text-gray-500 mb-2 font-normal">
+          <p className="text-xs text-gray-500 mb-2 font-medium">
             {product.dosage_strength}
           </p>
         )}
@@ -176,11 +176,11 @@ export default function ProductCard({
       {/* Body */}
       <div className="p-4">
         {/* Price */}
-        <div className="text-center mb-4 py-2">
-          <div className="text-3xl font-bold text-gray-900 tracking-tight">
+        <div className="text-center mb-4 py-2.5">
+          <div className="text-2xl font-semibold text-gray-900 tracking-tight leading-none">
             {formatCurrency(product.price_per_piece)}
           </div>
-          <div className="text-xs text-gray-500 mt-0.5 font-medium">
+          <div className="text-xs text-gray-500 mt-1 font-medium">
             per piece
           </div>
         </div>
@@ -219,22 +219,22 @@ export default function ProductCard({
         </div>
 
         {/* Product ID */}
-        <div className="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
-          <span className="font-medium">Product ID:</span>
-          <span className="font-mono font-semibold text-gray-700 text-[11px]">
+        <div className="flex justify-between items-center text-xs pt-3 border-t border-gray-100">
+          <span className="font-medium text-gray-500">Product ID:</span>
+          <span className="font-mono font-semibold text-gray-700">
             #{product.id.slice(-8)}
           </span>
         </div>
 
         {/* Low Stock Alert */}
         {product.stock_in_pieces <= product.reorder_level && (
-          <div className="flex items-start gap-2 p-3 mt-3 bg-amber-50 border border-amber-200 rounded-md">
+          <div className="flex items-start gap-2 p-3 mt-3 bg-amber-50 border border-amber-200 rounded-md hover:shadow-sm transition-shadow duration-200">
             <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-amber-900">
+              <div className="text-xs font-semibold text-amber-900 leading-tight">
                 Low Stock Alert
               </div>
-              <div className="text-xs text-amber-700 mt-0.5">
+              <div className="text-xs text-amber-700 mt-1 leading-tight">
                 Reorder level: {product.reorder_level} pieces
               </div>
             </div>
