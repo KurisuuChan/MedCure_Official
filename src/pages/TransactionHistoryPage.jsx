@@ -4,6 +4,8 @@ import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import unifiedTransactionService from "../services/domains/sales/transactionService";
 import SimpleReceipt from "../components/ui/SimpleReceipt";
+import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
+import { TableSkeleton } from "../components/ui/loading/SkeletonLoader";
 import {
   Search,
   Eye,
@@ -132,7 +134,9 @@ const TransactionHistoryPage = () => {
     return transactions.filter((transaction) => {
       const matchesSearch =
         debouncedSearchTerm === "" ||
-        transaction.id?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        transaction.id
+          ?.toLowerCase()
+          .includes(debouncedSearchTerm.toLowerCase()) ||
         transaction.customer_name
           ?.toLowerCase()
           .includes(debouncedSearchTerm.toLowerCase()) ||
@@ -215,7 +219,10 @@ const TransactionHistoryPage = () => {
       "📋 [TransactionHistory] Current selectedTransaction:",
       selectedTransaction?.id
     );
-    console.log("🔍 [TransactionHistory] Raw transaction from database:", transaction);
+    console.log(
+      "🔍 [TransactionHistory] Raw transaction from database:",
+      transaction
+    );
     console.log("🔍 [TransactionHistory] PWD fields in raw transaction:", {
       pwd_senior_id: transaction.pwd_senior_id,
       pwd_senior_holder_name: transaction.pwd_senior_holder_name,
@@ -223,7 +230,7 @@ const TransactionHistoryPage = () => {
       discount_percentage: transaction.discount_percentage,
       discount_amount: transaction.discount_amount,
     });
-    
+
     try {
       // Clear any existing selection first
       setSelectedTransaction(null);
@@ -233,19 +240,31 @@ const TransactionHistoryPage = () => {
       const enhancedTransaction = {
         ...transaction,
         // Ensure discount fields are properly set
-        discount_type: transaction.discount_type || 
-          (transaction.discount_amount > 0 && transaction.discount_percentage === 20 ? 'pwd' : 
-           transaction.discount_amount > 0 && transaction.discount_percentage === 20 ? 'senior' : 'none'),
-        discount_percentage: transaction.discount_percentage || 
+        discount_type:
+          transaction.discount_type ||
+          (transaction.discount_amount > 0 &&
+          transaction.discount_percentage === 20
+            ? "pwd"
+            : transaction.discount_amount > 0 &&
+              transaction.discount_percentage === 20
+            ? "senior"
+            : "none"),
+        discount_percentage:
+          transaction.discount_percentage ||
           (transaction.discount_amount > 0 ? 20 : 0),
         // For PWD/Senior fields, if missing but discount exists, show appropriate message
-        pwd_senior_id: transaction.pwd_senior_id || 
-          (transaction.discount_amount > 0 ? 'ID Not Recorded' : null),
-        pwd_senior_holder_name: transaction.pwd_senior_holder_name || 
-          (transaction.discount_amount > 0 ? 'Holder Name Not Recorded' : null),
+        pwd_senior_id:
+          transaction.pwd_senior_id ||
+          (transaction.discount_amount > 0 ? "ID Not Recorded" : null),
+        pwd_senior_holder_name:
+          transaction.pwd_senior_holder_name ||
+          (transaction.discount_amount > 0 ? "Holder Name Not Recorded" : null),
       };
 
-      console.log("🔄 [TransactionHistory] Enhanced transaction:", enhancedTransaction);
+      console.log(
+        "🔄 [TransactionHistory] Enhanced transaction:",
+        enhancedTransaction
+      );
 
       // Then set the enhanced transaction
       setTimeout(() => {
@@ -277,12 +296,15 @@ const TransactionHistoryPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-gray-700">Loading transactions...</span>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Transaction History
+            </h1>
+            <p className="text-gray-600">Loading transaction records...</p>
           </div>
+          <TableSkeleton rows={8} columns={6} />
         </div>
       </div>
     );
@@ -291,16 +313,16 @@ const TransactionHistoryPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md animate-shake">
           <div className="text-center">
-            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4 animate-wiggle" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Error Loading Transactions
             </h3>
             <p className="text-gray-600 mb-4">{error}</p>
             <button
               onClick={fetchTransactions}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:scale-105 transition-all duration-200"
             >
               Retry
             </button>

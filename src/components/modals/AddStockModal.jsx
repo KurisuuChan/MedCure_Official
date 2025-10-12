@@ -2,6 +2,7 @@
 import { X, Package, Calendar, AlertCircle } from "lucide-react";
 import StandardizedProductDisplay from "../ui/StandardizedProductDisplay";
 import { useToast } from "../ui/Toast";
+import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
 
 const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
   const { success: showSuccess, error: showError } = useToast();
@@ -247,11 +248,15 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                     disabled={
                       loading || !formData.quantity || !formData.expiryDate
                     }
-                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 hover:scale-105 hover:shadow-lg text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <UnifiedSpinner
+                          variant="dots"
+                          size="xs"
+                          color="white"
+                        />
                         Adding...
                       </>
                     ) : (

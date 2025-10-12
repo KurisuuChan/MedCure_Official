@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { X, Download, FileText, Database } from "lucide-react";
 import { UnifiedCategoryService } from "../../services/domains/inventory/unifiedCategoryService";
+import { UnifiedSpinner } from "./loading/UnifiedSpinner";
 
 const ExportModal = ({ isOpen, onClose, products, categories }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -1171,11 +1172,11 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 border border-transparent rounded-xl hover:from-emerald-600 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-md hover:shadow-lg transition-all duration-200"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 border border-transparent rounded-xl hover:from-emerald-600 hover:to-teal-700 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-md hover:shadow-lg transition-all duration-200"
           >
             {isExporting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <UnifiedSpinner variant="dots" size="xs" color="white" />
                 <span>Exporting...</span>
               </>
             ) : (

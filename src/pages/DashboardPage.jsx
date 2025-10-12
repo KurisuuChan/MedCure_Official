@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { DashboardService } from "../services/domains/analytics/dashboardService";
 import { formatCurrency, formatNumber } from "../utils/formatting";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { DashboardSkeleton } from "../components/ui/loading/SkeletonLoader";
+import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import SalesChart from "../components/charts/SalesChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
 import StandardizedProductDisplay from "../components/ui/StandardizedProductDisplay";
@@ -101,8 +102,8 @@ export default function DashboardPage() {
   // BEST PRACTICE: Centralize state rendering logic
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size="lg" />
+      <div className="min-h-screen bg-gray-50 p-6">
+        <DashboardSkeleton />
       </div>
     );
   }
@@ -110,15 +111,15 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-center p-8 bg-white shadow-lg rounded-xl">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+        <div className="text-center p-8 bg-white shadow-lg rounded-xl animate-shake">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4 animate-wiggle" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Dashboard Error
           </h3>
           <p className="text-red-600 mb-6">{error}</p>
           <button
             onClick={loadDashboardData}
-            className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:scale-105"
           >
             <RefreshCw className="h-4 w-4 mr-2 animate-spin-slow" />
             Try Again
@@ -210,53 +211,61 @@ export default function DashboardPage() {
 
         {/* Metrics Grid */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <MemoizedCleanMetricCard
-            title="Revenue Today"
-            value={formatCurrency(dashboardData.totalSales || 0)}
-            icon={TrendingUp}
-            trend={
-              dashboardData.growthPercentages?.revenue
-                ? Number(dashboardData.growthPercentages.revenue.toFixed(1))
-                : 0
-            }
-            trendText="vs yesterday"
-            color="green"
-            href="/transaction-history"
-            onClick={() => navigate("/transaction-history")}
-          />
-          <MemoizedCleanMetricCard
-            title="Total Products"
-            value={formatNumber(dashboardData.totalProducts || 0)}
-            icon={Package}
-            trend={null}
-            trendText="inventory count"
-            color="blue"
-            href="/inventory"
-            onClick={() => navigate("/inventory")}
-          />
-          <MemoizedCleanMetricCard
-            title="Low Stock Alert"
-            value={formatNumber(dashboardData.lowStockCount || 0)}
-            icon={AlertTriangle}
-            trend={null}
-            trendText="items need restock"
-            color="amber"
-            isAlert={true}
-            href="/inventory"
-            onClick={() =>
-              navigate("/inventory", { state: { filter: "low-stock" } })
-            }
-          />
-          <MemoizedCleanMetricCard
-            title="Active Users"
-            value={formatNumber(dashboardData.activeUsers || 0)}
-            icon={Users}
-            trend={null}
-            trendText="system users"
-            color="purple"
-            href="/user-management"
-            onClick={() => navigate("/user-management")}
-          />
+          <div className="animate-slide-up" style={{ animationDelay: "0s" }}>
+            <MemoizedCleanMetricCard
+              title="Revenue Today"
+              value={formatCurrency(dashboardData.totalSales || 0)}
+              icon={TrendingUp}
+              trend={
+                dashboardData.growthPercentages?.revenue
+                  ? Number(dashboardData.growthPercentages.revenue.toFixed(1))
+                  : 0
+              }
+              trendText="vs yesterday"
+              color="green"
+              href="/transaction-history"
+              onClick={() => navigate("/transaction-history")}
+            />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <MemoizedCleanMetricCard
+              title="Total Products"
+              value={formatNumber(dashboardData.totalProducts || 0)}
+              icon={Package}
+              trend={null}
+              trendText="inventory count"
+              color="blue"
+              href="/inventory"
+              onClick={() => navigate("/inventory")}
+            />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: "0.2s" }}>
+            <MemoizedCleanMetricCard
+              title="Low Stock Alert"
+              value={formatNumber(dashboardData.lowStockCount || 0)}
+              icon={AlertTriangle}
+              trend={null}
+              trendText="items need restock"
+              color="amber"
+              isAlert={true}
+              href="/inventory"
+              onClick={() =>
+                navigate("/inventory", { state: { filter: "low-stock" } })
+              }
+            />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
+            <MemoizedCleanMetricCard
+              title="Active Users"
+              value={formatNumber(dashboardData.activeUsers || 0)}
+              icon={Users}
+              trend={null}
+              trendText="system users"
+              color="purple"
+              href="/user-management"
+              onClick={() => navigate("/user-management")}
+            />
+          </div>
         </section>
 
         {/* Sales Overview - Full Width */}

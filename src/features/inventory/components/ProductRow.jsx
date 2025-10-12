@@ -13,8 +13,9 @@ import { getStockBreakdown } from "../../../utils/unitConversion";
  * @param {Function} onView - Handler for view details action
  * @param {Function} onEdit - Handler for edit product action
  * @param {Function} onDelete - Handler for archive/delete product action
+ * @param {Object} style - Optional inline styles (for animation delays)
  */
-function ProductRow({ product, onView, onEdit, onDelete }) {
+function ProductRow({ product, onView, onEdit, onDelete, style }) {
   const stockStatus = getStockStatus(product);
   const expiryStatus = getExpiryStatus(product);
   const stockBreakdown = getStockBreakdown(product.stock_in_pieces, product);
@@ -36,40 +37,48 @@ function ProductRow({ product, onView, onEdit, onDelete }) {
 
   // Get classification colors
   const getClassificationStyle = (classification) => {
-    const cleanClassification = classification?.replace('(Rx)', '').replace('(OTC)', '').trim();
-    
+    const cleanClassification = classification
+      ?.replace("(Rx)", "")
+      .replace("(OTC)", "")
+      .trim();
+
     switch (classification) {
-      case 'Prescription (Rx)':
+      case "Prescription (Rx)":
         return {
-          bgColor: 'bg-red-100',
-          textColor: 'text-red-800',
-          label: 'Prescription'
+          bgColor: "bg-red-100",
+          textColor: "text-red-800",
+          label: "Prescription",
         };
-      case 'Over-the-Counter (OTC)':
+      case "Over-the-Counter (OTC)":
         return {
-          bgColor: 'bg-green-100',
-          textColor: 'text-green-800',
-          label: 'Over-the-Counter'
+          bgColor: "bg-green-100",
+          textColor: "text-green-800",
+          label: "Over-the-Counter",
         };
-      case 'Controlled Substance':
+      case "Controlled Substance":
         return {
-          bgColor: 'bg-purple-100',
-          textColor: 'text-purple-800',
-          label: 'Controlled Substance'
+          bgColor: "bg-purple-100",
+          textColor: "text-purple-800",
+          label: "Controlled Substance",
         };
       default:
         return {
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-800',
-          label: cleanClassification || 'Not specified'
+          bgColor: "bg-gray-100",
+          textColor: "text-gray-800",
+          label: cleanClassification || "Not specified",
         };
     }
   };
 
-  const classificationStyle = getClassificationStyle(product.drug_classification);
+  const classificationStyle = getClassificationStyle(
+    product.drug_classification
+  );
 
   return (
-    <tr className="hover:bg-gray-50">
+    <tr
+      className="hover:bg-gray-50 transition-colors duration-150 animate-slide-up"
+      style={style}
+    >
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
@@ -80,11 +89,11 @@ function ProductRow({ product, onView, onEdit, onDelete }) {
           <div className="ml-4">
             {/* PRIMARY: Brand Name (largest, most prominent) */}
             <div className="text-sm font-bold text-gray-900">
-              {product.brand_name || product.brand || 'Unknown Brand'}
+              {product.brand_name || product.brand || "Unknown Brand"}
             </div>
             {/* PRIMARY: Generic Name (below brand name) */}
             <div className="text-sm font-medium text-gray-700">
-              {product.generic_name || product.name || 'Unknown Generic'}
+              {product.generic_name || product.name || "Unknown Generic"}
             </div>
           </div>
         </div>
@@ -115,7 +124,9 @@ function ProductRow({ product, onView, onEdit, onDelete }) {
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">
           {product.drug_classification ? (
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${classificationStyle.bgColor} ${classificationStyle.textColor}`}>
+            <span
+              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${classificationStyle.bgColor} ${classificationStyle.textColor}`}
+            >
               {classificationStyle.label}
             </span>
           ) : (

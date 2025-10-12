@@ -23,6 +23,8 @@ import {
   SuccessModal,
 } from "../../../components/modals/UserModals";
 import { useToast } from "../../../components/ui/Toast";
+import { UnifiedSpinner } from "../../../components/ui/loading/UnifiedSpinner";
+import { TableSkeleton } from "../../../components/ui/loading/SkeletonLoader";
 
 const UserManagementDashboard = () => {
   const { success: showSuccess, error: showError } = useToast();
@@ -40,6 +42,7 @@ const UserManagementDashboard = () => {
   const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState(null);
+  const [successModalType, setSuccessModalType] = useState("create"); // 'create' or 'update'
   const [selectedUser, setSelectedUser] = useState(null);
   const [userStats, setUserStats] = useState({});
 
@@ -118,6 +121,7 @@ const UserManagementDashboard = () => {
       await loadUserStats();
 
       // Show success modal with user details
+      setSuccessModalType("create");
       setSuccessModalData({
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -159,14 +163,22 @@ const UserManagementDashboard = () => {
 
       console.log("✅ [UserManagementDashboard] User updated successfully");
       setShowEditModal(false);
-      setSelectedUser(null);
       setError(null); // Clear any previous errors
 
       // Reload data
       await loadUsers();
 
-      // Show success message
-      alert("User updated successfully!");
+      // Show success modal with updated user details
+      setSuccessModalType("update");
+      setSuccessModalData({
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        phone: userData.phone,
+        role: userData.role,
+      });
+      setShowSuccessModal(true);
+      setSelectedUser(null);
     } catch (error) {
       console.error("❌ [UserManagementDashboard] Error updating user:", error);
 
@@ -478,11 +490,16 @@ const UserManagementDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2 text-lg font-medium text-gray-600">
-          Loading users...
-        </span>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              User Management
+            </h2>
+            <p className="text-gray-600">Loading team members...</p>
+          </div>
+        </div>
+        <TableSkeleton rows={8} columns={6} />
       </div>
     );
   }
@@ -499,7 +516,7 @@ const UserManagementDashboard = () => {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700 hover:scale-105 hover:shadow-lg transition-all duration-200"
         >
           <UserPlus className="h-5 w-5" />
           <span>Add User</span>
@@ -739,14 +756,14 @@ const UserManagementDashboard = () => {
                           setSelectedUser(user);
                           setShowEditModal(true);
                         }}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 hover:scale-110 transition-all duration-200"
                         title="Edit user"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleResetPassword(user.email)}
-                        className="text-yellow-600 hover:text-yellow-900"
+                        className="text-yellow-600 hover:text-yellow-900 hover:scale-110 transition-all duration-200"
                         title="Reset password"
                       >
                         <Key className="h-4 w-4" />
@@ -754,7 +771,7 @@ const UserManagementDashboard = () => {
                       {user.is_active ? (
                         <button
                           onClick={() => handleDeleteUser(user.id)}
-                          className="text-red-600 hover:text-red-900 cursor-pointer"
+                          className="text-red-600 hover:text-red-900 hover:scale-110 transition-all duration-200 cursor-pointer"
                           title="Deactivate user"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -763,14 +780,14 @@ const UserManagementDashboard = () => {
                         <>
                           <button
                             onClick={() => handleActivateUser(user)}
-                            className="text-green-600 hover:text-green-900 cursor-pointer"
+                            className="text-green-600 hover:text-green-900 hover:scale-110 transition-all duration-200 cursor-pointer"
                             title="Reactivate user"
                           >
                             <UserCheck className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleHardDeleteUser(user.id)}
-                            className="text-red-800 hover:text-red-950 cursor-pointer"
+                            className="text-red-800 hover:text-red-950 hover:scale-110 transition-all duration-200 cursor-pointer"
                             title="Permanently delete user"
                           >
                             <Trash2 className="h-4 w-4 fill-current" />

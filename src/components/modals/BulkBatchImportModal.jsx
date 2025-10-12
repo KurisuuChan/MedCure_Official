@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import { ProductService } from "../../services/domains/inventory/productService";
+import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
 
 const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [file, setFile] = useState(null);
@@ -571,11 +572,11 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
             <button
               onClick={handleImport}
               disabled={!file || importing}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
             >
               {importing ? (
                 <>
-                  <AlertCircle className="h-4 w-4 animate-spin" />
+                  <UnifiedSpinner variant="dots" size="xs" color="white" />
                   <span>Importing...</span>
                 </>
               ) : (

@@ -29,6 +29,8 @@ import {
 import { DashboardService } from "../services/domains/analytics/dashboardService";
 import { useSettings } from "../contexts/SettingsContext";
 import SecurityBackupService from "../services/security/securityBackupService";
+import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
+import { CardSkeleton } from "../components/ui/loading/SkeletonLoader";
 import { useToast } from "../components/ui/Toast";
 
 export default function SystemSettingsPage() {
@@ -234,18 +236,15 @@ function GeneralSettings() {
     console.log("💾 Saving general settings:", settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
-    
+
     // Show success toast
-    showSuccess(
-      "⚙️ General settings saved successfully!",
-      {
-        duration: 4000,
-        action: {
-          label: "Got it!",
-          onClick: () => {}
-        }
-      }
-    );
+    showSuccess("⚙️ General settings saved successfully!", {
+      duration: 4000,
+      action: {
+        label: "Got it!",
+        onClick: () => {},
+      },
+    });
   };
 
   return (
@@ -505,16 +504,13 @@ function SecurityBackup() {
         setTimeout(() => setSaved(false), 3000);
 
         // Show success toast
-        showSuccess(
-          "🔒 Security settings saved successfully!",
-          {
-            duration: 4000,
-            action: {
-              label: "Great!",
-              onClick: () => {}
-            }
-          }
-        );
+        showSuccess("🔒 Security settings saved successfully!", {
+          duration: 4000,
+          action: {
+            label: "Great!",
+            onClick: () => {},
+          },
+        });
 
         // Clean up old backups if retention policy changed
         if (securitySettings.autoBackupEnabled) {
@@ -523,7 +519,9 @@ function SecurityBackup() {
           );
         }
       } else {
-        showError("Failed to save security settings. Please try again.", { duration: 5000 });
+        showError("Failed to save security settings. Please try again.", {
+          duration: 5000,
+        });
       }
     } catch (error) {
       console.error("Error saving security settings:", error);
@@ -551,8 +549,8 @@ function SecurityBackup() {
             duration: 6000,
             action: {
               label: "Download",
-              onClick: () => handleDownloadBackup()
-            }
+              onClick: () => handleDownloadBackup(),
+            },
           }
         );
       } else {
@@ -560,7 +558,9 @@ function SecurityBackup() {
       }
     } catch (error) {
       console.error("Error creating backup:", error);
-      showError("An error occurred during backup. Please try again.", { duration: 5000 });
+      showError("An error occurred during backup. Please try again.", {
+        duration: 5000,
+      });
     } finally {
       setBacking(false);
     }
@@ -575,7 +575,9 @@ function SecurityBackup() {
     try {
       const backupData = localStorage.getItem("medcure-last-backup");
       if (!backupData) {
-        showError("No backup found. Please create a backup first.", { duration: 5000 });
+        showError("No backup found. Please create a backup first.", {
+          duration: 5000,
+        });
         return;
       }
 
@@ -595,18 +597,22 @@ function SecurityBackup() {
       URL.revokeObjectURL(url);
 
       showSuccess(
-        `📥 Backup downloaded successfully! File size: ${(blob.size / 1024).toFixed(2)} KB with ${backup.totalRecords || "N/A"} records.`,
+        `📥 Backup downloaded successfully! File size: ${(
+          blob.size / 1024
+        ).toFixed(2)} KB with ${backup.totalRecords || "N/A"} records.`,
         {
           duration: 5000,
           action: {
             label: "Open Folder",
-            onClick: () => {}
-          }
+            onClick: () => {},
+          },
         }
       );
     } catch (error) {
       console.error("Error downloading backup:", error);
-      showError("Failed to download backup. Please try again.", { duration: 5000 });
+      showError("Failed to download backup. Please try again.", {
+        duration: 5000,
+      });
     }
   };
 
@@ -625,12 +631,14 @@ function SecurityBackup() {
         "🔧 Restore functionality requires backend implementation. Contact your database administrator for manual restore or implement the restore API endpoint.",
         {
           duration: 8000,
-          persistent: false
+          persistent: false,
         }
       );
     } catch (error) {
       console.error("Error restoring backup:", error);
-      showError("Failed to restore backup. Please try again.", { duration: 5000 });
+      showError("Failed to restore backup. Please try again.", {
+        duration: 5000,
+      });
     } finally {
       setRestoring(false);
     }
@@ -739,7 +747,7 @@ function SecurityBackup() {
   if (loading || !securitySettings) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <UnifiedSpinner variant="gradient" size="lg" />
       </div>
     );
   }
@@ -938,11 +946,11 @@ function SecurityBackup() {
             <button
               onClick={handleManualBackup}
               disabled={backing}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             >
               {backing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <UnifiedSpinner variant="dots" size="xs" color="white" />
                   <span className="font-medium">Backing up...</span>
                 </>
               ) : (
@@ -967,11 +975,11 @@ function SecurityBackup() {
             <button
               onClick={handleImportBackup}
               disabled={importing}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             >
               {importing ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <UnifiedSpinner variant="dots" size="xs" color="white" />
                   <span className="font-medium">Importing...</span>
                 </>
               ) : (
@@ -986,11 +994,11 @@ function SecurityBackup() {
             <button
               onClick={handleRestoreBackup}
               disabled={!lastBackup || restoring}
-              className="flex items-center justify-center space-x-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             >
               {restoring ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <UnifiedSpinner variant="dots" size="xs" color="white" />
                   <span className="font-medium">Restoring...</span>
                 </>
               ) : (
@@ -1023,11 +1031,11 @@ function SecurityBackup() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center space-x-2 px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center space-x-2 px-6 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <UnifiedSpinner variant="dots" size="xs" color="white" />
               <span>Saving...</span>
             </>
           ) : (
@@ -1259,11 +1267,11 @@ function SecurityBackup() {
               <button
                 onClick={confirmBackup}
                 disabled={backing}
-                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 hover:scale-105 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {backing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <UnifiedSpinner variant="dots" size="xs" color="white" />
                     <span>Creating Backup...</span>
                   </>
                 ) : (
@@ -1545,11 +1553,11 @@ function SecurityBackup() {
               <button
                 onClick={confirmRestoreBackup}
                 disabled={restoring}
-                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 hover:scale-105 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {restoring ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <UnifiedSpinner variant="dots" size="xs" color="white" />
                     <span>Restoring...</span>
                   </>
                 ) : (
@@ -1750,11 +1758,11 @@ function SecurityBackup() {
               <button
                 onClick={confirmImportBackup}
                 disabled={!selectedFile || importing}
-                className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-lg hover:from-orange-700 hover:to-orange-800 hover:scale-105 transition-all shadow-lg font-medium flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {importing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <UnifiedSpinner variant="dots" size="xs" color="white" />
                     <span>Importing...</span>
                   </>
                 ) : (

@@ -23,7 +23,8 @@ import "../components/ui/ScrollableModal.css";
 import { formatCurrency } from "../utils/formatting";
 import PhoneValidator from "../utils/phoneValidator";
 import { useToast } from "../components/ui/Toast";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
+import { CardSkeleton } from "../components/ui/loading/SkeletonLoader";
 
 export default function POSPage() {
   const navigate = useNavigate();
@@ -381,10 +382,10 @@ export default function POSPage() {
         {/* Product Selector - Left Column (2/3 width) */}
         <div className="lg:col-span-2">
           {isLoadingProducts ? (
-            /* Loading State - Same style as Inventory Page */
+            /* Loading State with Skeleton */
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CardSkeleton count={6} variant="product" />
               </div>
             </div>
           ) : availableProducts.length === 0 ? (
@@ -889,7 +890,7 @@ export default function POSPage() {
                         />
                       </div>
                       <button
-                        className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg font-medium disabled:bg-gray-400"
+                        className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg font-medium hover:bg-green-700 hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:bg-gray-400 disabled:hover:scale-100"
                         onClick={async () => {
                           try {
                             const savedCustomer = await createCustomer({
@@ -1128,11 +1129,15 @@ export default function POSPage() {
                         cartSummary.total - discount.amount ||
                       cartSummary.total - discount.amount <= 0
                     }
-                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors flex items-center justify-center space-x-2"
+                    className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 hover:scale-105 hover:shadow-lg transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:scale-100 font-medium flex items-center justify-center space-x-2"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <UnifiedSpinner
+                          variant="dots"
+                          size="sm"
+                          color="white"
+                        />
                         <span>Processing...</span>
                       </>
                     ) : (

@@ -2,6 +2,10 @@ import React from "react";
 import { Grid, List, RefreshCw, Package } from "lucide-react";
 import ProductCard from "./ProductCard";
 import ProductRow from "./ProductRow";
+import {
+  TableSkeleton,
+  CardSkeleton,
+} from "../../../components/ui/loading/SkeletonLoader";
 
 /**
  * Product List Section Component
@@ -86,17 +90,31 @@ function ProductListSection({
       </div>
 
       {/* Products Display */}
-      {viewMode === "grid" ? (
+      {isLoading ? (
+        /* Loading Skeletons */
+        viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <CardSkeleton count={12} variant="product" />
+          </div>
+        ) : (
+          <TableSkeleton rows={10} columns={9} />
+        )
+      ) : viewMode === "grid" ? (
         /* Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {paginatedProducts.map((product) => (
-            <ProductCard
+          {paginatedProducts.map((product, index) => (
+            <div
               key={product.id}
-              product={transformProduct(product)}
-              onEdit={handleEditProduct}
-              onView={handleViewProduct}
-              onDelete={handleArchiveProduct}
-            />
+              className="animate-slide-up"
+              style={{ animationDelay: `${index * 0.05}s` }}
+            >
+              <ProductCard
+                product={transformProduct(product)}
+                onEdit={handleEditProduct}
+                onView={handleViewProduct}
+                onDelete={handleArchiveProduct}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -136,13 +154,14 @@ function ProductListSection({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedProducts.map((product) => (
+                {paginatedProducts.map((product, index) => (
                   <ProductRow
                     key={product.id}
                     product={product}
                     onView={() => handleViewProduct(product)}
                     onEdit={() => handleEditProduct(product)}
                     onDelete={() => handleArchiveProduct(product)}
+                    style={{ animationDelay: `${Math.min(index, 10) * 0.03}s` }}
                   />
                 ))}
               </tbody>
@@ -151,14 +170,7 @@ function ProductListSection({
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
-
-      {/* Empty State */}
+      {/* Empty State - Only show when not loading */}
       {!isLoading && filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />

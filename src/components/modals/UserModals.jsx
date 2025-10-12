@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { UserManagementService } from "../../services/domains/auth/userManagementService";
+import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
 
 // Create User Modal Component
 export const CreateUserModal = ({ onClose, onSubmit }) => {
@@ -357,11 +358,11 @@ export const CreateUserModal = ({ onClose, onSubmit }) => {
               type="submit"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+              className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 hover:scale-105 hover:shadow-lg rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
             >
               {isSubmitting ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  <UnifiedSpinner variant="dots" size="xs" color="white" />
                   <span>Creating...</span>
                 </>
               ) : (
@@ -653,11 +654,11 @@ export const EditUserModal = ({ user, onClose, onSubmit }) => {
             type="submit"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 hover:scale-105 hover:shadow-lg rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
           >
             {isSubmitting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <UnifiedSpinner variant="dots" size="xs" color="white" />
                 <span>Saving...</span>
               </>
             ) : (
@@ -874,11 +875,11 @@ export const DeleteConfirmationModal = ({ user, onClose, onConfirm }) => {
               isHardDelete
                 ? "bg-red-700 hover:bg-red-800"
                 : "bg-orange-600 hover:bg-orange-700"
-            } rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
+            } hover:scale-105 hover:shadow-lg rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2`}
           >
             {isDeleting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <UnifiedSpinner variant="dots" size="xs" color="white" />
                 <span>
                   {isHardDelete ? "Permanently Deleting..." : "Deactivating..."}
                 </span>
@@ -991,11 +992,11 @@ export const ResetPasswordModal = ({ user, onClose, onConfirm }) => {
             type="button"
             onClick={handleReset}
             disabled={isResetting}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 hover:scale-105 hover:shadow-lg rounded-lg transition-all duration-200 disabled:opacity-50 flex items-center space-x-2"
           >
             {isResetting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                <UnifiedSpinner variant="dots" size="xs" color="white" />
                 <span>Sending...</span>
               </>
             ) : (
@@ -1253,11 +1254,11 @@ export const ActivationConfirmationModal = ({
             type="button"
             onClick={handleConfirm}
             disabled={!isConfirmValid || isActivating}
-            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            className="px-6 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:scale-105 hover:shadow-xl rounded-lg transition-all duration-200 shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             {isActivating ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                <UnifiedSpinner variant="dots" size="xs" color="white" />
                 <span>Activating...</span>
               </>
             ) : (
