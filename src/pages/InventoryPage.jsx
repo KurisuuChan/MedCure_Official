@@ -46,6 +46,7 @@ import ArchivedProductsManagement from "../features/inventory/components/Archive
 import InventoryHeader from "../features/inventory/components/InventoryHeader";
 import InventorySummary from "../features/inventory/components/InventorySummary";
 import ProductListSection from "../features/inventory/components/ProductListSection";
+import { LoadingInventoryPage } from "../components/ui/loading/PharmacyLoadingStates";
 
 // Enhanced scrollbar styles
 const scrollbarStyles = `
@@ -271,6 +272,15 @@ export default function InventoryPage() {
     setProductToArchive(null);
     setIsArchiving(false);
   };
+
+  // Show full page loading skeleton on initial load
+  if (isLoading && allProducts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <LoadingInventoryPage />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

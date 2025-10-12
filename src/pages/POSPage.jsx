@@ -373,7 +373,7 @@ export default function POSPage() {
 
       {/* Main Content - Two Column Layout */}
       {isLoadingProducts ? (
-        /* Full Page Loading State */
+        /* Full Page Loading State */}
         <LoadingPOSPage />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
