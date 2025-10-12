@@ -39,7 +39,6 @@ import {
 import { useCustomers } from "../hooks/useCustomers";
 import unifiedTransactionService from "../services/domains/sales/transactionService";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
-import { TableSkeleton } from "../components/ui/loading/SkeletonLoader";
 import "../debug/customerStatisticsValidator.js";
 import { formatCurrency, formatDate } from "../utils/formatting";
 import SimpleReceipt from "../components/ui/SimpleReceipt";

@@ -13,7 +13,11 @@ import { usePOS } from "../features/pos/hooks/usePOS";
 import "../components/ui/ScrollableModal.css";
 import { formatCurrency } from "../utils/formatting";
 import { useToast } from "../components/ui/Toast";
-import { CardSkeleton } from "../components/ui/loading/SkeletonLoader";
+import {
+  LoadingInventoryGrid,
+  EmptyState,
+  LoadingPOSPage,
+} from "../components/ui/loading/PharmacyLoadingStates";
 
 export default function POSPage() {
   const navigate = useNavigate();
@@ -368,118 +372,114 @@ export default function POSPage() {
       )}
 
       {/* Main Content - Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Product Selector - Left Column (2/3 width) */}
-        <div className="lg:col-span-2">
-          {isLoadingProducts ? (
-            /* Loading State with Skeleton */
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <CardSkeleton count={6} variant="product" />
-              </div>
-            </div>
-          ) : availableProducts.length === 0 ? (
-            /* Empty State */
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-              <div className="text-center py-12">
-                <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No products available
-                </h3>
-                <p className="text-gray-500">
-                  Products are currently being loaded or no items are in stock.
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Product Selector */
-            <ProductSelector
-              products={availableProducts}
-              onAddToCart={handleAddToCart}
-              cartItems={cartItems}
-            />
-          )}
-        </div>
-
-        {/* Shopping Cart - Right Column (1/3 width) */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-6">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              {/* Cart Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <ShoppingCart className="h-5 w-5" />
-                    <h2 className="text-lg font-semibold">Shopping Cart</h2>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-800 px-2 py-1 rounded-full">
-                      <span className="text-sm font-medium">
-                        {cartItems.length} item
-                        {cartItems.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    {cartItems.length > 0 && (
-                      <button
-                        onClick={handleClearCart}
-                        className="text-sm text-blue-100 hover:text-white transition-colors underline"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Cart Content */}
-              <div className="flex-1">
-                <ShoppingCartComponent
-                  items={cartItems}
-                  onUpdateQuantity={handleUpdateQuantity}
-                  onRemoveItem={handleRemoveItem}
-                  onClearCart={handleClearCart}
+      {isLoadingProducts ? (
+        /* Full Page Loading State */
+        <LoadingPOSPage />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Product Selector - Left Column (2/3 width) */}
+          <div className="lg:col-span-2">
+            {availableProducts.length === 0 ? (
+              /* Empty State */
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <EmptyState
+                  icon={ShoppingCart}
+                  title="No products available"
+                  message="Products are currently being loaded or no items are in stock."
                 />
               </div>
+            ) : (
+              /* Product Selector */
+              <ProductSelector
+                products={availableProducts}
+                onAddToCart={handleAddToCart}
+                cartItems={cartItems}
+              />
+            )}
+          </div>
 
-              {/* Checkout Section */}
-              {cartItems.length > 0 && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50">
-                  {/* Discount Display Only */}
-                  {discount.amount > 0 && (
-                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex justify-between text-sm text-green-700 font-medium">
-                        <span>Discount Applied:</span>
-                        <span>-{formatCurrency(discount.amount)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg text-green-800 border-t border-green-200 pt-2 mt-2">
-                        <span>Final Total:</span>
-                        <span>
-                          {formatCurrency(cartSummary.total - discount.amount)}
+          {/* Shopping Cart - Right Column (1/3 width) */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6">
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                {/* Cart Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <ShoppingCart className="h-5 w-5" />
+                      <h2 className="text-lg font-semibold">Shopping Cart</h2>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-blue-800 px-2 py-1 rounded-full">
+                        <span className="text-sm font-medium">
+                          {cartItems.length} item
+                          {cartItems.length !== 1 ? "s" : ""}
                         </span>
                       </div>
+                      {cartItems.length > 0 && (
+                        <button
+                          onClick={handleClearCart}
+                          className="text-sm text-blue-100 hover:text-white transition-colors underline"
+                        >
+                          Clear All
+                        </button>
+                      )}
                     </div>
-                  )}
-
-                  {/* Checkout Button */}
-                  <button
-                    onClick={handleCheckout}
-                    className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center justify-center space-x-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-                  >
-                    <CreditCard className="h-5 w-5" />
-                    <span>Checkout</span>
-                  </button>
-
-                  {discount.amount > 0 && (
-                    <p className="text-center text-sm text-green-600 font-medium mt-2">
-                      💰 You save {formatCurrency(discount.amount)}!
-                    </p>
-                  )}
+                  </div>
                 </div>
-              )}
+
+                {/* Cart Content */}
+                <div className="flex-1">
+                  <ShoppingCartComponent
+                    items={cartItems}
+                    onUpdateQuantity={handleUpdateQuantity}
+                    onRemoveItem={handleRemoveItem}
+                    onClearCart={handleClearCart}
+                  />
+                </div>
+
+                {/* Checkout Section */}
+                {cartItems.length > 0 && (
+                  <div className="border-t border-gray-200 p-4 bg-gray-50">
+                    {/* Discount Display Only */}
+                    {discount.amount > 0 && (
+                      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex justify-between text-sm text-green-700 font-medium">
+                          <span>Discount Applied:</span>
+                          <span>-{formatCurrency(discount.amount)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-lg text-green-800 border-t border-green-200 pt-2 mt-2">
+                          <span>Final Total:</span>
+                          <span>
+                            {formatCurrency(
+                              cartSummary.total - discount.amount
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Checkout Button */}
+                    <button
+                      onClick={handleCheckout}
+                      className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white px-4 py-3 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center justify-center space-x-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      <span>Checkout</span>
+                    </button>
+
+                    {discount.amount > 0 && (
+                      <p className="text-center text-sm text-green-600 font-medium mt-2">
+                        💰 You save {formatCurrency(discount.amount)}!
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Checkout Modal */}
       <CheckoutModal

@@ -30,7 +30,6 @@ import { DashboardService } from "../services/domains/analytics/dashboardService
 import { useSettings } from "../contexts/SettingsContext";
 import SecurityBackupService from "../services/security/securityBackupService";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
-import { CardSkeleton } from "../components/ui/loading/SkeletonLoader";
 import { useToast } from "../components/ui/Toast";
 
 export default function SystemSettingsPage() {

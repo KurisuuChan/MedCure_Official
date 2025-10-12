@@ -31,7 +31,10 @@ import AddStockModal from "../components/modals/AddStockModal";
 import BulkBatchImportModal from "../components/modals/BulkBatchImportModal";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
-import { TableSkeleton } from "../components/ui/loading/SkeletonLoader";
+import {
+  LoadingTransactionTable,
+  LoadingBatchManagementPage,
+} from "../components/ui/loading/PharmacyLoadingStates";
 import ProductSelectionCard from "../components/ui/ProductSelectionCard";
 
 const BatchManagementPage = () => {
@@ -498,13 +501,7 @@ const BatchManagementPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Batch Management
-            </h1>
-            <p className="text-gray-600">Loading batch records...</p>
-          </div>
-          <TableSkeleton rows={8} columns={7} />
+          <LoadingBatchManagementPage />
         </div>
       </div>
     );

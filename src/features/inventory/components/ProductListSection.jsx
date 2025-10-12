@@ -3,9 +3,10 @@ import { Grid, List, RefreshCw, Package } from "lucide-react";
 import ProductCard from "./ProductCard";
 import ProductRow from "./ProductRow";
 import {
-  TableSkeleton,
-  CardSkeleton,
-} from "../../../components/ui/loading/SkeletonLoader";
+  LoadingInventoryGrid,
+  LoadingTransactionTable,
+  EmptyState,
+} from "../../../components/ui/loading/PharmacyLoadingStates";
 
 /**
  * Product List Section Component
@@ -91,13 +92,11 @@ function ProductListSection({
 
       {/* Products Display */}
       {isLoading ? (
-        /* Loading Skeletons */
+        /* Loading States */
         viewMode === "grid" ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <CardSkeleton count={12} variant="product" />
-          </div>
+          <LoadingInventoryGrid count={12} />
         ) : (
-          <TableSkeleton rows={10} columns={9} />
+          <LoadingTransactionTable rows={10} />
         )
       ) : viewMode === "grid" ? (
         /* Grid View */
@@ -172,15 +171,11 @@ function ProductListSection({
 
       {/* Empty State - Only show when not loading */}
       {!isLoading && filteredProducts.length === 0 && (
-        <div className="text-center py-12">
-          <Package className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No products found
-          </h3>
-          <p className="text-gray-500">
-            Try adjusting your search terms or filters.
-          </p>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="No products found"
+          message="Try adjusting your search terms or filters."
+        />
       )}
 
       {/* Pagination */}

@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { DashboardService } from "../services/domains/analytics/dashboardService";
 import { formatCurrency, formatNumber } from "../utils/formatting";
-import { DashboardSkeleton } from "../components/ui/loading/SkeletonLoader";
+import { LoadingDashboardStats } from "../components/ui/loading/PharmacyLoadingStates";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import SalesChart from "../components/charts/SalesChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
@@ -103,7 +103,61 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <DashboardSkeleton />
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex-1">
+                {/* Status Indicators */}
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-gray-200 rounded-full animate-pulse" />
+                    <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="w-px h-4 bg-gray-200" />
+                  <div className="flex items-center space-x-2">
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
+                {/* Title */}
+                <div className="h-9 w-48 bg-gray-200 rounded animate-pulse mb-3" />
+                {/* Subtitle */}
+                <div className="h-6 w-96 bg-gray-100 rounded animate-pulse mb-6" />
+                {/* Date/Time */}
+                <div className="flex items-center space-x-6">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="h-4 w-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              {/* Refresh Button */}
+              <div className="mt-6 lg:mt-0">
+                <div className="h-10 w-28 bg-gray-200 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <LoadingDashboardStats />
+
+          {/* Charts Section Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4" />
+              <div className="h-64 bg-gray-50 rounded-lg animate-pulse" />
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="h-6 w-40 bg-gray-200 rounded animate-pulse mb-4" />
+              <div className="h-64 bg-gray-50 rounded-lg animate-pulse" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

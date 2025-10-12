@@ -5,7 +5,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import unifiedTransactionService from "../services/domains/sales/transactionService";
 import SimpleReceipt from "../components/ui/SimpleReceipt";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
-import { TableSkeleton } from "../components/ui/loading/SkeletonLoader";
+import { LoadingTransactionTable } from "../components/ui/loading/PharmacyLoadingStates";
 import {
   Search,
   Eye,
@@ -513,7 +513,7 @@ const TransactionHistoryPage = () => {
             </h1>
             <p className="text-gray-600">Loading transaction records...</p>
           </div>
-          <TableSkeleton rows={8} columns={6} />
+          <LoadingTransactionTable rows={8} />
         </div>
       </div>
     );
