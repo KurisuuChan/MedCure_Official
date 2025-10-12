@@ -577,10 +577,26 @@ export function LoadingInventoryPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { bgColor: "bg-white", textColor: "bg-gray-200", iconColor: "bg-blue-100" },
-          { bgColor: "bg-white", textColor: "bg-gray-200", iconColor: "bg-orange-100" },
-          { bgColor: "bg-white", textColor: "bg-gray-200", iconColor: "bg-red-100" },
-          { bgColor: "bg-white", textColor: "bg-gray-200", iconColor: "bg-green-100" },
+          {
+            bgColor: "bg-white",
+            textColor: "bg-gray-200",
+            iconColor: "bg-blue-100",
+          },
+          {
+            bgColor: "bg-white",
+            textColor: "bg-gray-200",
+            iconColor: "bg-orange-100",
+          },
+          {
+            bgColor: "bg-white",
+            textColor: "bg-gray-200",
+            iconColor: "bg-red-100",
+          },
+          {
+            bgColor: "bg-white",
+            textColor: "bg-gray-200",
+            iconColor: "bg-green-100",
+          },
         ].map((stat, i) => (
           <div
             key={i}
@@ -591,7 +607,9 @@ export function LoadingInventoryPage() {
                 <div className={`h-4 w-28 ${stat.textColor} rounded shimmer`} />
                 <div className="h-8 w-20 bg-gray-300 rounded shimmer" />
               </div>
-              <div className={`w-12 h-12 ${stat.iconColor} rounded-lg shimmer flex-shrink-0`} />
+              <div
+                className={`w-12 h-12 ${stat.iconColor} rounded-lg shimmer flex-shrink-0`}
+              />
             </div>
             <div className={`h-3 w-24 ${stat.textColor} rounded shimmer`} />
           </div>
