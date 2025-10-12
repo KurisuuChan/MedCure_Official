@@ -93,85 +93,46 @@ export default function ProductCard({
   );
 
   return (
-    <div className="bg-white rounded-xl border-2 border-gray-200 shadow-sm hover:shadow-xl hover:border-blue-300 hover:scale-[1.02] transition-all duration-300 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2 mb-2 flex-wrap">
-              {product.is_archived && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                  <Archive className="h-3 w-3 mr-1" />
-                  Archived
-                </span>
-              )}
-              {/* Drug Classification Badge */}
-              <span
-                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border-2 ${classificationBadge.bgColor} ${classificationBadge.textColor} ${classificationBadge.borderColor} shadow-sm`}
-              >
-                <classificationBadge.icon className="h-3 w-3 mr-1" />
-                {classificationBadge.label}
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+      {/* Header with Status Badge */}
+      <div className="p-4 border-b border-gray-100">
+        <div className="flex items-start justify-between mb-3">
+          {/* Status Badge */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {product.is_archived && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                <Archive className="h-3 w-3 mr-1" />
+                Archived
               </span>
-            </div>
-
-            {/* Brand Name - Large and Prominent */}
-            <h3 className="font-bold text-gray-900 text-xl leading-tight mb-1 line-clamp-2">
-              {product.brand_name || product.brand || "Unknown Brand"}
-            </h3>
-
-            {/* Generic Name - Below Brand Name */}
-            <p className="text-gray-600 font-medium text-base mb-2 line-clamp-1">
-              {product.generic_name || product.name || "Unknown Generic"}
-            </p>
-
-            {/* Dosage Strength - Subtle */}
-            {product.dosage_strength && (
-              <div className="mb-1">
-                <span className="text-xs text-gray-500 font-medium">
-                  {product.dosage_strength}
-                </span>
-              </div>
             )}
-
-            {/* Dosage Form - Highlighted */}
-            {product.dosage_form && (
-              <div className="flex items-center space-x-1 mb-2">
-                <Pill className="h-3 w-3 text-purple-600" />
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                  {product.dosage_form}
-                </span>
-              </div>
-            )}
-
-            {/* Category */}
-            <div className="inline-flex items-center space-x-2 text-sm bg-white rounded-lg px-2 py-1 border border-gray-200">
-              <Package className="h-3 w-3 text-gray-400" />
-              <span className="text-gray-500">Category:</span>
-              <span className="font-semibold text-gray-700">
-                {product.category}
-              </span>
-            </div>
+            {/* Drug Classification Badge */}
+            <span
+              className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${classificationBadge.bgColor} ${classificationBadge.textColor} ${classificationBadge.borderColor}`}
+            >
+              <classificationBadge.icon className="h-3 w-3 mr-1.5" />
+              {classificationBadge.label}
+            </span>
           </div>
 
           {showActions && (
-            <div className="flex flex-col space-y-1 ml-3">
+            <div className="flex items-center gap-1 ml-2">
               <button
                 onClick={() => onView(product)}
-                className="group p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 hover:scale-110"
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-150"
                 title="View Details"
               >
                 <Eye className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onEdit(product)}
-                className="group p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all duration-200 hover:scale-110"
+                className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors duration-150"
                 title="Edit Product"
               >
                 <Edit className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onDelete(product)}
-                className="group p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110"
+                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors duration-150"
                 title="Delete Product"
               >
                 <Trash2 className="h-4 w-4" />
@@ -179,68 +140,101 @@ export default function ProductCard({
             </div>
           )}
         </div>
+
+        {/* Product Name */}
+        <h3 className="font-bold text-gray-900 text-base leading-tight mb-1.5">
+          {product.brand_name || product.brand || "Unknown Brand"}
+        </h3>
+        <p className="text-sm text-gray-600 font-normal mb-2 leading-snug">
+          {product.generic_name || product.name || "Unknown Generic"}
+        </p>
+
+        {/* Dosage Strength */}
+        {product.dosage_strength && (
+          <p className="text-xs text-gray-500 mb-2 font-normal">
+            {product.dosage_strength}
+          </p>
+        )}
+
+        {/* Dosage Form Badge */}
+        {product.dosage_form && (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+            <Pill className="h-3 w-3 mr-1.5" />
+            {product.dosage_form}
+          </span>
+        )}
+
+        {/* Category */}
+        <div className="mt-2.5 text-xs text-gray-500">
+          Category:{" "}
+          <span className="font-semibold text-gray-700">
+            {product.category}
+          </span>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4 space-y-4 bg-white">
+      {/* Body */}
+      <div className="p-4">
         {/* Price */}
-        <div className="text-center bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-3 border-2 border-blue-200">
-          <div className="text-3xl font-bold text-blue-900">
+        <div className="text-center mb-4 py-2">
+          <div className="text-3xl font-bold text-gray-900 tracking-tight">
             {formatCurrency(product.price_per_piece)}
           </div>
-          <div className="text-sm text-blue-600 font-medium">per piece</div>
+          <div className="text-xs text-gray-500 mt-0.5 font-medium">
+            per piece
+          </div>
         </div>
 
-        {/* Stock and Expiry */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Stock and Expiry Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Stock */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
                 Stock
               </span>
-              <Package className="h-4 w-4 text-gray-400" />
+              <Package className="h-3.5 w-3.5 text-gray-400" />
             </div>
             <div
-              className={`text-center py-2.5 px-3 rounded-xl text-sm font-bold ${stockBadge.bgColor} ${stockBadge.textColor} border-2 ${stockBadge.borderColor} shadow-sm`}
+              className={`text-center py-2.5 px-3 rounded-md text-sm font-semibold ${stockBadge.bgColor} ${stockBadge.textColor} border ${stockBadge.borderColor}`}
             >
               {product.stock_in_pieces} pcs
             </div>
           </div>
 
+          {/* Expiry */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-600 uppercase tracking-wider font-bold">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-gray-500 uppercase font-semibold tracking-wide">
                 Expiry
               </span>
-              <Calendar className="h-4 w-4 text-gray-400" />
+              <Calendar className="h-3.5 w-3.5 text-gray-400" />
             </div>
             <div
-              className={`text-center py-2.5 px-3 rounded-xl text-xs font-bold ${expiryBadge.bgColor} ${expiryBadge.textColor} border-2 ${expiryBadge.borderColor} shadow-sm`}
+              className={`text-center py-2.5 px-3 rounded-md text-xs font-semibold leading-tight ${expiryBadge.bgColor} ${expiryBadge.textColor} border ${expiryBadge.borderColor}`}
             >
               {getExpiryText(product.expiry_date)}
             </div>
           </div>
         </div>
 
-        {/* Details */}
-        <div className="space-y-2 pt-2 border-t-2 border-gray-100">
-          <div className="flex justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
-            <span className="text-gray-600 font-medium">Product ID:</span>
-            <span className="text-gray-900 font-mono text-xs font-bold bg-white px-2 py-1 rounded border border-gray-200">
-              #{product.id.slice(-8)}
-            </span>
-          </div>
+        {/* Product ID */}
+        <div className="flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
+          <span className="font-medium">Product ID:</span>
+          <span className="font-mono font-semibold text-gray-700 text-[11px]">
+            #{product.id.slice(-8)}
+          </span>
         </div>
 
         {/* Low Stock Alert */}
         {product.stock_in_pieces <= product.reorder_level && (
-          <div className="flex items-center space-x-2 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-xl shadow-sm animate-pulse-subtle">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+          <div className="flex items-start gap-2 p-3 mt-3 bg-amber-50 border border-amber-200 rounded-md">
+            <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-amber-900">
+              <div className="text-xs font-semibold text-amber-900">
                 Low Stock Alert
               </div>
-              <div className="text-xs text-amber-700 font-medium">
+              <div className="text-xs text-amber-700 mt-0.5">
                 Reorder level: {product.reorder_level} pieces
               </div>
             </div>
