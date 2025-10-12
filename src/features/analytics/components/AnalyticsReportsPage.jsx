@@ -381,12 +381,12 @@ const AnalyticsReportsPage = () => {
     try {
       console.log("📊 [PDF Export] Starting export for:", reportName);
       console.log("📊 [PDF Export] Report data:", reportData);
-      
+
       const doc = new jsPDF();
-      
+
       // Set the document to use UTF-8 encoding for special characters
       doc.setLanguage("en-US");
-      
+
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
 
@@ -475,7 +475,10 @@ const AnalyticsReportsPage = () => {
           reportData.topValueProducts &&
           reportData.topValueProducts.length > 0
         ) {
-          console.log("📊 [PDF Export] Top Value Products:", reportData.topValueProducts);
+          console.log(
+            "📊 [PDF Export] Top Value Products:",
+            reportData.topValueProducts
+          );
           yPosition = doc.lastAutoTable.finalY + 10;
 
           doc.setFillColor(...colors.lightGray);
@@ -491,7 +494,16 @@ const AnalyticsReportsPage = () => {
               const price = Number(p.price_per_piece) || 0;
               const stock = Number(p.stock_in_pieces) || 0;
               const totalValue = price * stock;
-              console.log("📊 [PDF Export] Processing product:", p.brand_name, "Price:", price, "Stock:", stock, "Total:", totalValue);
+              console.log(
+                "📊 [PDF Export] Processing product:",
+                p.brand_name,
+                "Price:",
+                price,
+                "Stock:",
+                stock,
+                "Total:",
+                totalValue
+              );
               return [
                 p.brand_name || p.generic_name || "N/A",
                 stock,

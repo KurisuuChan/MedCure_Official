@@ -211,11 +211,15 @@ const TransactionHistoryPage = () => {
         return;
       }
 
-      console.log("📊 [Print Report] Generating PDF for", filteredTransactions.length, "transactions");
+      console.log(
+        "📊 [Print Report] Generating PDF for",
+        filteredTransactions.length,
+        "transactions"
+      );
 
       const doc = new jsPDF();
       doc.setLanguage("en-US");
-      
+
       const pageWidth = doc.internal.pageSize.getWidth();
 
       // Professional color scheme
@@ -270,16 +274,36 @@ const TransactionHistoryPage = () => {
       yPosition += 12;
 
       // Calculate summary metrics
-      const completedTransactions = filteredTransactions.filter(t => t.status === 'completed');
-      const totalRevenue = completedTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
-      const totalDiscount = completedTransactions.reduce((sum, t) => sum + (t.discount_amount || 0), 0);
-      const totalRefunded = filteredTransactions.filter(t => t.status === 'refunded').length;
+      const completedTransactions = filteredTransactions.filter(
+        (t) => t.status === "completed"
+      );
+      const totalRevenue = completedTransactions.reduce(
+        (sum, t) => sum + (t.total_amount || 0),
+        0
+      );
+      const totalDiscount = completedTransactions.reduce(
+        (sum, t) => sum + (t.discount_amount || 0),
+        0
+      );
+      const totalRefunded = filteredTransactions.filter(
+        (t) => t.status === "refunded"
+      ).length;
 
       const summaryMetrics = [
         ["Total Transactions", filteredTransactions.length],
         ["Completed Transactions", completedTransactions.length],
-        ["Total Revenue", `P ${totalRevenue.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`],
-        ["Total Discounts", `P ${totalDiscount.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`],
+        [
+          "Total Revenue",
+          `P ${totalRevenue
+            .toFixed(2)
+            .replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`,
+        ],
+        [
+          "Total Discounts",
+          `P ${totalDiscount
+            .toFixed(2)
+            .replace(/\\B(?=(\\d{3})+(?!\\d))/g, ",")}`,
+        ],
         ["Refunded Transactions", totalRefunded],
       ];
 
@@ -372,9 +396,12 @@ const TransactionHistoryPage = () => {
       }
 
       // Save the PDF
-      const fileName = `Transaction_Report_${format(new Date(), "yyyy-MM-dd_HHmm")}.pdf`;
+      const fileName = `Transaction_Report_${format(
+        new Date(),
+        "yyyy-MM-dd_HHmm"
+      )}.pdf`;
       doc.save(fileName);
-      
+
       console.log("✅ [Print Report] PDF generated successfully:", fileName);
     } catch (error) {
       console.error("❌ [Print Report] Error generating PDF:", error);
