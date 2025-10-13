@@ -1,11 +1,14 @@
-﻿import React, { useState } from "react";
+﻿import React, { useState, useContext } from "react";
 import { X, Package, Calendar, AlertCircle } from "lucide-react";
 import StandardizedProductDisplay from "../ui/StandardizedProductDisplay";
 import { useToast } from "../ui/Toast";
 import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
+import { AuthContext } from "../../contexts/AuthContext";
+import NotificationService from "../../services/notifications/NotificationService";
 
 const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
-  const { success: showSuccess, error: showError } = useToast();
+  const { success: showSuccess } = useToast();
+  const { user } = useContext(AuthContext);
   const [formData, setFormData] = useState({
     quantity: "",
     expiryDate: "",
@@ -64,11 +67,12 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
       const resultData = Array.isArray(result) ? result[0] : result;
 
       if (resultData && resultData.success) {
+        const productName =
+          product?.brand_name || product?.generic_name || "product";
+
         // ✅ Show success toast notification
         showSuccess(
-          `Successfully added ${formData.quantity} units to ${
-            product?.brand_name || product?.generic_name || "product"
-          }!`,
+          `Successfully added ${formData.quantity} units to ${productName}!`,
           {
             duration: 4000,
             action: {
@@ -77,6 +81,41 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
             },
           }
         );
+
+        // 📬 Send notification about stock added and batch received
+        if (user?.id) {
+          try {
+            const batchNumber =
+              resultData.batch_number || resultData.batch_id || "N/A";
+
+            // Get updated stock level from product or calculate
+            const newStockLevel =
+              (product?.stock_in_pieces || 0) + parseInt(formData.quantity);
+
+            // Notify about stock added
+            await NotificationService.notifyStockAdded(
+              product.id,
+              productName,
+              parseInt(formData.quantity),
+              batchNumber,
+              newStockLevel,
+              user.id
+            );
+
+            // Notify about batch received
+            await NotificationService.notifyBatchReceived(
+              batchNumber,
+              productName,
+              parseInt(formData.quantity),
+              formData.expiryDate,
+              user.id
+            );
+          } catch (notifyError) {
+            console.error("⚠️ Failed to send notification:", notifyError);
+            // Don't block the success flow if notification fails
+          }
+        }
+
         onSuccess &&
           onSuccess({
             success: true,

@@ -345,9 +345,9 @@ export default function DashboardPage() {
         </main>
 
         {/* Quick Actions and Inventory Analysis */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -386,7 +386,7 @@ export default function DashboardPage() {
                 icon={UserCheck}
                 title="User Management"
                 description="System administration"
-                href="/management"
+                href="/user-management"
                 color="gray"
               />
               <MemoizedCleanActionCard
@@ -402,7 +402,7 @@ export default function DashboardPage() {
           {/* Inventory Analysis */}
           <div
             onClick={() => navigate("/inventory")}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-fit"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-full flex flex-col"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === "Enter" && navigate("/inventory")}
@@ -418,7 +418,7 @@ export default function DashboardPage() {
                 <Package className="h-5 w-5 text-green-600" />
               </div>
             </div>
-            <div className="h-56">
+            <div className="flex-1 min-h-[300px]">
               {dashboardData.categoryAnalysis &&
               dashboardData.categoryAnalysis.length > 0 ? (
                 <Doughnut
@@ -463,7 +463,7 @@ export default function DashboardPage() {
                           usePointStyle: true,
                           boxWidth: 12,
                           font: {
-                            size: 12,
+                            size: window.innerWidth < 640 ? 10 : 12,
                           },
                           generateLabels: (chart) => {
                             const data = chart.data;

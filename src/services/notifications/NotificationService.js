@@ -401,6 +401,119 @@ class NotificationService {
     });
   }
 
+  /**
+   * Notify about out of stock product
+   */
+  async notifyOutOfStock(productId, productName, userId) {
+    return await this.create({
+      userId,
+      title: "❌ Out of Stock Alert",
+      message: `${productName} is completely out of stock! Immediate reorder required.`,
+      type: NOTIFICATION_TYPE.ERROR,
+      priority: NOTIFICATION_PRIORITY.CRITICAL,
+      category: NOTIFICATION_CATEGORY.INVENTORY,
+      metadata: {
+        productId,
+        productName,
+        currentStock: 0,
+        actionUrl: `/inventory?product=${productId}`,
+        notification_key: `out-of-stock:${productId}`,
+      },
+    });
+  }
+
+  /**
+   * Notify about stock added via batch management
+   */
+  async notifyStockAdded(
+    productId,
+    productName,
+    quantityAdded,
+    batchNumber,
+    newStockLevel,
+    userId
+  ) {
+    return await this.create({
+      userId,
+      title: "📦 Stock Added",
+      message: `${quantityAdded} units of ${productName} added (Batch: ${batchNumber}). New stock: ${newStockLevel} pieces.`,
+      type: NOTIFICATION_TYPE.SUCCESS,
+      priority: NOTIFICATION_PRIORITY.INFO,
+      category: NOTIFICATION_CATEGORY.INVENTORY,
+      metadata: {
+        productId,
+        productName,
+        quantityAdded,
+        batchNumber,
+        newStockLevel,
+        actionUrl: `/batch-management?product=${productId}`,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Notify about batch created/received
+   */
+  async notifyBatchReceived(
+    batchNumber,
+    productName,
+    quantity,
+    expiryDate,
+    userId
+  ) {
+    return await this.create({
+      userId,
+      title: "✅ Batch Received",
+      message: `Batch ${batchNumber} of ${productName} (${quantity} units) received. Expires: ${expiryDate}`,
+      type: NOTIFICATION_TYPE.SUCCESS,
+      priority: NOTIFICATION_PRIORITY.LOW,
+      category: NOTIFICATION_CATEGORY.INVENTORY,
+      metadata: {
+        batchNumber,
+        productName,
+        quantity,
+        expiryDate,
+        actionUrl: `/batch-management?batch=${batchNumber}`,
+      },
+    });
+  }
+
+  /**
+   * Notify about stock adjustment
+   */
+  async notifyStockAdjustment(
+    productId,
+    productName,
+    oldStock,
+    newStock,
+    reason,
+    userId
+  ) {
+    const difference = newStock - oldStock;
+    const action = difference > 0 ? "increased" : "decreased";
+    const icon = difference > 0 ? "📈" : "📉";
+
+    return await this.create({
+      userId,
+      title: `${icon} Stock Adjusted`,
+      message: `${productName} stock ${action} from ${oldStock} to ${newStock} pieces. Reason: ${reason}`,
+      type:
+        difference > 0 ? NOTIFICATION_TYPE.SUCCESS : NOTIFICATION_TYPE.WARNING,
+      priority: NOTIFICATION_PRIORITY.LOW,
+      category: NOTIFICATION_CATEGORY.INVENTORY,
+      metadata: {
+        productId,
+        productName,
+        oldStock,
+        newStock,
+        difference,
+        reason,
+        actionUrl: `/inventory?product=${productId}`,
+      },
+    });
+  }
+
   // ============================================================================
   // EMAIL: Send Critical Notifications
   // ============================================================================
@@ -889,12 +1002,16 @@ class NotificationService {
       );
 
       // Run checks (only for primary user)
-      const [lowStockCount, expiringCount] = await Promise.all([
-        this.checkLowStock([primaryUser]), // Only primary user
-        this.checkExpiringProducts([primaryUser]), // Only primary user
-      ]);
+      const [lowStockCount, expiringCount, outOfStockCount] = await Promise.all(
+        [
+          this.checkLowStock([primaryUser]), // Only primary user
+          this.checkExpiringProducts([primaryUser]), // Only primary user
+          this.checkOutOfStock([primaryUser]), // Only primary user
+        ]
+      );
 
-      const totalNotifications = lowStockCount + expiringCount;
+      const totalNotifications =
+        lowStockCount + expiringCount + outOfStockCount;
 
       // ✅ FIX: Record successful completion (if function exists)
       try {
@@ -914,7 +1031,7 @@ class NotificationService {
       }
 
       logger.debug(
-        `✅ Health checks completed: ${lowStockCount} low stock, ${expiringCount} expiring products (${totalNotifications} total notifications)`
+        `✅ Health checks completed: ${lowStockCount} low stock, ${expiringCount} expiring, ${outOfStockCount} out of stock (${totalNotifications} total notifications)`
       );
 
       // ✅ Update local timestamp after successful run
@@ -1089,6 +1206,49 @@ class NotificationService {
       return notificationCount;
     } catch (error) {
       logger.error("❌ Expiry check failed:", error);
+      return 0;
+    }
+  }
+
+  /**
+   * Check for out of stock products
+   * @private
+   */
+  async checkOutOfStock(users) {
+    try {
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("id, brand_name, generic_name, stock_in_pieces")
+        .eq("stock_in_pieces", 0)
+        .eq("is_active", true);
+
+      if (error) {
+        throw error;
+      }
+
+      if (!products || products.length === 0) {
+        return 0;
+      }
+
+      logger.debug(`❌ Found ${products.length} out of stock products`);
+
+      let notificationCount = 0;
+
+      // Notify each relevant user about out of stock products
+      for (const user of users) {
+        for (const product of products) {
+          const productName =
+            product.brand_name || product.generic_name || "Unknown Product";
+
+          await this.notifyOutOfStock(product.id, productName, user.id);
+
+          notificationCount++;
+        }
+      }
+
+      return notificationCount;
+    } catch (error) {
+      logger.error("❌ Out of stock check failed:", error);
       return 0;
     }
   }

@@ -589,8 +589,8 @@ const AnalyticsReportsPage = () => {
           const productData = reportData.topProducts
             .slice(0, 10)
             .map((p) => [
-              p.productName || "N/A",
-              p.quantitySold || 0,
+              p.name || p.productName || "N/A",
+              p.quantity || p.quantitySold || 0,
               formatCurrency(p.revenue || 0),
             ]);
 
