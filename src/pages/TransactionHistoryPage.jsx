@@ -1229,14 +1229,21 @@ const TransactionHistoryPage = () => {
 
                         // Show success toast
                         showSuccessToast(
-                          `Refund processed successfully! ₱${formatCurrency(editingTransaction.total_amount)}`
+                          `Refund processed successfully! ₱${formatCurrency(
+                            editingTransaction.total_amount
+                          )}`
                         );
 
                         // Create notification in the system
                         await notificationService.create({
                           userId: user?.id,
                           title: "Transaction Refunded",
-                          message: `Refund processed for ${editingTransaction.customer_name || "Walk-in customer"} - ₱${formatCurrency(editingTransaction.total_amount)}`,
+                          message: `Refund processed for ${
+                            editingTransaction.customer_name ||
+                            "Walk-in customer"
+                          } - ₱${formatCurrency(
+                            editingTransaction.total_amount
+                          )}`,
                           type: "info",
                           priority: 2,
                           category: "sales",
