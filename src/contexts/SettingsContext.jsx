@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
 import { supabase } from "../config/supabase";
 
 const SettingsContext = createContext();
@@ -24,16 +30,22 @@ export function SettingsProvider({ children }) {
 
   const loadSettings = async () => {
     try {
+      console.log("📥 Loading settings from Supabase...");
+
       const { data, error } = await supabase
         .from("system_settings")
         .select("setting_key, setting_value");
 
       if (error) {
-        console.error("Error loading settings:", error);
+        console.error("❌ Error loading settings from Supabase:", error);
         // Fall back to localStorage
         const savedSettings = localStorage.getItem("medcure-settings");
         if (savedSettings) {
-          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+          const parsedSettings = JSON.parse(savedSettings);
+          setSettings({ ...DEFAULT_SETTINGS, ...parsedSettings });
+          console.log("✅ Loaded settings from localStorage:", parsedSettings);
+        } else {
+          console.log("ℹ️ No settings found, using defaults");
         }
         setIsLoading(false);
         return;
@@ -77,9 +89,28 @@ export function SettingsProvider({ children }) {
           JSON.stringify(loadedSettings)
         );
         console.log("✅ Settings loaded from Supabase:", loadedSettings);
+      } else {
+        // No data in Supabase, check localStorage
+        const savedSettings = localStorage.getItem("medcure-settings");
+        if (savedSettings) {
+          const parsedSettings = JSON.parse(savedSettings);
+          setSettings({ ...DEFAULT_SETTINGS, ...parsedSettings });
+          console.log(
+            "✅ Loaded settings from localStorage (no Supabase data):",
+            parsedSettings
+          );
+        } else {
+          console.log("ℹ️ No settings found anywhere, using defaults");
+        }
       }
     } catch (error) {
-      console.error("Error loading settings:", error);
+      console.error("❌ Error loading settings:", error);
+      // Try localStorage as final fallback
+      const savedSettings = localStorage.getItem("medcure-settings");
+      if (savedSettings) {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+        console.log("✅ Loaded settings from localStorage (after error)");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -88,10 +119,15 @@ export function SettingsProvider({ children }) {
   const updateSettings = async (newSettings) => {
     try {
       const updatedSettings = { ...settings, ...newSettings };
+
+      console.log("🔄 Updating settings:", updatedSettings);
+
+      // Update state immediately
       setSettings(updatedSettings);
 
-      // Save to localStorage immediately
+      // Save to localStorage immediately for quick access
       localStorage.setItem("medcure-settings", JSON.stringify(updatedSettings));
+      console.log("💾 Saved to localStorage");
 
       // Save to Supabase
       const settingsMap = {
@@ -116,6 +152,7 @@ export function SettingsProvider({ children }) {
         }
       }
 
+      // Save each setting to Supabase
       for (const update of updates) {
         const { error } = await supabase.from("system_settings").upsert(
           {
@@ -128,13 +165,18 @@ export function SettingsProvider({ children }) {
         );
 
         if (error) {
-          console.error(`Error updating ${update.setting_key}:`, error);
+          console.error(`❌ Error updating ${update.setting_key}:`, error);
+          throw error;
+        } else {
+          console.log(`✅ Saved ${update.setting_key} to Supabase`);
         }
       }
 
-      console.log("✅ Settings saved to Supabase");
+      console.log("✅ All settings saved to Supabase successfully");
+      return true;
     } catch (error) {
-      console.error("Error updating settings:", error);
+      console.error("❌ Error updating settings:", error);
+      throw error;
     }
   };
 
@@ -163,10 +205,13 @@ export function SettingsProvider({ children }) {
     }
   };
 
+  const contextValue = useMemo(
+    () => ({ settings, updateSettings, resetSettings, isLoading }),
+    [settings, isLoading]
+  );
+
   return (
-    <SettingsContext.Provider
-      value={{ settings, updateSettings, resetSettings, isLoading }}
-    >
+    <SettingsContext.Provider value={contextValue}>
       {children}
     </SettingsContext.Provider>
   );

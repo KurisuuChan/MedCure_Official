@@ -24,8 +24,9 @@ function GeneralSettings() {
   });
 
   const [saved, setSaved] = useState(false);
-  const [logoPreview, setLogoPreview] = useState(settings.businessLogo);
+  const [logoPreview, setLogoPreview] = useState(globalSettings.businessLogo);
 
+  // Only sync with global settings on initial mount or when specifically needed
   useEffect(() => {
     setSettings({
       businessName: globalSettings.businessName || "MedCure Pharmacy",
@@ -37,7 +38,15 @@ function GeneralSettings() {
       enableEmailAlerts: globalSettings.enableEmailAlerts ?? true,
     });
     setLogoPreview(globalSettings.businessLogo);
-  }, [globalSettings]);
+  }, [
+    globalSettings.businessName,
+    globalSettings.businessLogo,
+    globalSettings.currency,
+    globalSettings.taxRate,
+    globalSettings.timezone,
+    globalSettings.enableNotifications,
+    globalSettings.enableEmailAlerts,
+  ]);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -61,10 +70,17 @@ function GeneralSettings() {
     setSettings({ ...settings, businessLogo: null });
   };
 
-  const handleSave = () => {
-    updateSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const handleSave = async () => {
+    try {
+      console.log("💾 Saving settings:", settings);
+      await updateSettings(settings);
+      console.log("✅ Settings saved successfully");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error("❌ Error saving settings:", error);
+      alert("Failed to save settings. Please try again.");
+    }
   };
 
   return (
