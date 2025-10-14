@@ -36,8 +36,8 @@ const navigationItems = [
     name: "Drug Inventory",
     href: "/inventory",
     icon: Package,
-    // All roles can view inventory (admin & pharmacist can manage)
-    roles: ["admin", "pharmacist", "employee"],
+    // Admin and Pharmacist only (employees cannot access inventory management)
+    roles: ["admin", "pharmacist"],
     category: "main",
   },
   {

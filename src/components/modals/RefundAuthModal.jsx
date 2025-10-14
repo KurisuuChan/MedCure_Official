@@ -1,42 +1,54 @@
 import React, { useState } from "react";
-import { Shield, Lock, AlertTriangle, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { Shield, Lock, AlertTriangle, CheckCircle, Eye, EyeOff, UserCheck } from "lucide-react";
 
 /**
- * RefundAuthModal - Handles password authentication for refund authorization
+ * RefundAuthModal - Admin/Pharmacist approval for employee refund requests
  * 
- * For Employees: Shows a request for admin/pharmacist approval
- * For Admin/Pharmacist: Requires password confirmation
+ * This modal appears ONLY for employees requesting refunds.
+ * Admin or Pharmacist must enter their credentials to approve.
  */
 const RefundAuthModal = ({
   isOpen,
   onClose,
   onConfirm,
-  userRole,
+  employeeName,
   transactionAmount,
+  refundReason,
   isLoading = false,
 }) => {
+  const [adminEmail, setAdminEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
-  const isEmployee = userRole === "employee";
-  const canAuthorize = userRole === "admin" || userRole === "pharmacist";
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (canAuthorize && !password.trim()) {
+    if (!adminEmail.trim()) {
+      setError("Admin/Pharmacist email is required");
+      return;
+    }
+
+    if (!password.trim()) {
       setError("Password is required");
       return;
     }
 
-    onConfirm(password);
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminEmail)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    onConfirm(adminEmail, password);
   };
 
   const handleClose = () => {
+    setAdminEmail("");
     setPassword("");
     setError("");
     setShowPassword(false);
@@ -58,14 +70,14 @@ const RefundAuthModal = ({
           <div className="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-4">
             <div className="flex items-center space-x-3">
               <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-white bg-opacity-20">
-                <Shield className="h-6 w-6 text-white" />
+                <UserCheck className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">
-                  Refund Authorization Required
+                  Admin/Pharmacist Approval Required
                 </h3>
                 <p className="text-sm text-orange-100">
-                  Security verification for transaction refund
+                  Employee refund request needs authorization
                 </p>
               </div>
             </div>
@@ -74,66 +86,82 @@ const RefundAuthModal = ({
           <form onSubmit={handleSubmit}>
             {/* Content */}
             <div className="bg-white px-6 py-5">
-              {/* Transaction Info */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">
-                    Refund Amount:
-                  </span>
-                  <span className="text-lg font-bold text-gray-900">
-                    ₱{transactionAmount?.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
+              {/* Employee Request Info */}
+              <div className="mb-6 p-4 bg-amber-50 rounded-lg border-2 border-amber-300">
+                <div className="flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-amber-900 mb-2">
+                      Employee Refund Request
+                    </h4>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-amber-700">Requested by:</span>
+                        <span className="font-semibold text-amber-900">{employeeName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-amber-700">Refund Amount:</span>
+                        <span className="font-bold text-amber-900">
+                          ₱{transactionAmount?.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      {refundReason && (
+                        <div className="pt-2 border-t border-amber-200">
+                          <span className="text-amber-700 block mb-1">Reason:</span>
+                          <span className="text-amber-900 font-medium">{refundReason}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Employee Message */}
-              {isEmployee && (
-                <div className="mb-6">
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
-                      <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-amber-800 mb-2">
-                          Authorization Required
-                        </h4>
-                        <p className="text-sm text-amber-700 mb-3">
-                          As an employee, you need approval from an Admin or Pharmacist to process refunds.
-                        </p>
-                        <div className="bg-white border border-amber-300 rounded p-3">
-                          <p className="text-xs font-medium text-gray-700 mb-2">
-                            Please ask an authorized person to:
-                          </p>
-                          <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
-                            <li>Verify this refund request</li>
-                            <li>Enter their password to authorize</li>
-                          </ol>
-                        </div>
-                      </div>
+              {/* Admin/Pharmacist Credentials Input */}
+              <div className="mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-blue-800 mb-1">
+                        Authorization Required
+                      </h4>
+                      <p className="text-xs text-blue-700">
+                        Only Admin or Pharmacist can approve this refund request. Please enter your credentials.
+                      </p>
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Admin/Pharmacist Password Input */}
-              {canAuthorize && (
-                <div className="mb-6">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                    <div className="flex items-start space-x-3">
-                      <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h4 className="text-sm font-semibold text-blue-800 mb-1">
-                          You are authorized to process refunds
-                        </h4>
-                        <p className="text-xs text-blue-700">
-                          Please enter your password to confirm this action
-                        </p>
-                      </div>
-                    </div>
+                {/* Email Input */}
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Your Email (Admin/Pharmacist) <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={adminEmail}
+                      onChange={(e) => {
+                        setAdminEmail(e.target.value);
+                        setError("");
+                      }}
+                      className={`block w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all ${
+                        error
+                          ? "border-red-300 bg-red-50"
+                          : "border-gray-300 hover:border-gray-400"
+                      }`}
+                      placeholder="admin@medcure.com"
+                      autoFocus
+                      disabled={isLoading}
+                    />
                   </div>
+                </div>
 
+                {/* Password Input */}
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Your Password <span className="text-red-500">*</span>
                   </label>
@@ -154,7 +182,6 @@ const RefundAuthModal = ({
                           : "border-gray-300 hover:border-gray-400"
                       }`}
                       placeholder="Enter your password"
-                      autoFocus
                       disabled={isLoading}
                     />
                     <button
@@ -177,7 +204,7 @@ const RefundAuthModal = ({
                     </p>
                   )}
                 </div>
-              )}
+              </div>
 
               {/* Warning Message */}
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -208,34 +235,23 @@ const RefundAuthModal = ({
               >
                 Cancel
               </button>
-              {canAuthorize && (
-                <button
-                  type="submit"
-                  disabled={isLoading || !password.trim()}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Verifying...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="h-4 w-4" />
-                      <span>Authorize Refund</span>
-                    </>
-                  )}
-                </button>
-              )}
-              {isEmployee && (
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium transition-colors"
-                >
-                  Close
-                </button>
-              )}
+              <button
+                type="submit"
+                disabled={isLoading || !adminEmail.trim() || !password.trim()}
+                className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shield className="h-4 w-4" />
+                    <span>Approve Refund</span>
+                  </>
+                )}
+              </button>
             </div>
           </form>
         </div>

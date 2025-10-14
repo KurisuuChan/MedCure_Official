@@ -499,22 +499,30 @@ const TransactionHistoryPage = () => {
     }
   };
 
-  // Handle password verification for refund authorization
-  const handleRefundPasswordVerification = async (password) => {
+  // Handle password verification for refund authorization (Employee requests only)
+  const handleRefundPasswordVerification = async (adminEmail, password) => {
     setAuthLoading(true);
     
     try {
-      // Verify the password
-      const result = await authService.verifyPassword(user.email, password);
+      // Verify the admin/pharmacist password
+      const result = await authService.verifyPassword(adminEmail, password);
       
       if (!result.success) {
-        showErrorToast("Invalid password. Authorization failed.");
+        showErrorToast("Invalid credentials. Authorization failed.");
+        setAuthLoading(false);
+        return;
+      }
+
+      // Check if the user is admin or pharmacist
+      const authorizedUser = result.user;
+      if (authorizedUser.role !== 'admin' && authorizedUser.role !== 'pharmacist') {
+        showErrorToast("Only Admin or Pharmacist can authorize refunds.");
         setAuthLoading(false);
         return;
       }
       
-      // Password verified, proceed with refund
-      await processRefundWithAuthorization();
+      // Password verified and role is correct, proceed with refund
+      await processRefundWithAuthorization(authorizedUser);
       setShowAuthModal(false);
       setAuthLoading(false);
     } catch (error) {
@@ -524,8 +532,8 @@ const TransactionHistoryPage = () => {
     }
   };
 
-  // Process refund after authorization
-  const processRefundWithAuthorization = async () => {
+  // Process refund after authorization (or directly for admin/pharmacist)
+  const processRefundWithAuthorization = async (authorizedBy = null) => {
     try {
       if (!pendingRefundData) {
         throw new Error("No pending refund data found");
@@ -534,10 +542,13 @@ const TransactionHistoryPage = () => {
       const { transaction, reason } = pendingRefundData;
 
       // Process the refund using the transaction service
+      // Use authorizedBy user ID if employee request, otherwise use current user ID
+      const processingUserId = authorizedBy ? authorizedBy.id : user?.id;
+      
       const result = await unifiedTransactionService.undoTransaction(
         transaction.id,
-        `Refund: ${reason}`,
-        user?.id
+        `Refund: ${reason}${authorizedBy ? ` (Approved by: ${authorizedBy.email})` : ''}`,
+        processingUserId
       );
 
       if (result.success) {
@@ -547,6 +558,7 @@ const TransactionHistoryPage = () => {
           refund_reason: reason,
           refunded_at: new Date().toISOString(),
           status: "refunded",
+          authorized_by: authorizedBy?.email || user?.email,
         });
         setShowRefundSuccess(true);
 
@@ -561,7 +573,9 @@ const TransactionHistoryPage = () => {
           title: "Transaction Refunded",
           message: `Refund processed for ${
             transaction.customer_name || "Walk-in customer"
-          } - ₱${formatCurrency(transaction.total_amount)}`,
+          } - ₱${formatCurrency(transaction.total_amount)}${
+            authorizedBy ? ` (Authorized by: ${authorizedBy.email})` : ''
+          }`,
           type: "info",
           priority: 2,
           category: "sales",
@@ -570,6 +584,8 @@ const TransactionHistoryPage = () => {
             customerName: transaction.customer_name,
             amount: transaction.total_amount,
             refundReason: reason,
+            authorizedBy: authorizedBy?.email || user?.email,
+            requestedBy: user?.email,
             actionUrl: "/transaction-history",
           },
         });
@@ -1305,7 +1321,7 @@ const TransactionHistoryPage = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!finalReason.trim()) {
                       alert("Please select a refund reason.");
                       return;
@@ -1317,16 +1333,17 @@ const TransactionHistoryPage = () => {
                       reason: finalReason,
                     });
 
-                    // Check user role and show appropriate authorization
+                    // Check user role
                     if (role === "employee") {
-                      // Employee needs admin/pharmacist approval
-                      showErrorToast(
-                        "Employees cannot process refunds. Please request approval from an Admin or Pharmacist."
-                      );
+                      // Employee needs admin/pharmacist approval - show modal
                       setShowAuthModal(true);
                     } else if (role === "admin" || role === "pharmacist") {
-                      // Admin/Pharmacist needs to enter password
-                      setShowAuthModal(true);
+                      // Admin/Pharmacist can process directly without modal
+                      try {
+                        await processRefundWithAuthorization(null);
+                      } catch (error) {
+                        console.error("❌ Refund processing error:", error);
+                      }
                     } else {
                       showErrorToast("Unauthorized role for refund processing.");
                     }
@@ -1491,8 +1508,9 @@ const TransactionHistoryPage = () => {
           setPendingRefundData(null);
         }}
         onConfirm={handleRefundPasswordVerification}
-        userRole={role}
+        employeeName={user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.email}
         transactionAmount={pendingRefundData?.transaction?.total_amount}
+        refundReason={pendingRefundData?.reason}
         isLoading={authLoading}
       />
     </div>
