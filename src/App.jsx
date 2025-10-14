@@ -48,6 +48,7 @@ const BatchManagementPage = React.lazy(() =>
 const DiscountDebugTest = React.lazy(() =>
   import("./components/debug/DiscountDebugTest")
 );
+const EmailTestPage = React.lazy(() => import("./pages/EmailTestPage"));
 
 // Create a client with optimized cache settings for better performance
 const queryClient = new QueryClient({
@@ -283,6 +284,17 @@ function AppContent() {
           <PageErrorBoundary title="Discount Debug Error">
             <ProtectedRoute>
               <DiscountDebugTest />
+            </ProtectedRoute>
+          </PageErrorBoundary>
+        }
+      />
+
+      <Route
+        path="/debug/email"
+        element={
+          <PageErrorBoundary title="Email Test Error">
+            <ProtectedRoute>
+              <EmailTestPage />
             </ProtectedRoute>
           </PageErrorBoundary>
         }

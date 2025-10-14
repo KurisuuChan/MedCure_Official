@@ -219,8 +219,9 @@ class NotificationService {
         throw error;
       }
 
-      // Send email if critical (priority 1 or 2)
-      if (priority <= NOTIFICATION_PRIORITY.HIGH) {
+      // Send email if critical (priority 1 or 2) - but only for non-health-check notifications
+      // Health checks now send comprehensive summary emails instead
+      if (priority <= NOTIFICATION_PRIORITY.HIGH && !metadata.suppressEmail) {
         // Send email notification for critical alerts (fire and forget)
         this.sendEmailNotification(notification).catch(() => {
           // Silent fail - don't block notification creation
@@ -704,11 +705,25 @@ class NotificationService {
         return;
       }
 
+      // Override email for notifications - use actual working email instead of mock data
+      let userEmail = user.email;
+      if (user.email === "admin@medcure.com") {
+        userEmail = "kurisuuuchannn@gmail.com";
+        logger.info(
+          "📧 [Email Override] Using actual email for notifications: kurisuuuchannn@gmail.com"
+        );
+        logger.info(
+          `📧 [Email Override] Changed from: ${user.email} to: ${userEmail}`
+        );
+      }
+
       const userName = user.first_name || "User";
+
+      logger.info(`📧 [Email Service] About to send email to: ${userEmail}`);
 
       // Send email
       const emailResult = await this.emailService.send({
-        to: user.email,
+        to: userEmail,
         subject: `[MedCure] ${notification.title}`,
         html: this.generateEmailTemplate(notification, userName),
       });
@@ -731,6 +746,81 @@ class NotificationService {
     } catch {
       // Email notification skipped - silently fail (requires server-side)
       // Don't throw - email failure shouldn't break notification creation
+    }
+  }
+
+  /**
+   * Send comprehensive health check summary email
+   * @private
+   */
+  async sendComprehensiveHealthSummary(user, healthData) {
+    try {
+      // Override email for notifications
+      let userEmail = user.email;
+      if (user.email === "admin@medcure.com") {
+        userEmail = "kurisuuuchannn@gmail.com";
+        logger.info(
+          "📧 [Comprehensive Email] Using actual email: kurisuuuchannn@gmail.com"
+        );
+      }
+
+      const userName = user.first_name || "Admin";
+      const timestamp = new Date().toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // Generate priority-based subject
+      const criticalCount = healthData.outOfStock.products.length;
+      const warningCount = healthData.lowStock.products.filter(
+        (p) => p.isCritical
+      ).length;
+
+      let priority = "INFO";
+      let icon = "ℹ️";
+
+      if (criticalCount > 0) {
+        priority = "CRITICAL";
+        icon = "🚨";
+      } else if (warningCount > 0) {
+        priority = "WARNING";
+        icon = "⚠️";
+      }
+
+      const subject = `${icon} [MedCure] ${priority} - Pharmacy Health Report (${healthData.totalNotifications} issues)`;
+
+      const html = this.generateComprehensiveHealthEmailTemplate(
+        healthData,
+        userName,
+        timestamp
+      );
+
+      logger.info(
+        `📧 [Comprehensive Email] Sending health summary to: ${userEmail}`
+      );
+
+      const emailResult = await this.emailService.send({
+        to: userEmail,
+        subject,
+        html,
+      });
+
+      if (emailResult.success) {
+        logger.success(
+          "✅ Comprehensive health summary email sent successfully"
+        );
+      } else {
+        logger.error(
+          "❌ Failed to send comprehensive health summary email:",
+          emailResult.error
+        );
+      }
+    } catch (error) {
+      logger.error("❌ Error sending comprehensive health summary:", error);
     }
   }
 
@@ -881,6 +971,242 @@ For support, visit: http://localhost:5173/help
 ─────────────────────────────────────────
 © ${new Date().getFullYear()} MedCure Pharmacy | Inventory Management System
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  }
+
+  /**
+   * Generate comprehensive health check email template
+   * @private
+   */
+  generateComprehensiveHealthEmailTemplate(healthData, userName, timestamp) {
+    const { outOfStock, lowStock, expiring, totalNotifications } = healthData;
+
+    // Count critical issues
+    const criticalOutOfStock = outOfStock.products.length;
+    const criticalLowStock = lowStock.products.filter(
+      (p) => p.isCritical
+    ).length;
+    const criticalExpiring = expiring.products.filter(
+      (p) => p.isCritical
+    ).length;
+    const totalCritical =
+      criticalOutOfStock + criticalLowStock + criticalExpiring;
+
+    // Generate sections
+    let outOfStockSection = "";
+    if (outOfStock.products.length > 0) {
+      outOfStockSection = `
+🚨 URGENT: OUT OF STOCK PRODUCTS (${outOfStock.products.length})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${outOfStock.products
+  .map((p) => `❌ ${p.name} - COMPLETELY OUT OF STOCK`)
+  .join("\n")}
+
+⚡ IMMEDIATE ACTIONS REQUIRED:
+• Contact suppliers for emergency restocking
+• Check alternative products for customers
+• Update customers about availability
+• Prioritize in next delivery
+
+`;
+    }
+
+    let lowStockSection = "";
+    if (lowStock.products.length > 0) {
+      const critical = lowStock.products.filter((p) => p.isCritical);
+      const warning = lowStock.products.filter((p) => !p.isCritical);
+
+      lowStockSection = `
+📦 LOW STOCK ALERTS (${lowStock.products.length} total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+      if (critical.length > 0) {
+        lowStockSection += `
+🔥 CRITICAL LOW STOCK (${critical.length}):
+${critical
+  .map(
+    (p) => `   🚨 ${p.name} - ${p.stock} pieces (Reorder: ${p.reorderLevel})`
+  )
+  .join("\n")}
+`;
+      }
+
+      if (warning.length > 0) {
+        lowStockSection += `
+⚠️ WARNING LOW STOCK (${warning.length}):
+${warning
+  .map(
+    (p) => `   📉 ${p.name} - ${p.stock} pieces (Reorder: ${p.reorderLevel})`
+  )
+  .join("\n")}
+`;
+      }
+
+      lowStockSection += `
+📋 RECOMMENDED ACTIONS:
+• Schedule reorders within 24-48 hours
+• Review sales patterns for trending products
+• Check for bulk pricing opportunities
+• Verify supplier contact information
+
+`;
+    }
+
+    let expiringSection = "";
+    if (expiring.products.length > 0) {
+      const critical = expiring.products.filter((p) => p.isCritical);
+      const warning = expiring.products.filter((p) => !p.isCritical);
+
+      expiringSection = `
+📅 EXPIRING PRODUCTS (${expiring.products.length} total)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+      if (critical.length > 0) {
+        expiringSection += `
+🚨 EXPIRES WITHIN 7 DAYS (${critical.length}):
+${critical
+  .map((p) => `   ⏰ ${p.name} - ${p.daysRemaining} days (${p.expiryDate})`)
+  .join("\n")}
+`;
+      }
+
+      if (warning.length > 0) {
+        expiringSection += `
+📆 EXPIRES WITHIN 30 DAYS (${warning.length}):
+${warning
+  .map((p) => `   📅 ${p.name} - ${p.daysRemaining} days (${p.expiryDate})`)
+  .join("\n")}
+`;
+      }
+
+      expiringSection += `
+🎯 ACTION PLAN:
+• Promote expiring items with discounts
+• Train staff to recommend these products first
+• Consider donation options for near-expiry items
+• Update inventory rotation procedures
+
+`;
+    }
+
+    // Executive summary
+    let summaryIcon = "✅";
+    let summaryStatus = "HEALTHY";
+    let summaryColor = "GREEN";
+
+    if (totalCritical > 0) {
+      summaryIcon = "🚨";
+      summaryStatus = "CRITICAL ATTENTION REQUIRED";
+      summaryColor = "RED";
+    } else if (totalNotifications > 0) {
+      summaryIcon = "⚠️";
+      summaryStatus = "MONITORING REQUIRED";
+      summaryColor = "YELLOW";
+    }
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedCure Health Report</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px;">
+
+<!-- Header -->
+<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px; margin-bottom: 30px;">
+    <h1 style="margin: 0; font-size: 28px;">🏥 MedCure Pharmacy</h1>
+    <p style="margin: 10px 0 0; font-size: 18px; opacity: 0.9;">Comprehensive Health Report</p>
+</div>
+
+<!-- Executive Summary -->
+<div style="background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 30px;">
+    <h2 style="color: #1f2937; margin-top: 0; display: flex; align-items: center;">
+        ${summaryIcon} Executive Summary
+    </h2>
+    <div style="background: white; border-radius: 8px; padding: 20px; border-left: 5px solid ${
+      summaryColor === "RED"
+        ? "#ef4444"
+        : summaryColor === "YELLOW"
+        ? "#f59e0b"
+        : "#10b981"
+    };">
+        <h3 style="margin-top: 0; color: ${
+          summaryColor === "RED"
+            ? "#dc2626"
+            : summaryColor === "YELLOW"
+            ? "#d97706"
+            : "#059669"
+        };">
+            Status: ${summaryStatus}
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+            <div style="text-align: center; padding: 15px; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca;">
+                <div style="font-size: 24px; font-weight: bold; color: #dc2626;">${criticalOutOfStock}</div>
+                <div style="color: #7f1d1d; font-size: 14px;">Out of Stock</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #fed7aa;">
+                <div style="font-size: 24px; font-weight: bold; color: #d97706;">${criticalLowStock}</div>
+                <div style="color: #92400e; font-size: 14px;">Critical Low Stock</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px; border: 1px solid #fed7aa;">
+                <div style="font-size: 24px; font-weight: bold; color: #d97706;">${criticalExpiring}</div>
+                <div style="color: #92400e; font-size: 14px;">Expiring Soon</div>
+            </div>
+            <div style="text-align: center; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                <div style="font-size: 24px; font-weight: bold; color: #0369a1;">${totalNotifications}</div>
+                <div style="color: #075985; font-size: 14px;">Total Issues</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Sections -->
+${
+  outOfStockSection
+    ? `<div style="background: white; border: 2px solid #fca5a5; border-radius: 10px; padding: 25px; margin-bottom: 20px;">
+    <pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.4;">${outOfStockSection.trim()}</pre>
+</div>`
+    : ""
+}
+
+${
+  lowStockSection
+    ? `<div style="background: white; border: 2px solid #fed7aa; border-radius: 10px; padding: 25px; margin-bottom: 20px;">
+    <pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.4;">${lowStockSection.trim()}</pre>
+</div>`
+    : ""
+}
+
+${
+  expiringSection
+    ? `<div style="background: white; border: 2px solid #bae6fd; border-radius: 10px; padding: 25px; margin-bottom: 20px;">
+    <pre style="font-family: 'Courier New', monospace; white-space: pre-wrap; margin: 0; font-size: 14px; line-height: 1.4;">${expiringSection.trim()}</pre>
+</div>`
+    : ""
+}
+
+<!-- Quick Actions -->
+<div style="background: #f8fafc; border-radius: 10px; padding: 25px; margin-bottom: 30px;">
+    <h3 style="color: #1f2937; margin-top: 0;">🔗 Quick Actions</h3>
+    <div style="display: grid; gap: 10px;">
+        <a href="http://localhost:5173/dashboard" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📊 View Dashboard</a>
+        <a href="http://localhost:5173/inventory" style="display: inline-block; background: #059669; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📦 Manage Inventory</a>
+        <a href="http://localhost:5173/settings" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">⚙️ Notification Settings</a>
+    </div>
+</div>
+
+<!-- Footer -->
+<div style="text-align: center; padding: 20px; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb;">
+    <p><strong>Report Generated:</strong> ${timestamp}</p>
+    <p><strong>Recipient:</strong> ${userName}</p>
+    <p style="margin-top: 15px;">This is an automated report from your MedCure Pharmacy Management System.</p>
+    <p>© ${new Date().getFullYear()} MedCure Pharmacy | Professional Healthcare Solutions</p>
+</div>
+
+</body>
+</html>`;
   }
 
   // ============================================================================
@@ -1157,27 +1483,34 @@ For support, visit: http://localhost:5173/help
 
   /**
    * Run automated health checks (WITH DUPLICATE PREVENTION)
-   * Only runs if 15+ minutes have passed since last run
+   * Only runs if 15+ minutes have passed since last run (unless forced)
+   *
+   * @param {boolean} force - If true, bypasses scheduling checks (for manual runs)
    */
-  async runHealthChecks() {
+  async runHealthChecks(force = false) {
     const now = Date.now();
-    logger.info("🏥 [Health Check] Starting health checks...");
+    logger.info(
+      `🏥 [Health Check] Starting health checks... ${
+        force ? "(MANUAL - FORCED)" : "(AUTOMATIC)"
+      }`
+    );
 
-    // Local debounce check
-    if (
-      this.lastHealthCheckRun &&
-      now - this.lastHealthCheckRun < this.healthCheckDebounceMs
-    ) {
-      const timeSinceLastRun = Math.floor(
-        (now - this.lastHealthCheckRun) / (1000 * 60)
-      );
-      logger.debug(
-        `⏰ Health check skipped - last run was ${timeSinceLastRun} minutes ago (minimum: 15 minutes)`
-      );
-      return { skipped: true, reason: "Too soon since last run" };
-    }
+    // Skip debounce and scheduling checks if this is a forced/manual run
+    if (!force) {
+      // Local debounce check
+      if (
+        this.lastHealthCheckRun &&
+        now - this.lastHealthCheckRun < this.healthCheckDebounceMs
+      ) {
+        const timeSinceLastRun = Math.floor(
+          (now - this.lastHealthCheckRun) / (1000 * 60)
+        );
+        logger.debug(
+          `⏰ Health check skipped - last run was ${timeSinceLastRun} minutes ago (minimum: 15 minutes)`
+        );
+        return { skipped: true, reason: "Too soon since last run" };
+      }
 
-    try {
       // Check if we should run (database-backed scheduling)
       const shouldRun = await this.shouldRunHealthCheck();
       if (!shouldRun) {
@@ -1186,7 +1519,13 @@ For support, visit: http://localhost:5173/help
         );
         return { skipped: true, reason: "Database scheduling" };
       }
+    } else {
+      logger.info(
+        "🚀 [Health Check] MANUAL RUN - Bypassing all scheduling checks!"
+      );
+    }
 
+    try {
       // Get primary user for notifications
       const primaryUser = await this.getPrimaryNotificationUser();
       if (!primaryUser) {
@@ -1211,6 +1550,8 @@ For support, visit: http://localhost:5173/help
         totalNotifications,
         primaryUser: primaryUser.email,
         timestamp: new Date().toISOString(),
+        forced: force,
+        statistics: await this.getHealthCheckStatistics(),
       };
 
       logger.success(
@@ -1273,7 +1614,17 @@ For support, visit: http://localhost:5173/help
         return null;
       }
 
-      return users[0];
+      // Override email for notifications - use actual working email instead of mock data
+      const primaryUser = users[0];
+      if (primaryUser.email === "admin@medcure.com") {
+        // Replace mock email with actual working email
+        primaryUser.email = "kurisuuuchannn@gmail.com";
+        logger.info(
+          "📧 [NotificationService] Using actual email for notifications: kurisuuuchannn@gmail.com"
+        );
+      }
+
+      return primaryUser;
     } catch {
       return null;
     }
@@ -1324,14 +1675,17 @@ For support, visit: http://localhost:5173/help
         }, Out-of-Stock=✅ ALWAYS`
     );
 
-    // Run checks based on intervals
-    const [lowStockCount, expiringCount, outOfStockCount] = await Promise.all([
-      shouldCheckLowStock ? this.checkLowStock(users) : Promise.resolve(0),
-      shouldCheckExpiring
-        ? this.checkExpiringProducts(users)
-        : Promise.resolve(0),
-      this.checkOutOfStock(users), // Always check (critical safety feature)
-    ]);
+    // Run checks and collect detailed results instead of just counts
+    const [lowStockResults, expiringResults, outOfStockResults] =
+      await Promise.all([
+        shouldCheckLowStock
+          ? this.checkLowStockDetailed(users)
+          : Promise.resolve({ count: 0, products: [] }),
+        shouldCheckExpiring
+          ? this.checkExpiringProductsDetailed(users)
+          : Promise.resolve({ count: 0, products: [] }),
+        this.checkOutOfStockDetailed(users), // Always check (critical safety feature)
+      ]);
 
     // Update last check timestamps
     if (shouldCheckLowStock) {
@@ -1343,11 +1697,23 @@ For support, visit: http://localhost:5173/help
       logger.debug(`✅ Updated lastExpiringCheck timestamp`);
     }
 
-    const totalNotifications = lowStockCount + expiringCount + outOfStockCount;
+    const totalNotifications =
+      lowStockResults.count + expiringResults.count + outOfStockResults.count;
+
+    // Send single comprehensive email summary if there are any issues
+    if (totalNotifications > 0 && users.length > 0) {
+      await this.sendComprehensiveHealthSummary(users[0], {
+        lowStock: lowStockResults,
+        expiring: expiringResults,
+        outOfStock: outOfStockResults,
+        totalNotifications,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     logger.success(
       `✅ Health check completed: ${totalNotifications} total notifications ` +
-        `(${lowStockCount} low stock, ${expiringCount} expiring, ${outOfStockCount} out-of-stock)`
+        `(${lowStockResults.count} low stock, ${expiringResults.count} expiring, ${outOfStockResults.count} out-of-stock)`
     );
 
     return totalNotifications;
@@ -1395,20 +1761,19 @@ For support, visit: http://localhost:5173/help
   }
 
   /**
-   * Check for low stock products (ENHANCED VERSION)
+   * Check for low stock products (ENHANCED VERSION) - Returns detailed results
    * @private
    */
-  async checkLowStock(users) {
+  async checkLowStockDetailed(users) {
     try {
       logger.debug("🔍 [Health Check] Starting ENHANCED low stock check...");
 
-      // OPTIMIZATION 1: Fetch ALL active products (not just those with reorder levels)
       const { data: allProducts, error } = await supabase
         .from("products")
         .select(
           "id, brand_name, generic_name, stock_in_pieces, reorder_level, category_id"
         )
-        .gt("stock_in_pieces", 0) // Only products with stock > 0
+        .gt("stock_in_pieces", 0)
         .eq("is_active", true);
 
       if (error) {
@@ -1416,139 +1781,139 @@ For support, visit: http://localhost:5173/help
         throw error;
       }
 
-      logger.debug(
-        `📦 Found ${allProducts?.length || 0} active products with stock`
-      );
-
-      // OPTIMIZATION 2: Enhanced filtering with intelligent defaults
       const lowStockProducts =
         allProducts?.filter((product) => {
           const stock = product.stock_in_pieces || 0;
-          let reorderLevel = product.reorder_level || 0;
-
-          // SMART DEFAULT: If no reorder level set, use intelligent default based on stock
-          if (!reorderLevel || reorderLevel === 0) {
-            // Default to 20% of current stock or minimum of 5 pieces
-            reorderLevel = Math.max(Math.floor(stock * 0.2), 5);
-            logger.debug(
-              `📊 Using smart default reorder level for ${
-                product.brand_name || product.generic_name
-              }: ${reorderLevel} (stock: ${stock})`
-            );
-          }
-
-          const isLowStock = stock > 0 && stock <= reorderLevel;
-
-          if (isLowStock) {
-            logger.debug(
-              `⚠️ Low stock detected: ${
-                product.brand_name || product.generic_name
-              } (Stock: ${stock}, Reorder: ${reorderLevel})`
-            );
-          }
-
-          return isLowStock;
+          let reorderLevel =
+            product.reorder_level || Math.max(Math.floor(stock * 0.2), 5);
+          return stock > 0 && stock <= reorderLevel;
         }) || [];
 
       logger.debug(`🚨 Found ${lowStockProducts.length} low stock products`);
 
-      if (lowStockProducts.length === 0) {
-        logger.debug("✅ No low stock products found");
-        return 0;
+      // Create notifications in database (but don't send individual emails)
+      let notificationCount = 0;
+      const productDetails = [];
+
+      // First, process products for email details (only once per product)
+      for (const product of lowStockProducts) {
+        const productName =
+          product.brand_name || product.generic_name || "Unknown Product";
+        const stock = product.stock_in_pieces;
+        let reorderLevel =
+          product.reorder_level || Math.max(Math.floor(stock * 0.2), 5);
+
+        // More aggressive critical threshold - 50% of reorder level or max 5 pieces
+        const criticalThreshold = Math.max(
+          Math.floor(reorderLevel * 0.5),
+          Math.min(5, reorderLevel)
+        );
+        const isCritical = stock <= criticalThreshold;
+
+        // Store product details for email summary (only once per product)
+        productDetails.push({
+          name: productName,
+          stock,
+          reorderLevel,
+          isCritical,
+          severity: isCritical ? "CRITICAL" : "LOW",
+        });
       }
 
-      // OPTIMIZATION 3: Batch notification creation for better performance
-      const notificationPromises = [];
-
+      // Then, create notifications for each user
       for (const user of users) {
-        logger.debug(`📧 Preparing notifications for user: ${user.email}`);
-
         for (const product of lowStockProducts) {
           const productName =
             product.brand_name || product.generic_name || "Unknown Product";
           const stock = product.stock_in_pieces;
-          let reorderLevel = product.reorder_level;
+          let reorderLevel =
+            product.reorder_level || Math.max(Math.floor(stock * 0.2), 5);
 
-          // Apply same smart default logic as in filtering
-          if (!reorderLevel || reorderLevel === 0) {
-            reorderLevel = Math.max(Math.floor(stock * 0.2), 5);
-          }
-
-          // Determine if this is critical (30% or less of reorder level)
-          const criticalThreshold = Math.floor(reorderLevel * 0.3);
+          // More aggressive critical threshold - 50% of reorder level or max 5 pieces
+          const criticalThreshold = Math.max(
+            Math.floor(reorderLevel * 0.5),
+            Math.min(5, reorderLevel)
+          );
           const isCritical = stock <= criticalThreshold;
 
-          logger.debug(
-            `📦 Processing: ${productName} (Stock: ${stock}, Reorder: ${reorderLevel}, Critical: ${isCritical})`
-          );
-
-          // SMART DEDUPLICATION: Different cooldown periods based on severity
-          const cooldownHours = isCritical ? 6 : 24; // Critical alerts every 6 hours, regular every 24 hours
+          // Create database notification (suppress individual email - we'll send comprehensive summary)
+          const cooldownHours = isCritical ? 6 : 24;
           const notificationKey = `${isCritical ? "critical" : "low"}_stock_${
             product.id
           }`;
 
+          let notification;
           if (isCritical) {
-            notificationPromises.push(
-              this.notifyCriticalStockWithCooldown(
-                product.id,
+            notification = await this.create({
+              userId: user.id,
+              title: "🚨 Critical Stock Alert",
+              message: `${productName} is critically low: Only ${stock} pieces left!`,
+              type: NOTIFICATION_TYPE.ERROR,
+              priority: NOTIFICATION_PRIORITY.CRITICAL,
+              category: NOTIFICATION_CATEGORY.INVENTORY,
+              metadata: {
+                productId: product.id,
                 productName,
-                stock,
-                user.id,
-                cooldownHours,
-                notificationKey
-              )
-            );
+                currentStock: stock,
+                actionUrl: `/inventory?product=${product.id}`,
+                notification_key: notificationKey,
+                cooldown_hours: cooldownHours,
+                severity: "critical",
+                suppressEmail: true, // Don't send individual email
+              },
+            });
           } else {
-            notificationPromises.push(
-              this.notifyLowStockWithCooldown(
-                product.id,
+            notification = await this.create({
+              userId: user.id,
+              title: "⚠️ Low Stock Alert",
+              message: `${productName} is running low: ${stock} pieces remaining (reorder at ${reorderLevel})`,
+              type: NOTIFICATION_TYPE.WARNING,
+              priority: NOTIFICATION_PRIORITY.HIGH,
+              category: NOTIFICATION_CATEGORY.INVENTORY,
+              metadata: {
+                productId: product.id,
                 productName,
-                stock,
+                currentStock: stock,
                 reorderLevel,
-                user.id,
-                cooldownHours,
-                notificationKey
-              )
-            );
+                actionUrl: `/inventory?product=${product.id}`,
+                notification_key: notificationKey,
+                cooldown_hours: cooldownHours,
+                severity: "low",
+                suppressEmail: true, // Don't send individual email
+              },
+            });
+          }
+
+          if (notification && !notification.skipped) {
+            notificationCount++;
           }
         }
       }
 
-      // Execute all notifications in parallel for better performance
-      const results = await Promise.allSettled(notificationPromises);
-
-      let notificationCount = 0;
-      let failureCount = 0;
-
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-          notificationCount++;
-        } else {
-          failureCount++;
-          logger.error(`❌ Notification ${index} failed:`, result.reason);
-        }
-      });
-
-      logger.debug(
-        `✅ Low stock check completed. Created ${notificationCount} notifications, ${failureCount} failures`
-      );
-
-      logger.debug(
-        `✅ Low stock check completed. Created ${notificationCount} notifications`
-      );
-      return notificationCount;
+      return {
+        count: notificationCount,
+        products: productDetails,
+      };
     } catch (error) {
       logger.error("❌ Low stock check failed:", error);
-      return 0;
+      return { count: 0, products: [] };
     }
   }
 
   /**
-   * Check for expiring products
+   * Legacy method for backward compatibility
    * @private
    */
-  async checkExpiringProducts(users) {
+  async checkLowStock(users) {
+    const result = await this.checkLowStockDetailed(users);
+    return result.count;
+  }
+
+  /**
+   * Check for expiring products - Returns detailed results
+   * @private
+   */
+  async checkExpiringProductsDetailed(users) {
     try {
       const today = new Date();
       const thirtyDaysFromNow = new Date(today);
@@ -1567,11 +1932,34 @@ For support, visit: http://localhost:5173/help
       }
 
       if (!products || products.length === 0) {
-        return 0;
+        return { count: 0, products: [] };
       }
 
       let notificationCount = 0;
+      const productDetails = [];
 
+      // First, process products for email details (only once per product)
+      for (const product of products) {
+        const productName =
+          product.brand_name || product.generic_name || "Unknown Product";
+        const expiryDate = new Date(product.expiry_date);
+        const daysRemaining = Math.ceil(
+          (expiryDate - today) / (1000 * 60 * 60 * 24)
+        );
+
+        const isCritical = daysRemaining <= 7;
+
+        // Store product details for email summary (only once per product)
+        productDetails.push({
+          name: productName,
+          expiryDate: product.expiry_date,
+          daysRemaining,
+          isCritical,
+          severity: isCritical ? "CRITICAL" : "WARNING",
+        });
+      }
+
+      // Then, create notifications for each user
       for (const user of users) {
         for (const product of products) {
           const productName =
@@ -1581,32 +1969,63 @@ For support, visit: http://localhost:5173/help
             (expiryDate - today) / (1000 * 60 * 60 * 24)
           );
 
-          await this.notifyExpiringSoon(
-            product.id,
-            productName,
-            product.expiry_date,
-            daysRemaining,
-            user.id
-          );
+          const isCritical = daysRemaining <= 7;
+
+          // Create database notification (suppress individual email)
+          await this.create({
+            userId: user.id,
+            title: isCritical
+              ? "🚨 Urgent: Product Expiring Soon"
+              : "📅 Product Expiry Warning",
+            message: `${productName} expires in ${daysRemaining} day${
+              daysRemaining === 1 ? "" : "s"
+            } (${product.expiry_date})`,
+            type: isCritical
+              ? NOTIFICATION_TYPE.ERROR
+              : NOTIFICATION_TYPE.WARNING,
+            priority: isCritical
+              ? NOTIFICATION_PRIORITY.CRITICAL
+              : NOTIFICATION_PRIORITY.HIGH,
+            category: NOTIFICATION_CATEGORY.EXPIRY,
+            metadata: {
+              productId: product.id,
+              productName,
+              expiryDate: product.expiry_date,
+              daysRemaining,
+              actionUrl: `/inventory?product=${product.id}`,
+              notification_key: `expiry:${product.id}:${product.expiry_date}`,
+              suppressEmail: true, // Don't send individual email
+            },
+          });
 
           notificationCount++;
         }
       }
 
-      return notificationCount;
+      return {
+        count: notificationCount,
+        products: productDetails,
+      };
     } catch (error) {
       logger.error("❌ Expiry check failed:", error);
-      return 0;
+      return { count: 0, products: [] };
     }
   }
 
   /**
-   * Check for out of stock products
-   * CRITICAL: Out of stock alerts are ALWAYS IMMEDIATE - no cooldown
-   * Uses database deduplication to prevent spam
+   * Legacy method for backward compatibility
    * @private
    */
-  async checkOutOfStock(users) {
+  async checkExpiringProducts(users) {
+    const result = await this.checkExpiringProductsDetailed(users);
+    return result.count;
+  }
+
+  /**
+   * Check for out of stock products - Returns detailed results
+   * @private
+   */
+  async checkOutOfStockDetailed(users) {
     try {
       logger.debug("🔍 [Health Check] Starting out of stock check...");
 
@@ -1628,12 +2047,12 @@ For support, visit: http://localhost:5173/help
 
       if (!products || products.length === 0) {
         logger.debug("✅ No out of stock products found");
-        return 0;
+        return { count: 0, products: [] };
       }
 
-      // CRITICAL: Use direct notification method (NO COOLDOWN)
-      // Database RPC function handles deduplication
-      const notificationPromises = [];
+      let notificationCount = 0;
+      let dedupedCount = 0;
+      const productDetails = [];
 
       for (const user of users) {
         logger.debug(
@@ -1644,51 +2063,65 @@ For support, visit: http://localhost:5173/help
           const productName =
             product.brand_name || product.generic_name || "Unknown Product";
 
+          // Store product details for email summary
+          productDetails.push({
+            name: productName,
+            stock: 0,
+            severity: "CRITICAL",
+          });
+
           logger.debug(
             `🚨 Creating IMMEDIATE out of stock alert for: ${productName}`
           );
 
-          // Use direct method - database handles deduplication
-          notificationPromises.push(
-            this.notifyOutOfStock(product.id, productName, user.id)
-          );
-        }
-      }
+          // Create database notification (suppress individual email)
+          const notification = await this.create({
+            userId: user.id,
+            title: "❌ Out of Stock Alert",
+            message: `${productName} is completely out of stock! Immediate reorder required.`,
+            type: NOTIFICATION_TYPE.ERROR,
+            priority: NOTIFICATION_PRIORITY.CRITICAL,
+            category: NOTIFICATION_CATEGORY.INVENTORY,
+            metadata: {
+              productId: product.id,
+              productName,
+              currentStock: 0,
+              actionUrl: `/inventory?product=${product.id}`,
+              notification_key: `out-of-stock:${product.id}`,
+              suppressEmail: true, // Don't send individual email
+            },
+          });
 
-      // Execute all notifications in parallel
-      const results = await Promise.allSettled(notificationPromises);
-
-      let notificationCount = 0;
-      let dedupedCount = 0;
-      let failureCount = 0;
-
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-          if (result.value === null) {
-            // Database deduplication prevented this notification
+          if (notification === null) {
             dedupedCount++;
           } else {
             notificationCount++;
           }
-        } else {
-          failureCount++;
-          logger.error(
-            `❌ Out of stock notification ${index} failed:`,
-            result.reason
-          );
         }
-      });
+      }
 
       logger.info(
         `✅ Out of stock check completed. Created ${notificationCount} new notifications, ` +
-          `${dedupedCount} blocked by database deduplication, ${failureCount} failures`
+          `${dedupedCount} blocked by database deduplication`
       );
 
-      return notificationCount;
+      return {
+        count: notificationCount,
+        products: productDetails,
+      };
     } catch (error) {
       logger.error("❌ Out of stock check failed:", error);
-      return 0;
+      return { count: 0, products: [] };
     }
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   * @private
+   */
+  async checkOutOfStock(users) {
+    const result = await this.checkOutOfStockDetailed(users);
+    return result.count;
   }
 
   /**
@@ -1798,6 +2231,69 @@ For support, visit: http://localhost:5173/help
     } catch (error) {
       logger.error("❌ Debug analysis failed:", error);
       return { error: error.message };
+    }
+  }
+
+  /**
+   * Get comprehensive health check statistics
+   * @private
+   */
+  async getHealthCheckStatistics() {
+    try {
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("id, brand_name, generic_name, stock_in_pieces, reorder_level")
+        .eq("is_active", true);
+
+      if (error) {
+        logger.error("❌ Failed to fetch product statistics:", error);
+        return null;
+      }
+
+      let outOfStock = 0;
+      let criticalLowStock = 0;
+      let lowStock = 0;
+      let healthy = 0;
+      const today = new Date();
+      const thirtyDaysFromNow = new Date(today);
+      thirtyDaysFromNow.setDate(today.getDate() + 30);
+
+      for (const product of products || []) {
+        const stock = product.stock_in_pieces || 0;
+        const reorderLevel =
+          product.reorder_level || Math.max(Math.floor(stock * 0.2), 5);
+
+        if (stock === 0) {
+          outOfStock++;
+        } else if (stock <= Math.floor(reorderLevel * 0.3)) {
+          criticalLowStock++;
+        } else if (stock <= reorderLevel) {
+          lowStock++;
+        } else {
+          healthy++;
+        }
+      }
+
+      // Check expiring products
+      const { count: expiringCount } = await supabase
+        .from("products")
+        .select("*", { count: "exact", head: true })
+        .not("expiry_date", "is", null)
+        .gte("expiry_date", today.toISOString().split("T")[0])
+        .lte("expiry_date", thirtyDaysFromNow.toISOString().split("T")[0])
+        .eq("is_active", true);
+
+      return {
+        total: products?.length || 0,
+        outOfStock,
+        criticalLowStock,
+        lowStock,
+        healthy,
+        expiringSoon: expiringCount || 0,
+      };
+    } catch (error) {
+      logger.error("❌ Failed to generate statistics:", error);
+      return null;
     }
   }
 

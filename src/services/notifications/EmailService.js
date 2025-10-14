@@ -22,9 +22,7 @@
  * Supported email providers
  */
 const EMAIL_PROVIDER = {
-  FORMSUBMIT: "formsubmit", // Primary: No signup required, no CORS issues
-  RESEND: "resend", // Alternative: Production-grade service
-  SENDGRID: "sendgrid", // Alternative: Enterprise option
+  RESEND: "resend", // Primary: Production-grade service via Edge Function
   NONE: "none",
 };
 
@@ -41,22 +39,11 @@ class EmailService {
   }
 
   /**
-   * Initialize email provider based on environment variables
+   * Initialize Resend email provider
    */
   initializeProvider() {
     try {
-      // Check for FormSubmit (Primary - No signup required, no CORS)
-      if (import.meta.env.VITE_FORMSUBMIT_EMAIL) {
-        this.provider = EMAIL_PROVIDER.FORMSUBMIT;
-        this.fromEmail = import.meta.env.VITE_FORMSUBMIT_EMAIL;
-        this.fromName =
-          import.meta.env.VITE_FORMSUBMIT_FROM_NAME || this.fromName;
-        this.isConfigured = true;
-        console.log("✅ EmailService configured with FormSubmit");
-        return;
-      }
-
-      // Check for Resend (Production ready)
+      // Check for Resend (Only supported provider)
       if (import.meta.env.VITE_RESEND_API_KEY) {
         this.provider = EMAIL_PROVIDER.RESEND;
         this.apiKey = import.meta.env.VITE_RESEND_API_KEY;
@@ -65,19 +52,9 @@ class EmailService {
         this.fromName = import.meta.env.VITE_RESEND_FROM_NAME || this.fromName;
         this.isConfigured = true;
         console.log("✅ EmailService configured with Resend");
-        return;
-      }
-
-      // Check for SendGrid
-      if (import.meta.env.VITE_SENDGRID_API_KEY) {
-        this.provider = EMAIL_PROVIDER.SENDGRID;
-        this.apiKey = import.meta.env.VITE_SENDGRID_API_KEY;
-        this.fromEmail =
-          import.meta.env.VITE_SENDGRID_FROM_EMAIL || "no-reply@medcure.com";
-        this.fromName =
-          import.meta.env.VITE_SENDGRID_FROM_NAME || this.fromName;
-        this.isConfigured = true;
-        console.log("✅ EmailService configured with SendGrid");
+        console.log(`📧 From: ${this.fromName} <${this.fromEmail}>`);
+        console.log(`🔑 API Key: ${this.apiKey.substring(0, 8)}...`);
+        console.log("🚀 Using Supabase Edge Function for CORS-free delivery");
         return;
       }
 
@@ -85,7 +62,7 @@ class EmailService {
       this.provider = EMAIL_PROVIDER.NONE;
       this.isConfigured = false;
       console.warn(
-        "⚠️ No email provider configured. Set VITE_FORMSUBMIT_EMAIL to enable notifications."
+        "⚠️ Resend not configured. Set VITE_RESEND_API_KEY to enable email notifications."
       );
     } catch (error) {
       console.error("❌ Failed to initialize EmailService:", error);
@@ -116,7 +93,7 @@ class EmailService {
    * Send email using configured provider
    *
    * @param {Object} params - Email parameters
-   * @param {string} params.to - Recipient email address
+   * @param {string|string[]} params.to - Recipient email address(es) - can be single email or array
    * @param {string} params.subject - Email subject
    * @param {string} params.html - HTML email content
    * @param {string} [params.text] - Plain text alternative
@@ -129,9 +106,34 @@ class EmailService {
         throw new Error("Missing required email parameters: to, subject, html");
       }
 
-      if (!this.isEmailValid(to)) {
-        throw new Error(`Invalid email address: ${to}`);
+      // Convert to array for validation and processing
+      const recipients = Array.isArray(to) ? to : [to];
+
+      // Validate all email addresses
+      for (const email of recipients) {
+        if (!this.isEmailValid(email)) {
+          throw new Error(`Invalid email address: ${email}`);
+        }
       }
+
+      console.log(
+        `📧 Sending email to ${
+          recipients.length
+        } recipient(s): ${recipients.join(", ")}`
+      );
+
+      // For multiple recipients, process them appropriately based on provider capabilities
+      if (recipients.length > 1) {
+        return await this.sendToMultipleRecipients({
+          recipients,
+          subject,
+          html,
+          text,
+        });
+      }
+
+      // Single recipient - use existing logic with first recipient
+      const singleTo = recipients[0];
 
       // Check if configured
       if (!this.isReady()) {
@@ -143,24 +145,16 @@ class EmailService {
         };
       }
 
-      // Send using appropriate provider
-      switch (this.provider) {
-        case EMAIL_PROVIDER.FORMSUBMIT:
-          return await this.sendViaFormSubmit({ to, subject, html, text });
-
-        case EMAIL_PROVIDER.SENDGRID:
-          return await this.sendViaSendGrid({ to, subject, html, text });
-
-        case EMAIL_PROVIDER.RESEND:
-          return await this.sendViaResend({ to, subject, html, text });
-
-        default:
-          return {
-            success: false,
-            reason: "no_provider",
-            message: "No email provider configured",
-          };
+      // Send using Resend provider
+      if (this.provider === EMAIL_PROVIDER.RESEND) {
+        return await this.sendViaResend({ to: singleTo, subject, html, text });
       }
+
+      return {
+        success: false,
+        reason: "no_provider",
+        message: "Resend email provider not configured",
+      };
     } catch (error) {
       console.error("❌ Failed to send email:", error);
       return {
@@ -172,125 +166,24 @@ class EmailService {
   }
 
   /**
-   * Send email via FormSubmit (no signup required, no CORS issues)
+   * Send email to multiple recipients (Resend only)
    * @private
    */
-  async sendViaFormSubmit({ to, subject, html, text }) {
-    try {
-      const formData = new FormData();
-      formData.append("email", to);
-      formData.append("subject", `[MedCure] ${subject}`);
-      formData.append(
-        "message",
-        text || html.replace(/<[^>]*>/g, "").replace(/&[^;]+;/g, " ")
-      );
-      formData.append("_next", "https://formsubmit.co/thankyou");
-      formData.append("_captcha", "false");
-      formData.append("_template", "table");
+  async sendToMultipleRecipients({ recipients, subject, html, text }) {
+    console.log(
+      `📧 Processing multi-recipient email to ${recipients.length} addresses`
+    );
 
-      const response = await fetch(`https://formsubmit.co/${this.fromEmail}`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (response.ok) {
-        return {
-          success: true,
-          provider: "formsubmit",
-          messageId: "formsubmit-" + Date.now(),
-        };
-      } else {
-        throw new Error(
-          `FormSubmit error: ${response.status} ${response.statusText}`
-        );
-      }
-    } catch (error) {
-      return {
-        success: false,
-        reason: "formsubmit_error",
-        error: error.message,
-      };
+    if (this.provider === EMAIL_PROVIDER.RESEND) {
+      // Resend supports multiple recipients natively
+      return await this.sendViaResend({ to: recipients, subject, html, text });
     }
-  }
 
-  /**
-   * Send email via SendGrid
-   * @private
-   */
-  async sendViaSendGrid({ to, subject, html, text }) {
-    try {
-      const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          personalizations: [
-            {
-              to: [{ email: to }],
-            },
-          ],
-          from: {
-            email: this.fromEmail,
-            name: this.fromName,
-          },
-          subject,
-          content: [
-            {
-              type: "text/html",
-              value: html,
-            },
-            ...(text
-              ? [
-                  {
-                    type: "text/plain",
-                    value: text,
-                  },
-                ]
-              : []),
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        let errorDetails;
-
-        try {
-          errorDetails = JSON.parse(errorBody);
-        } catch {
-          errorDetails = { message: errorBody };
-        }
-
-        throw new Error(
-          `SendGrid error (${response.status}): ${
-            errorDetails?.errors?.[0]?.message ||
-            errorDetails.message ||
-            "Unknown error"
-          }`
-        );
-      }
-
-      console.log("✅ Email sent successfully via SendGrid to:", to);
-      return {
-        success: true,
-        provider: "sendgrid",
-      };
-    } catch (error) {
-      // CORS errors are expected when calling SendGrid from browser - this is normal
-      // Email sending MUST be implemented server-side (Supabase Edge Functions, etc.)
-      // Silently fail to avoid console noise during development
-      return {
-        success: false,
-        reason:
-          error.message.includes("NetworkError") ||
-          error.message.includes("CORS")
-            ? "cors_expected"
-            : "sendgrid_error",
-        error: error.message,
-      };
-    }
+    return {
+      success: false,
+      reason: "no_provider",
+      message: "Resend provider required for multi-recipient emails",
+    };
   }
 
   /**
@@ -303,18 +196,39 @@ class EmailService {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const edgeFunctionUrl = `${supabaseUrl}/functions/v1/send-notification-email`;
 
+      // Convert to array if needed for consistent handling
+      const recipients = Array.isArray(to) ? to : [to];
+
+      console.log(
+        `📧 Resend: Sending to ${
+          recipients.length
+        } recipient(s): ${recipients.join(", ")}`
+      );
+
+      const requestBody = {
+        to: recipients, // Send array to Edge Function
+        subject,
+        html,
+        ...(text ? { text } : {}),
+      };
+
+      console.log("🔍 Request details:", {
+        url: edgeFunctionUrl,
+        method: "POST",
+        body: JSON.stringify(requestBody, null, 2),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer [HIDDEN]",
+        },
+      });
+
       const response = await fetch(edgeFunctionUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          // Note: Edge Function deployed with --no-verify-jwt, no auth needed
         },
-        body: JSON.stringify({
-          to,
-          subject,
-          html,
-          ...(text ? { text } : {}),
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -326,6 +240,13 @@ class EmailService {
         } catch {
           errorDetails = { message: errorBody };
         }
+
+        console.error("🔍 Edge Function Error Details:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorBody,
+          parsed: errorDetails,
+        });
 
         throw new Error(
           `Email function error (${response.status}): ${
@@ -337,7 +258,7 @@ class EmailService {
       const data = await response.json();
       console.log(
         "✅ Email sent successfully via Supabase Edge Function to:",
-        to,
+        recipients.join(", "),
         "(ID:",
         data.emailId || "unknown",
         ")"
@@ -347,80 +268,14 @@ class EmailService {
         success: true,
         provider: "resend-edge-function",
         emailId: data.emailId,
+        recipients: recipients,
+        recipientCount: recipients.length,
       };
     } catch (error) {
       console.error("❌ Edge function email send failed:", error);
-
-      // Fallback: Try direct API call (will likely fail due to CORS but worth trying)
-      console.log("📧 Attempting direct API fallback...");
-      return await this.sendViaResendDirect({ to, subject, html, text });
-    }
-  }
-
-  /**
-   * Fallback: Direct Resend API call (will likely fail due to CORS)
-   * @private
-   */
-  async sendViaResendDirect({ to, subject, html, text }) {
-    try {
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          from: `${this.fromName} <${this.fromEmail}>`,
-          to: [to],
-          subject,
-          html,
-          ...(text ? { text } : {}),
-        }),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
-        let errorDetails;
-
-        try {
-          errorDetails = JSON.parse(errorBody);
-        } catch {
-          errorDetails = { message: errorBody };
-        }
-
-        throw new Error(
-          `Resend error (${response.status}): ${
-            errorDetails?.message || "Unknown error"
-          }`
-        );
-      }
-
-      const data = await response.json();
-      console.log(
-        "✅ Email sent successfully via direct Resend API to:",
-        to,
-        "(ID:",
-        data.id,
-        ")"
-      );
-
-      return {
-        success: true,
-        provider: "resend-direct",
-        emailId: data.id,
-      };
-    } catch (error) {
-      console.error(
-        "❌ Direct Resend API failed (expected due to CORS):",
-        error
-      );
       return {
         success: false,
-        reason:
-          error.message.includes("NetworkError") ||
-          error.message.includes("CORS")
-            ? "cors_expected"
-            : "resend_error",
+        reason: "edge_function_error",
         error: error.message,
       };
     }

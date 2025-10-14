@@ -31,6 +31,7 @@ import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import SalesChart from "../components/charts/SalesChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
 import StandardizedProductDisplay from "../components/ui/StandardizedProductDisplay";
+// Test imports removed - using real notification system in Settings
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -396,6 +397,17 @@ export default function DashboardPage() {
                 href="/customers"
                 color="orange"
               />
+              {/* Development-only email testing */}
+              {import.meta.env.DEV && (
+                <MemoizedCleanActionCard
+                  icon={Activity}
+                  title="Test Email System"
+                  description="Resend integration testing"
+                  href="/debug/email"
+                  color="purple"
+                  badge="Debug"
+                />
+              )}
             </div>
           </div>
 
@@ -600,6 +612,8 @@ export default function DashboardPage() {
             </div>
           </section>
         )}
+
+        {/* Test components removed - Real notification system available in System Settings */}
 
         {/* System Status Footer */}
         <footer className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">

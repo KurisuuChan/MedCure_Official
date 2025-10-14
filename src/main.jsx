@@ -7,6 +7,11 @@ import App from "./App.jsx";
 if (import.meta.env.DEV) {
   import("./debug/SystemValidationRoadmap.js");
   import("./debug/ProfessionalDeveloperMode.js");
+  // Load email service debug helper
+  const script = document.createElement("script");
+  script.src = "/debug_email_service.js";
+  script.async = true;
+  document.head.appendChild(script);
 }
 
 createRoot(document.getElementById("root")).render(
