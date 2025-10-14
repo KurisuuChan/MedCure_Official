@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
+// ...existing imports...
+import { useAuth } from "../hooks/useAuth";
+import { UserManagementService } from "../services/domains/auth/userManagementService";
 import { useNavigate } from "react-router-dom";
 import {
   DollarSign,
@@ -65,136 +68,143 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // OPTIMIZATION: Use useCallback to memoize the data loading function
-  const loadDashboardData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log("🔍 [Dashboard] Loading dashboard data...");
-
-      const response = await DashboardService.getDashboardData();
-      console.log("📊 [Dashboard] Service response:", {
-        success: response.success,
-        hasData: !!response.data,
-      });
-
-      if (response.success) {
-        setDashboardData(response.data);
-        console.log("✅ [Dashboard] Data loaded successfully.");
-      } else {
-        const errorMessage = response.error || "Failed to load dashboard data";
-        console.error("❌ [Dashboard] Service returned error:", errorMessage);
-        setError(errorMessage);
-      }
-    } catch (err) {
-      console.error("❌ [Dashboard] Error loading dashboard data:", err);
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []); // Empty dependency array means this function is created only once
-
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
-
-  // BEST PRACTICE: Centralize state rendering logic
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center p-8 bg-white shadow-lg rounded-xl">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Dashboard Error
-          </h3>
-          <p className="text-red-600 mb-6">{error}</p>
-          <button
-            onClick={loadDashboardData}
-            className="inline-flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin-slow" />
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!dashboardData) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">No dashboard data available.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Derived state for date/time to avoid recalculating on every render
-  const currentTime = new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header Section */}
-        <header className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-4 mb-6">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium text-green-700">
-                    System Online
-                  </span>
+  // Get current user role
+  const { user } = useAuth();
+  const userRole = user?.role;
+  const isEmployee = userRole === UserManagementService.ROLES.EMPLOYEE;
+        {/* Quick Actions and Inventory Analysis (hidden for employees) */}
+        {!isEmployee && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Quick Actions */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Quick Actions
+                  </h3>
+                  <p className="text-gray-500 text-sm">Essential tasks</p>
                 </div>
-                <div className="w-px h-4 bg-gray-200"></div>
-                <div className="flex items-center space-x-2">
-                  <Activity className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-600">
-                    Real-time Monitoring
-                  </span>
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Stethoscope className="h-5 w-5 text-gray-600" />
                 </div>
               </div>
-              <h1 className="text-3xl lg:text-4xl font-bold mb-2 text-gray-900">
-                Dashboard
-              </h1>
-              <p className="text-gray-600 text-lg mb-6">
-                Welcome back! Here's your pharmacy overview for today.
-              </p>
-              <div className="flex items-center space-x-6 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-700 font-medium">
-                    {currentTime}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">{currentDate}</span>
-                </div>
+              <div className="space-y-3">
+                <MemoizedCleanActionCard
+                  icon={ShoppingCart}
+                  title="Process Sale"
+                  description="Quick POS transaction"
+                  href="/pos"
+                  color="blue"
+                  badge="Popular"
+                />
+                <MemoizedCleanActionCard
+                  icon={Pill}
+                  title="Add Medication"
+                  description="Add new products"
+                  href="/inventory"
+                  color="green"
+                />
+                <MemoizedCleanActionCard
+                  icon={Package}
+                  title="Batch Management"
+                  description="Track product batches"
+                  href="/batch-management"
+                  color="purple"
+                />
+                <MemoizedCleanActionCard
+                  icon={UserCheck}
+                  title="User Management"
+                  description="System administration"
+                  href="/management"
+                  color="gray"
+                />
+                <MemoizedCleanActionCard
+                  icon={Users}
+                  title="Customer Information"
+                  description="View customer database"
+                  href="/customers"
+                  color="orange"
+                />
               </div>
             </div>
-            <div className="mt-6 lg:mt-0">
-              <button
+
+            {/* Inventory Analysis */}
+            <div
+              onClick={() => navigate("/inventory")}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-fit"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && navigate("/inventory")}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Inventory Analysis
+                  </h3>
+                  <p className="text-sm text-gray-600">Stock value by category</p>
+                </div>
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Package className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+              <div className="h-56">
+                {dashboardData.categoryAnalysis &&
+                dashboardData.categoryAnalysis.length > 0 ? (
+                  <Doughnut
+                    data={{
+                      labels: dashboardData.categoryAnalysis.map(
+                        (cat) => cat.name
+                      ),
+                      datasets: [
+                        {
+                          data: dashboardData.categoryAnalysis.map((cat) =>
+                            parseFloat(cat.percentage)
+                          ),
+                          backgroundColor: [
+                            "rgba(59, 130, 246, 0.8)", // Blue
+                            "rgba(16, 185, 129, 0.8)", // Green
+                            "rgba(245, 158, 11, 0.8)", // Amber
+                            "rgba(139, 92, 246, 0.8)", // Purple
+                            "rgba(236, 72, 153, 0.8)", // Pink
+                            "rgba(107, 114, 128, 0.8)", // Gray
+                            "rgba(239, 68, 68, 0.8)", // Red
+                            "rgba(20, 184, 166, 0.8)", // Teal
+                          ].slice(0, dashboardData.categoryAnalysis.length),
+                          borderWidth: 2,
+                          borderColor: "#ffffff",
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      layout: {
+                        padding: {
+                          top: 10,
+                          bottom: 10,
+                        },
+                      },
+                      plugins: {
+                        legend: {
+                          position: "bottom",
+                          labels: {
+                            padding: 10,
+                            usePointStyle: true,
+                            boxWidth: 12,
+                          },
+                        },
+                      },
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    No data available
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
                 onClick={loadDashboardData}
                 disabled={isLoading}
                 className="bg-gray-900 text-white hover:bg-gray-800 px-6 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-2 font-medium disabled:bg-gray-400"
