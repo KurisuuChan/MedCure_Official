@@ -30,7 +30,6 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
     "kurisuuuchannn@gmail.com"
   );
   const [customRecipient, setCustomRecipient] = useState("");
-  const [testingEmail, setTestingEmail] = useState(false);
   const { settings: globalSettings, updateSettings } = useSettings();
 
   // Simplified notification settings
@@ -170,57 +169,6 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
       return customRecipient;
     }
     return selectedRecipient;
-  };
-
-  // Test email functionality
-  const testEmailAlert = async () => {
-    setTestingEmail(true);
-    try {
-      const recipient = getCurrentRecipient();
-      if (!recipient) {
-        showError("Please select or enter a recipient email address");
-        return;
-      }
-
-      // Initialize notification service
-      await notificationService.initialize();
-
-      // Run health check and send email
-      const result = await notificationService.runHealthChecks(true);
-
-      if (result.success) {
-        // Send email to selected recipient
-        await emailService.send({
-          to: recipient,
-          subject: `🧪 MedCure Test Email - Health Check Results`,
-          html: `
-            <h1>✅ MedCure Test Email</h1>
-            <p><strong>Health Check Completed Successfully!</strong></p>
-            <p>📊 <strong>Statistics:</strong></p>
-            <ul>
-              <li>Total Products: ${result.statistics?.total || 0}</li>
-              <li>Out of Stock: ${result.statistics?.outOfStock || 0}</li>
-              <li>Low Stock: ${result.statistics?.lowStock || 0}</li>
-              <li>Expiring Soon: ${result.statistics?.expiringSoon || 0}</li>
-            </ul>
-            <p>🕐 <strong>Time:</strong> ${new Date().toLocaleString()}</p>
-            <p>📧 <strong>Sent to:</strong> ${recipient}</p>
-          `,
-          text: `MedCure Test - Health check completed. Statistics: ${result.totalNotifications} notifications created.`,
-        });
-
-        showSuccess(
-          `✅ Test email sent successfully to ${recipient}! Health check created ${result.totalNotifications} notifications.`
-        );
-      } else {
-        showError(`❌ Health check failed: ${result.error}`);
-      }
-    } catch (error) {
-      console.error("Test email error:", error);
-      showError("Failed to send test email");
-    } finally {
-      setTestingEmail(false);
-    }
   };
 
   return (
@@ -735,36 +683,6 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Test Email Button */}
-          {notificationSettings.emailAlertsEnabled && getCurrentRecipient() && (
-            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                🧪 Test Email System
-              </h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Send a test email with health check results to verify everything
-                is working.
-              </p>
-              <button
-                onClick={testEmailAlert}
-                disabled={testingEmail}
-                className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-              >
-                {testingEmail ? (
-                  <>
-                    <Loader className="h-5 w-5 animate-spin" />
-                    <span>Sending Test Email...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-5 w-5" />
-                    <span>Send Test Email to {getCurrentRecipient()}</span>
-                  </>
-                )}
-              </button>
             </div>
           )}
         </div>
