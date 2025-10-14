@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import unifiedTransactionService from "../services/domains/sales/transactionService";
+import notificationService from "../services/notifications/NotificationService";
+import { useToast } from "../components/ui/Toast";
 import SimpleReceipt from "../components/ui/SimpleReceipt";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import { LoadingTransactionTable } from "../components/ui/loading/PharmacyLoadingStates";
@@ -32,6 +34,8 @@ import { format } from "date-fns";
 
 const TransactionHistoryPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // State Management
   const [transactions, setTransactions] = useState([]);
@@ -65,8 +69,6 @@ const TransactionHistoryPage = () => {
     "Customer changed mind",
     "Medical reasons",
   ];
-
-  const { user } = useAuth();
 
   // Check if transaction is within 7-day refund policy
   const isWithinRefundPolicy = (transactionDate) => {
@@ -1225,6 +1227,28 @@ const TransactionHistoryPage = () => {
                         });
                         setShowRefundSuccess(true);
 
+                        // Show success toast
+                        showSuccessToast(
+                          `Refund processed successfully! ₱${formatCurrency(editingTransaction.total_amount)}`
+                        );
+
+                        // Create notification in the system
+                        await notificationService.create({
+                          userId: user?.id,
+                          title: "Transaction Refunded",
+                          message: `Refund processed for ${editingTransaction.customer_name || "Walk-in customer"} - ₱${formatCurrency(editingTransaction.total_amount)}`,
+                          type: "info",
+                          priority: 2,
+                          category: "sales",
+                          metadata: {
+                            transactionId: editingTransaction.id,
+                            customerName: editingTransaction.customer_name,
+                            amount: editingTransaction.total_amount,
+                            refundReason: finalReason,
+                            actionUrl: "/transaction-history",
+                          },
+                        });
+
                         // Force refresh transactions to show updated status
                         await fetchTransactions();
 
@@ -1242,6 +1266,7 @@ const TransactionHistoryPage = () => {
                       setFinalReason("");
                     } catch (error) {
                       console.error("Refund failed:", error);
+                      showErrorToast("Refund failed: " + error.message);
                       alert("Refund failed: " + error.message);
                     }
                   }}

@@ -12,12 +12,14 @@ import {
 } from "lucide-react";
 import { emailService } from "../../services/notifications/EmailService";
 import { supabase } from "../../config/supabase";
+import { useSettings } from "../../contexts/SettingsContext";
 
 function NotificationManagement({ showSuccess, showError }) {
   const [checkingStock, setCheckingStock] = useState(false);
   const [stockAlert, setStockAlert] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const { settings: globalSettings, updateSettings } = useSettings();
 
   // Notification timing settings
   const [notificationSettings, setNotificationSettings] = useState({
@@ -26,24 +28,45 @@ function NotificationManagement({ showSuccess, showError }) {
     emailAlertsEnabled: false,
   });
 
+  // Load settings from SettingsContext and localStorage
   useEffect(() => {
+    // Try to load from localStorage first (for backwards compatibility)
     const savedSettings = localStorage.getItem("medcure-notification-settings");
     if (savedSettings) {
       try {
         setNotificationSettings(JSON.parse(savedSettings));
       } catch (err) {
-        console.error("Failed to load settings:", err);
+        console.error("Failed to load settings from localStorage:", err);
       }
     }
-  }, []);
 
-  const handleSaveSettings = () => {
+    // Also load from global settings if available
+    if (globalSettings.lowStockCheckInterval !== undefined) {
+      setNotificationSettings((prev) => ({
+        ...prev,
+        lowStockCheckInterval: globalSettings.lowStockCheckInterval || 60,
+        expiringCheckInterval: globalSettings.expiringCheckInterval || 360,
+        emailAlertsEnabled: globalSettings.emailAlertsEnabled || false,
+      }));
+    }
+  }, [globalSettings]);
+
+  const handleSaveSettings = async () => {
     setSaving(true);
     try {
+      // Save to localStorage (for immediate use by NotificationService)
       localStorage.setItem(
         "medcure-notification-settings",
         JSON.stringify(notificationSettings)
       );
+
+      // Save to database via SettingsContext (for persistence across browsers)
+      await updateSettings({
+        lowStockCheckInterval: notificationSettings.lowStockCheckInterval,
+        expiringCheckInterval: notificationSettings.expiringCheckInterval,
+        emailAlertsEnabled: notificationSettings.emailAlertsEnabled,
+      });
+
       setSaved(true);
       showSuccess(
         "Notification settings saved successfully! The system will use these intervals for checking inventory."
@@ -51,7 +74,7 @@ function NotificationManagement({ showSuccess, showError }) {
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error("Failed to save settings:", err);
-      showError("Failed to save settings");
+      showError("Failed to save settings. Please try again.");
     } finally {
       setSaving(false);
     }

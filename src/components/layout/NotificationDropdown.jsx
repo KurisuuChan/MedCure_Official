@@ -110,7 +110,7 @@ export const addTransactionNotification = (type, details = {}) => {
 // Export function to clear all notification data (useful for logout)
 export const clearAllNotificationData = () => {
   try {
-    notificationSystem.clearAll();
+    notificationService.clearAll();
     console.log(
       "✅ [NotificationDropdown] Cleared all notification data for logout"
     );
@@ -151,7 +151,7 @@ export function NotificationDropdown({
                   payload
                 );
                 // Run notification checks when products change
-                notificationSystem.runHealthChecks();
+                notificationService.runHealthChecks();
                 loadNotifications();
               }
             )
@@ -169,7 +169,7 @@ export function NotificationDropdown({
                 );
                 // Run checks after sales to update stock levels
                 setTimeout(() => {
-                  notificationSystem.runHealthChecks();
+                  notificationService.runHealthChecks();
                   loadNotifications();
                 }, 1000);
               }
@@ -316,9 +316,9 @@ export function NotificationDropdown({
           `📖 [NotificationDropdown] Marking ${unreadNotifications.length} notifications as read`
         );
 
-        // Mark all as read using the notificationSystem
+        // Mark all as read using the notificationService
         unreadNotifications.forEach((notification) => {
-          notificationSystem.markAsRead(notification.id);
+          notificationService.markAsRead(notification.id);
         });
 
         // Reload notifications to reflect the changes
@@ -333,7 +333,7 @@ export function NotificationDropdown({
 
     try {
       // Get notifications from the new manager
-      const allNotifications = notificationSystem.getNotifications();
+      const allNotifications = notificationService.getNotifications();
 
       // Convert to display format with icons
       const displayNotifications = allNotifications.map((notification) => ({
@@ -377,7 +377,7 @@ export function NotificationDropdown({
     }
 
     // Mark notification as read using the manager
-    notificationSystem.markAsRead(notification.id);
+    notificationService.markAsRead(notification.id);
 
     // Reload notifications to reflect the change
     loadNotifications();
@@ -392,7 +392,7 @@ export function NotificationDropdown({
   const clearAll = () => {
     // Dismiss all current notifications using the manager
     notifications.forEach((notification) => {
-      notificationSystem.dismiss(notification.id);
+      notificationService.dismiss(notification.id);
     });
 
     // Clear display immediately
@@ -403,7 +403,7 @@ export function NotificationDropdown({
 
   const removeNotification = (notificationId) => {
     // Dismiss notification using the manager
-    notificationSystem.dismiss(notificationId);
+    notificationService.dismiss(notificationId);
 
     // Update display immediately
     setNotifications((prev) => prev.filter((n) => n.id !== notificationId));

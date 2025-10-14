@@ -17,6 +17,9 @@ const DEFAULT_SETTINGS = {
   timezone: "Asia/Manila",
   enableNotifications: true,
   enableEmailAlerts: true,
+  lowStockCheckInterval: 60, // minutes (1 hour default)
+  expiringCheckInterval: 360, // minutes (6 hours default)
+  emailAlertsEnabled: false,
 };
 
 export function SettingsProvider({ children }) {
@@ -76,6 +79,15 @@ export function SettingsProvider({ children }) {
               break;
             case "enable_email_alerts":
               loadedSettings.enableEmailAlerts = setting_value;
+              break;
+            case "low_stock_check_interval":
+              loadedSettings.lowStockCheckInterval = setting_value;
+              break;
+            case "expiring_check_interval":
+              loadedSettings.expiringCheckInterval = setting_value;
+              break;
+            case "email_alerts_enabled":
+              loadedSettings.emailAlertsEnabled = setting_value;
               break;
             default:
               break;
@@ -138,6 +150,9 @@ export function SettingsProvider({ children }) {
         timezone: "timezone",
         enableNotifications: "enable_notifications",
         enableEmailAlerts: "enable_email_alerts",
+        lowStockCheckInterval: "low_stock_check_interval",
+        expiringCheckInterval: "expiring_check_interval",
+        emailAlertsEnabled: "email_alerts_enabled",
       };
 
       const updates = [];
@@ -183,8 +198,10 @@ export function SettingsProvider({ children }) {
   const getSettingType = (key) => {
     // Return the actual data type that matches the database constraint
     // Constraint: setting_type IN ('string', 'number', 'boolean', 'json')
-    if (key.includes("enable_")) return "boolean"; // enable_notifications, enable_email_alerts
+    if (key.includes("enable_")) return "boolean"; // enable_notifications, enable_email_alerts, email_alerts_enabled
     if (key === "tax_rate") return "string"; // stored as string in DB
+    if (key === "low_stock_check_interval" || key === "expiring_check_interval")
+      return "number"; // notification intervals
     return "string"; // business_name, business_logo, currency, timezone
   };
 
