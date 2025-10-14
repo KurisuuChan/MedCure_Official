@@ -89,4 +89,24 @@ export const authService = {
   hasPermission: (user, permission) => {
     return user?.permissions?.includes(permission) || false;
   },
+
+  // Verify password for refund authorization
+  verifyPassword: async (email, password) => {
+    try {
+      console.log("🔐 [AuthService] Verifying password for refund authorization");
+      
+      // Try to sign in with the credentials
+      const result = await AuthService.signIn(email, password);
+      
+      if (result && result.user) {
+        console.log("✅ [AuthService] Password verification successful");
+        return { success: true, user: result.user };
+      }
+      
+      return { success: false, error: "Invalid password" };
+    } catch (error) {
+      console.error("❌ [AuthService] Password verification failed:", error);
+      return { success: false, error: error.message || "Invalid password" };
+    }
+  },
 };

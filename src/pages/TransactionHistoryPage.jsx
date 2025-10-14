@@ -4,8 +4,10 @@ import { useAuth } from "../hooks/useAuth";
 import { useDebounce } from "../hooks/useDebounce";
 import unifiedTransactionService from "../services/domains/sales/transactionService";
 import notificationService from "../services/notifications/NotificationService";
+import { authService } from "../services/authService";
 import { useToast } from "../components/ui/Toast";
 import SimpleReceipt from "../components/ui/SimpleReceipt";
+import RefundAuthModal from "../components/modals/RefundAuthModal";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import { LoadingTransactionTable } from "../components/ui/loading/PharmacyLoadingStates";
 import {
@@ -34,7 +36,7 @@ import { format } from "date-fns";
 
 const TransactionHistoryPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { success: showSuccessToast, error: showErrorToast } = useToast();
 
   // State Management
@@ -55,6 +57,11 @@ const TransactionHistoryPage = () => {
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [showRefundSuccess, setShowRefundSuccess] = useState(false);
   const [refundedTransaction, setRefundedTransaction] = useState(null);
+  
+  // Refund Authorization States
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [pendingRefundData, setPendingRefundData] = useState(null);
 
   // Refund reason states
   const [selectedReason, setSelectedReason] = useState("");
@@ -489,6 +496,102 @@ const TransactionHistoryPage = () => {
     } catch (error) {
       console.error("❌ [TransactionHistory] Error opening receipt:", error);
       alert("Error opening receipt. Please try again.");
+    }
+  };
+
+  // Handle password verification for refund authorization
+  const handleRefundPasswordVerification = async (password) => {
+    setAuthLoading(true);
+    
+    try {
+      // Verify the password
+      const result = await authService.verifyPassword(user.email, password);
+      
+      if (!result.success) {
+        showErrorToast("Invalid password. Authorization failed.");
+        setAuthLoading(false);
+        return;
+      }
+      
+      // Password verified, proceed with refund
+      await processRefundWithAuthorization();
+      setShowAuthModal(false);
+      setAuthLoading(false);
+    } catch (error) {
+      console.error("❌ Password verification error:", error);
+      showErrorToast("Authorization failed. Please try again.");
+      setAuthLoading(false);
+    }
+  };
+
+  // Process refund after authorization
+  const processRefundWithAuthorization = async () => {
+    try {
+      if (!pendingRefundData) {
+        throw new Error("No pending refund data found");
+      }
+
+      const { transaction, reason } = pendingRefundData;
+
+      // Process the refund using the transaction service
+      const result = await unifiedTransactionService.undoTransaction(
+        transaction.id,
+        `Refund: ${reason}`,
+        user?.id
+      );
+
+      if (result.success) {
+        // Store refunded transaction for success modal
+        setRefundedTransaction({
+          ...transaction,
+          refund_reason: reason,
+          refunded_at: new Date().toISOString(),
+          status: "refunded",
+        });
+        setShowRefundSuccess(true);
+
+        // Show success toast
+        showSuccessToast(
+          `Refund processed successfully! ₱${formatCurrency(transaction.total_amount)}`
+        );
+
+        // Create notification in the system
+        await notificationService.create({
+          userId: user?.id,
+          title: "Transaction Refunded",
+          message: `Refund processed for ${
+            transaction.customer_name || "Walk-in customer"
+          } - ₱${formatCurrency(transaction.total_amount)}`,
+          type: "info",
+          priority: 2,
+          category: "sales",
+          metadata: {
+            transactionId: transaction.id,
+            customerName: transaction.customer_name,
+            amount: transaction.total_amount,
+            refundReason: reason,
+            actionUrl: "/transaction-history",
+          },
+        });
+
+        // Force refresh transactions to show updated status
+        await fetchTransactions();
+
+        // Close the refund modal
+        setShowEditModal(false);
+        setSelectedReason("");
+        setCustomReason("");
+        setFinalReason("");
+        setPendingRefundData(null);
+
+        console.log("✅ [TransactionHistory] Refund completed, data refreshed");
+      } else {
+        throw new Error(result.error || "Refund processing failed");
+      }
+    } catch (error) {
+      console.error("❌ Refund failed:", error);
+      showErrorToast("Refund failed: " + error.message);
+      alert("Refund failed: " + error.message);
     }
   };
 
@@ -1202,79 +1305,30 @@ const TransactionHistoryPage = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={async () => {
-                    try {
-                      if (!finalReason.trim()) {
-                        alert("Please select a refund reason.");
-                        return;
-                      }
+                  onClick={() => {
+                    if (!finalReason.trim()) {
+                      alert("Please select a refund reason.");
+                      return;
+                    }
 
-                      // Process the refund using the transaction service
-                      const result =
-                        await unifiedTransactionService.undoTransaction(
-                          editingTransaction.id,
-                          `Refund: ${finalReason}`,
-                          user?.id
-                        );
+                    // Store pending refund data
+                    setPendingRefundData({
+                      transaction: editingTransaction,
+                      reason: finalReason,
+                    });
 
-                      if (result.success) {
-                        // Store refunded transaction for success modal
-                        setRefundedTransaction({
-                          ...editingTransaction,
-                          refund_reason: finalReason,
-                          refunded_at: new Date().toISOString(),
-                          status: "refunded", // Ensure status is updated
-                        });
-                        setShowRefundSuccess(true);
-
-                        // Show success toast
-                        showSuccessToast(
-                          `Refund processed successfully! ₱${formatCurrency(
-                            editingTransaction.total_amount
-                          )}`
-                        );
-
-                        // Create notification in the system
-                        await notificationService.create({
-                          userId: user?.id,
-                          title: "Transaction Refunded",
-                          message: `Refund processed for ${
-                            editingTransaction.customer_name ||
-                            "Walk-in customer"
-                          } - ₱${formatCurrency(
-                            editingTransaction.total_amount
-                          )}`,
-                          type: "info",
-                          priority: 2,
-                          category: "sales",
-                          metadata: {
-                            transactionId: editingTransaction.id,
-                            customerName: editingTransaction.customer_name,
-                            amount: editingTransaction.total_amount,
-                            refundReason: finalReason,
-                            actionUrl: "/transaction-history",
-                          },
-                        });
-
-                        // Force refresh transactions to show updated status
-                        await fetchTransactions();
-
-                        console.log(
-                          "✅ [TransactionHistory] Refund completed, data refreshed"
-                        );
-                      } else {
-                        throw new Error(
-                          result.error || "Refund processing failed"
-                        );
-                      }
-                      setShowEditModal(false);
-                      setSelectedReason("");
-                      setCustomReason("");
-                      setFinalReason("");
-                    } catch (error) {
-                      console.error("Refund failed:", error);
-                      showErrorToast("Refund failed: " + error.message);
-                      alert("Refund failed: " + error.message);
+                    // Check user role and show appropriate authorization
+                    if (role === "employee") {
+                      // Employee needs admin/pharmacist approval
+                      showErrorToast(
+                        "Employees cannot process refunds. Please request approval from an Admin or Pharmacist."
+                      );
+                      setShowAuthModal(true);
+                    } else if (role === "admin" || role === "pharmacist") {
+                      // Admin/Pharmacist needs to enter password
+                      setShowAuthModal(true);
+                    } else {
+                      showErrorToast("Unauthorized role for refund processing.");
                     }
                   }}
                   disabled={!finalReason.trim()}
@@ -1428,6 +1482,19 @@ const TransactionHistoryPage = () => {
           </div>
         </div>
       )}
+
+      {/* Refund Authorization Modal */}
+      <RefundAuthModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          setPendingRefundData(null);
+        }}
+        onConfirm={handleRefundPasswordVerification}
+        userRole={role}
+        transactionAmount={pendingRefundData?.transaction?.total_amount}
+        isLoading={authLoading}
+      />
     </div>
   );
 };
