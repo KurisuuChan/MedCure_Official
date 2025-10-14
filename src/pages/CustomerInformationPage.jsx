@@ -1291,10 +1291,14 @@ const CustomerInformationPage = () => {
       {/* View Customer Modal */}
       {showViewModal && selectedCustomer && (
         <div
-          className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           style={{ zIndex: 9999 }}
+          onClick={closeAllModals}
         >
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative pointer-events-auto">
+          <div
+            className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -1403,10 +1407,14 @@ const CustomerInformationPage = () => {
       {/* Edit Customer Modal */}
       {showEditModal && selectedCustomer && (
         <div
-          className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           style={{ zIndex: 9999 }}
+          onClick={closeAllModals}
         >
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-md w-full relative pointer-events-auto">
+          <div
+            className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-md w-full relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -1593,10 +1601,14 @@ const CustomerInformationPage = () => {
       {/* Customer Transaction History Modal */}
       {showTransactionHistory && selectedCustomer && (
         <div
-          className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           style={{ zIndex: 9999 }}
+          onClick={closeAllModals}
         >
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-6xl w-full max-h-[90vh] overflow-hidden relative pointer-events-auto">
+          <div
+            className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-6xl w-full max-h-[90vh] overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
