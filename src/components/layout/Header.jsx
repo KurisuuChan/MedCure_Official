@@ -1,14 +1,13 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { Search, User, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import NotificationBell from "../notifications/NotificationBell.jsx";
 import NotificationErrorBoundary from "../notifications/NotificationErrorBoundary.jsx";
 import { logger } from "../../utils/logger.js";
 
 export function Header({ onToggleSidebar }) {
   const { user, signOut } = useAuth();
-  const [showSearch, setShowSearch] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -32,28 +31,8 @@ export function Header({ onToggleSidebar }) {
             </button>
           </div>
 
-          {/* Center - Search (on larger screens) */}
-          <div className="hidden md:block flex-1 max-w-lg mx-8">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products, sales, or anything..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
-          </div>
-
           {/* Right side - Notifications and User menu */}
-          <div className="flex items-center space-x-4">
-            {/* Mobile search toggle */}
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 md:hidden"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-
+          <div className="flex items-center space-x-4 ml-auto">
             {/* Notifications - New Database-Backed System with Error Boundary */}
             {user && (
               <NotificationErrorBoundary>
@@ -96,20 +75,6 @@ export function Header({ onToggleSidebar }) {
             </div>
           </div>
         </div>
-
-        {/* Mobile search */}
-        {showSearch && (
-          <div className="md:hidden py-4 border-t border-gray-200">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products, sales, or anything..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );
