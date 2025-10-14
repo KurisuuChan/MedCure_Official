@@ -508,7 +508,7 @@ const TransactionHistoryPage = () => {
       const result = await authService.verifyPassword(adminEmail, password);
       
       if (!result.success) {
-        showErrorToast("Invalid credentials. Authorization failed.");
+        showErrorToast("Invalid password. Authorization failed.");
         setAuthLoading(false);
         return;
       }
