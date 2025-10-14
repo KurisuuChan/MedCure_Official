@@ -38,15 +38,12 @@ const CustomerDeleteModal = ({
     }
   };
 
-  const requiredConfirmText = customer?.customer_name || "DELETE";
-  const isConfirmTextValid = confirmText === requiredConfirmText;
-
   if (!isOpen || !customer) return null;
 
   // Success state
   if (showSuccess) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-xl shadow-2xl max-w-md w-full relative">
           <div className="p-8 text-center">
             <div className="bg-green-100 p-4 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -69,7 +66,7 @@ const CustomerDeleteModal = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full relative">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
