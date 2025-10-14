@@ -152,9 +152,6 @@ function NotificationManagement({ user, showSuccess, showError }) {
       const alertEmoji = outOfStock.length > 0 ? "🚨" : "⚠️";
       const alertTextColor = outOfStock.length > 0 ? "#991b1b" : "#92400e";
       const alertTitle = outOfStock.length > 0 ? "CRITICAL ALERT" : "WARNING ALERT";
-      const alertMessage = outOfStock.length > 0 
-        ? "Some products are completely out of stock and need immediate attention!"
-        : "Some products are running low on stock. Please review and reorder soon.";
       
       const outOfStockWidth = lowStock.length > 0 ? "48%" : "100%";
       const outOfStockPaddingRight = lowStock.length > 0 ? "2%" : "0";
@@ -253,9 +250,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
                   ${
                     outOfStock.length > 0
                       ? `
-                  <td style="width: 48%; padding-right: ${
-                    lowStock.length > 0 ? "2%" : "0"
-                  };">
+                  <td style="width: ${outOfStockWidth}; padding-right: ${outOfStockPaddingRight};">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; padding: 15px; text-align: center;">
                       <tr>
                         <td>
@@ -273,9 +268,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
                   ${
                     lowStock.length > 0
                       ? `
-                  <td style="width: ${
-                    outOfStock.length > 0 ? "48%" : "100%"
-                  }; padding-left: ${outOfStock.length > 0 ? "2%" : "0"};">
+                  <td style="width: ${lowStockWidth}; padding-left: ${lowStockPaddingLeft};">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fffbeb; border: 2px solid #fde68a; border-radius: 8px; padding: 15px; text-align: center;">
                       <tr>
                         <td>
@@ -303,9 +296,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
             <td style="padding: 0 30px 30px 30px;">
               <div style="background: #fef2f2; border-radius: 8px; padding: 20px; border-left: 4px solid #dc2626;">
                 <h3 style="margin: 0 0 15px 0; color: #991b1b; font-size: 18px; font-weight: bold;">
-                  🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${
-                  outOfStock.length === 1 ? "Item" : "Items"
-                })
+                  🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${outOfStockLabel})
                 </h3>
                 <p style="margin: 0 0 15px 0; color: #7f1d1d; font-size: 14px;">
                   These products have <strong>ZERO</strong> stock available and need immediate restocking:
@@ -367,9 +358,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
             <td style="padding: 0 30px 30px 30px;">
               <div style="background: #fffbeb; border-radius: 8px; padding: 20px; border-left: 4px solid #f59e0b;">
                 <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 18px; font-weight: bold;">
-                  ⚠️ LOW STOCK - WARNING (${lowStock.length} ${
-                  lowStock.length === 1 ? "Item" : "Items"
-                })
+                  ⚠️ LOW STOCK - WARNING (${lowStock.length} ${lowStockLabel})
                 </h3>
                 <p style="margin: 0 0 15px 0; color: #78350f; font-size: 14px;">
                   These products are at or below their reorder level and should be restocked soon:
@@ -504,9 +493,7 @@ ${
   outOfStock.length > 0
     ? `
 ═══════════════════════════════════════════════════════════════════
-🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${
-        outOfStock.length === 1 ? "Item" : "Items"
-      })
+🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${outOfStockLabel})
 ═══════════════════════════════════════════════════════════════════
 These products have ZERO stock available and need IMMEDIATE restocking:
 
@@ -533,9 +520,7 @@ ${
   lowStock.length > 0
     ? `
 ═══════════════════════════════════════════════════════════════════
-⚠️ LOW STOCK - WARNING (${lowStock.length} ${
-        lowStock.length === 1 ? "Item" : "Items"
-      })
+⚠️ LOW STOCK - WARNING (${lowStock.length} ${lowStockLabel})
 ═══════════════════════════════════════════════════════════════════
 These products are at or below their reorder level:
 
