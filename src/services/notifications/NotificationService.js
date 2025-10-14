@@ -66,7 +66,31 @@ class NotificationService {
     this.realtimeSubscription = null;
     this.isInitialized = false;
     this.lastHealthCheckRun = null; // ✅ Local debounce timestamp
-    this.healthCheckDebounceMs = 15 * 60 * 1000; // 15 minutes in milliseconds
+    this.healthCheckDebounceMs = 15 * 60 * 1000; // 15 minutes in milliseconds (default)
+    this.lastLowStockCheck = null; // Track last low stock check
+    this.lastExpiringCheck = null; // Track last expiring check
+  }
+
+  /**
+   * Get user notification settings from localStorage
+   * @private
+   */
+  getUserNotificationSettings() {
+    try {
+      const settings = localStorage.getItem("medcure-notification-settings");
+      if (settings) {
+        return JSON.parse(settings);
+      }
+    } catch (err) {
+      logger.warn("[NotificationService] Failed to load user settings:", err);
+    }
+
+    // Default settings
+    return {
+      lowStockCheckInterval: 60, // 1 hour default
+      expiringCheckInterval: 360, // 6 hours default
+      emailAlertsEnabled: false,
+    };
   }
 
   /**
@@ -1260,19 +1284,73 @@ For support, visit: http://localhost:5173/help
    * @private
    */
   async executeHealthChecks(users) {
-    logger.debug("🔍 Running all health check categories...");
+    logger.info("🔍 Starting comprehensive health check...");
 
-    const [lowStockCount, expiringCount, outOfStockCount] = await Promise.all([
-      this.checkLowStock(users),
-      this.checkExpiringProducts(users),
-      this.checkOutOfStock(users),
-    ]);
+    const userSettings = this.getUserNotificationSettings();
+    const now = Date.now();
+
+    // Check if enough time has passed for low stock check
+    const lowStockIntervalMs = userSettings.lowStockCheckInterval * 60 * 1000;
+    const shouldCheckLowStock =
+      !this.lastLowStockCheck ||
+      now - this.lastLowStockCheck >= lowStockIntervalMs;
+
+    // Check if enough time has passed for expiring check
+    const expiringIntervalMs = userSettings.expiringCheckInterval * 60 * 1000;
+    const shouldCheckExpiring =
+      !this.lastExpiringCheck ||
+      now - this.lastExpiringCheck >= expiringIntervalMs;
+
+    // Calculate time since last checks (for logging)
+    const minutesSinceLowStock = this.lastLowStockCheck
+      ? Math.floor((now - this.lastLowStockCheck) / (60 * 1000))
+      : "Never";
+    const minutesSinceExpiring = this.lastExpiringCheck
+      ? Math.floor((now - this.lastExpiringCheck) / (60 * 1000))
+      : "Never";
 
     logger.info(
-      `📊 Health check results: ${lowStockCount} low stock, ${expiringCount} expiring, ${outOfStockCount} out of stock`
+      `⏱️ User Settings: Low Stock=${userSettings.lowStockCheckInterval}min, Expiring=${userSettings.expiringCheckInterval}min`
+    );
+    logger.info(
+      `📊 Last Checks: Low Stock=${minutesSinceLowStock}min ago, Expiring=${minutesSinceExpiring}min ago`
+    );
+    logger.info(
+      `🎯 Running Checks: Low Stock=${
+        shouldCheckLowStock ? "✅ YES" : "⏭️ SKIP"
+      }, ` +
+        `Expiring=${
+          shouldCheckExpiring ? "✅ YES" : "⏭️ SKIP"
+        }, Out-of-Stock=✅ ALWAYS`
     );
 
-    return lowStockCount + expiringCount + outOfStockCount;
+    // Run checks based on intervals
+    const [lowStockCount, expiringCount, outOfStockCount] = await Promise.all([
+      shouldCheckLowStock ? this.checkLowStock(users) : Promise.resolve(0),
+      shouldCheckExpiring
+        ? this.checkExpiringProducts(users)
+        : Promise.resolve(0),
+      this.checkOutOfStock(users), // Always check (critical safety feature)
+    ]);
+
+    // Update last check timestamps
+    if (shouldCheckLowStock) {
+      this.lastLowStockCheck = now;
+      logger.debug(`✅ Updated lastLowStockCheck timestamp`);
+    }
+    if (shouldCheckExpiring) {
+      this.lastExpiringCheck = now;
+      logger.debug(`✅ Updated lastExpiringCheck timestamp`);
+    }
+
+    const totalNotifications = lowStockCount + expiringCount + outOfStockCount;
+
+    logger.success(
+      `✅ Health check completed: ${totalNotifications} total notifications ` +
+        `(${lowStockCount} low stock, ${expiringCount} expiring, ${outOfStockCount} out-of-stock)`
+    );
+
+    return totalNotifications;
   }
 
   /**
@@ -1524,6 +1602,8 @@ For support, visit: http://localhost:5173/help
 
   /**
    * Check for out of stock products
+   * CRITICAL: Out of stock alerts are ALWAYS IMMEDIATE - no cooldown
+   * Uses database deduplication to prevent spam
    * @private
    */
   async checkOutOfStock(users) {
@@ -1551,7 +1631,8 @@ For support, visit: http://localhost:5173/help
         return 0;
       }
 
-      // OPTIMIZATION 4: Batch out-of-stock notifications with smart cooldown
+      // CRITICAL: Use direct notification method (NO COOLDOWN)
+      // Database RPC function handles deduplication
       const notificationPromises = [];
 
       for (const user of users) {
@@ -1562,21 +1643,14 @@ For support, visit: http://localhost:5173/help
         for (const product of products) {
           const productName =
             product.brand_name || product.generic_name || "Unknown Product";
-          const notificationKey = `out_of_stock_${product.id}`;
 
           logger.debug(
-            `❌ Preparing out of stock notification for: ${productName}`
+            `🚨 Creating IMMEDIATE out of stock alert for: ${productName}`
           );
 
-          // Out of stock is urgent - check every 12 hours
+          // Use direct method - database handles deduplication
           notificationPromises.push(
-            this.notifyOutOfStockWithCooldown(
-              product.id,
-              productName,
-              user.id,
-              12,
-              notificationKey
-            )
+            this.notifyOutOfStock(product.id, productName, user.id)
           );
         }
       }
@@ -1585,13 +1659,14 @@ For support, visit: http://localhost:5173/help
       const results = await Promise.allSettled(notificationPromises);
 
       let notificationCount = 0;
-      let skippedCount = 0;
+      let dedupedCount = 0;
       let failureCount = 0;
 
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
-          if (result.value?.skipped) {
-            skippedCount++;
+          if (result.value === null) {
+            // Database deduplication prevented this notification
+            dedupedCount++;
           } else {
             notificationCount++;
           }
@@ -1604,9 +1679,11 @@ For support, visit: http://localhost:5173/help
         }
       });
 
-      logger.debug(
-        `✅ Out of stock check completed. Created ${notificationCount} notifications, skipped ${skippedCount}, ${failureCount} failures`
+      logger.info(
+        `✅ Out of stock check completed. Created ${notificationCount} new notifications, ` +
+          `${dedupedCount} blocked by database deduplication, ${failureCount} failures`
       );
+
       return notificationCount;
     } catch (error) {
       logger.error("❌ Out of stock check failed:", error);

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Globe,
   DollarSign,
-  Bell,
   Save,
   CheckCircle,
   Upload,
@@ -195,56 +194,6 @@ function GeneralSettings() {
             <option value="USD">US Dollar ($)</option>
             <option value="EUR">Euro (€)</option>
           </select>
-        </div>
-      </div>
-
-      {/* Notifications */}
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center space-x-2">
-          <Bell className="h-5 w-5 text-gray-500" />
-          <span>Notifications</span>
-        </h3>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">System Notifications</p>
-              <p className="text-sm text-gray-500">
-                Receive alerts for low stock, sales, and system events
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.enableNotifications}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    enableNotifications: e.target.checked,
-                  })
-                }
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-            </label>
-          </div>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg opacity-60 cursor-not-allowed">
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-gray-900">Email Alerts</p>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gradient-to-r from-yellow-400 to-orange-400 text-white shadow-sm">
-                  Coming Soon
-                </span>
-              </div>
-              <p className="text-sm text-gray-500">
-                Send email notifications for critical events
-              </p>
-            </div>
-            <div className="relative inline-flex items-center">
-              <div className="w-11 h-6 bg-gray-300 rounded-full relative">
-                <div className="absolute top-[2px] left-[2px] bg-gray-400 border-gray-300 border rounded-full h-5 w-5"></div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

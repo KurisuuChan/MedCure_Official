@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Settings, Shield, Activity, Bell, CheckCircle } from "lucide-react";
+import { Settings, Activity, Bell, CheckCircle } from "lucide-react";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../hooks/useAuth";
 import GeneralSettings from "../components/settings/GeneralSettings";
-import SecurityBackup from "../components/settings/SecurityBackup";
 import SystemHealth from "../components/settings/SystemHealth";
 import NotificationManagement from "../components/settings/NotificationManagement";
 
@@ -28,12 +27,6 @@ function SystemSettingsPage() {
       description: "Business information and system preferences",
     },
     {
-      id: "security",
-      label: "Security & Backup",
-      icon: Shield,
-      description: "Security policies and data protection",
-    },
-    {
       id: "health",
       label: "System Health",
       icon: Activity,
@@ -43,7 +36,8 @@ function SystemSettingsPage() {
       id: "notifications",
       label: "Notifications & Alerts",
       icon: Bell,
-      description: "Manage notifications and email alerts for inventory",
+      description:
+        "Manage notification timing, email alerts, and inventory monitoring",
     },
   ];
 
@@ -137,7 +131,6 @@ function SystemSettingsPage() {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === "general" && <GeneralSettings />}
-          {activeTab === "security" && <SecurityBackup />}
           {activeTab === "health" && (
             <SystemHealth systemHealth={systemHealth} loading={loading} />
           )}
