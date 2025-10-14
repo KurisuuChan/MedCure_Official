@@ -3,6 +3,7 @@
 ## Problem Identified
 
 **Error Message**:
+
 ```
 invalid input syntax for type integer: "reorder_level"
 Failed to check inventory
@@ -18,12 +19,13 @@ The Supabase PostgREST API doesn't support direct column-to-column comparisons i
 const { data: products, error } = await supabase
   .from("products")
   .select("id, brand_name, generic_name, stock_in_pieces, reorder_level")
-  .or("stock_in_pieces.eq.0,stock_in_pieces.lte.reorder_level")  // ❌ This fails!
+  .or("stock_in_pieces.eq.0,stock_in_pieces.lte.reorder_level") // ❌ This fails!
   .order("stock_in_pieces", { ascending: true })
   .limit(100);
 ```
 
 **Why it failed**:
+
 - Supabase treats `"reorder_level"` as a string literal, not a column reference
 - PostgreSQL receives: `WHERE stock_in_pieces <= 'reorder_level'`
 - PostgreSQL expects: `WHERE stock_in_pieces <= reorder_level` (column value)
@@ -48,9 +50,7 @@ if (!allProducts || allProducts.length === 0) {
 // Filter for out of stock and low stock items in JavaScript
 const outOfStock = allProducts.filter((p) => p.stock_in_pieces === 0);
 const lowStock = allProducts.filter(
-  (p) =>
-    p.stock_in_pieces > 0 && 
-    p.stock_in_pieces <= (p.reorder_level || 10)
+  (p) => p.stock_in_pieces > 0 && p.stock_in_pieces <= (p.reorder_level || 10)
 );
 
 // Combine problem items
@@ -82,6 +82,7 @@ Instead of trying to compare columns in the database query, we:
 ### Concern: "Fetching all products might be slow"
 
 **Answer**: Actually, it's fine because:
+
 - Most pharmacies have 100-5000 products (manageable dataset)
 - We're only fetching 5 columns (minimal data transfer)
 - Products are already filtered by `is_active = true`
@@ -112,7 +113,7 @@ const { data: possibleLowStock } = await supabase
 
 // Filter in JavaScript for actual low stock
 const lowStock = possibleLowStock.filter(
-  p => p.stock_in_pieces <= (p.reorder_level || 10)
+  (p) => p.stock_in_pieces <= (p.reorder_level || 10)
 );
 ```
 
@@ -129,7 +130,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     p.id,
     p.brand_name,
     p.generic_name,
@@ -205,6 +206,7 @@ to maintain optimal inventory levels.
 ## 🔍 Database Schema Reference
 
 ### Products Table Columns Used
+
 ```sql
 products (
   id uuid PRIMARY KEY,
@@ -217,6 +219,7 @@ products (
 ```
 
 ### Key Points
+
 - `stock_in_pieces`: Current inventory quantity (integer)
 - `reorder_level`: Threshold for low stock alerts (integer)
 - `is_active`: Whether product is active (boolean)
@@ -226,18 +229,22 @@ products (
 **File**: `src/components/settings/NotificationManagement.jsx`
 
 **Line ~103-106**: Changed query approach
+
 - Before: `.or("stock_in_pieces.eq.0,stock_in_pieces.lte.reorder_level")` ❌
 - After: Fetch all, filter in JavaScript ✅
 
 **Line ~120-126**: Added client-side filtering
+
 - `outOfStock`: Items with 0 stock
 - `lowStock`: Items with stock > 0 and <= reorder_level
 - `problemItems`: Combined array
 
 **Line ~150**: Updated variable reference
+
 - Changed: `products.length` → `problemItems.length`
 
 **Line ~261**: Updated variable reference
+
 - Changed: `total: products.length` → `total: problemItems.length`
 
 ## ✅ Status
@@ -253,6 +260,7 @@ products (
 ## 🎉 Result
 
 The inventory alert system now works perfectly! It:
+
 - ✅ Queries the database correctly
 - ✅ Filters products accurately
 - ✅ Sends professional HTML emails

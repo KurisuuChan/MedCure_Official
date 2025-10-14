@@ -99,7 +99,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
     setCheckingStock(true);
     setStockAlert(null);
     try {
-      // Fetch all active products - we'll filter in JavaScript since Supabase 
+      // Fetch all active products - we'll filter in JavaScript since Supabase
       // doesn't support column-to-column comparison in .or() filters
       const { data: allProducts, error } = await supabase
         .from("products")
@@ -118,8 +118,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
       const outOfStock = allProducts.filter((p) => p.stock_in_pieces === 0);
       const lowStock = allProducts.filter(
         (p) =>
-          p.stock_in_pieces > 0 && 
-          p.stock_in_pieces <= (p.reorder_level || 10)
+          p.stock_in_pieces > 0 && p.stock_in_pieces <= (p.reorder_level || 10)
       );
 
       // Combine problem items
@@ -134,116 +133,473 @@ function NotificationManagement({ user, showSuccess, showError }) {
         return;
       }
 
-      // Generate professional email HTML
-      const emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); color: white; padding: 30px; border-radius: 10px 10px 0 0;">
-            <h1 style="margin: 0; font-size: 28px;">🏥 MedCure Pharmacy</h1>
-            <p style="margin: 10px 0 0 0; font-size: 18px;">Inventory Alert Report</p>
-          </div>
-          
-          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-            <p style="font-size: 16px; color: #374151;">
-              <strong>Alert Summary</strong><br>
-              Generated: ${new Date().toLocaleString()}<br>
-              Total Items Requiring Attention: <strong>${
-                problemItems.length
-              }</strong>
-            </p>
+      // Generate professional, informative email HTML
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+      const formattedTime = currentDate.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
-            ${
-              outOfStock.length > 0
-                ? `
-              <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                <h3 style="color: #dc2626; margin: 0 0 10px 0;">🚨 OUT OF STOCK (${
-                  outOfStock.length
-                } items)</h3>
-                <table style="width: 100%; border-collapse: collapse;">
+      // Pre-calculate values to avoid nested template literal issues
+      const alertBgColor = outOfStock.length > 0 ? "#fee2e2" : "#fef3c7";
+      const alertBorderColor = outOfStock.length > 0 ? "#dc2626" : "#f59e0b";
+      const alertEmoji = outOfStock.length > 0 ? "🚨" : "⚠️";
+      const alertTextColor = outOfStock.length > 0 ? "#991b1b" : "#92400e";
+      const alertTitle = outOfStock.length > 0 ? "CRITICAL ALERT" : "WARNING ALERT";
+      const alertMessage = outOfStock.length > 0 
+        ? "Some products are completely out of stock and need immediate attention!"
+        : "Some products are running low on stock. Please review and reorder soon.";
+      
+      const outOfStockWidth = lowStock.length > 0 ? "48%" : "100%";
+      const outOfStockPaddingRight = lowStock.length > 0 ? "2%" : "0";
+      const lowStockWidth = outOfStock.length > 0 ? "48%" : "100%";
+      const lowStockPaddingLeft = outOfStock.length > 0 ? "2%" : "0";
+      
+      const outOfStockLabel = outOfStock.length === 1 ? "Item" : "Items";
+      const lowStockLabel = lowStock.length === 1 ? "Item" : "Items";
+
+      const emailContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedCure Inventory Alert</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 650px; margin: 0 auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" width="100%" cellpadding="0" cellspacing="0" border="0">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">
+                🏥 MedCure Pharmacy
+              </h1>
+              <p style="margin: 15px 0 0 0; color: #f3e8ff; font-size: 18px; font-weight: 500;">
+                Inventory Status Alert
+              </p>
+            </td>
+          </tr>
+
+          <!-- Alert Banner -->
+          <tr>
+            <td style="padding: 0;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background: ${alertBgColor}; padding: 20px 30px; border-left: 5px solid ${alertBorderColor};">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-size: 48px; text-align: center; padding-right: 15px; vertical-align: middle; width: 60px;">
+                          ${alertEmoji}
+                        </td>
+                        <td style="vertical-align: middle;">
+                          <h2 style="margin: 0; color: ${alertTextColor}; font-size: 20px; font-weight: bold;">
+                            ${alertTitle}
+                          </h2>
+                          <p style="margin: 5px 0 0 0; color: ${alertTextColor}; font-size: 14px;">
+                            Immediate attention required for inventory items
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Summary Section -->
+          <tr>
+            <td style="padding: 30px;">
+              <h3 style="margin: 0 0 20px 0; color: #111827; font-size: 18px; font-weight: 600; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                📊 Alert Summary
+              </h3>
+              
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f9fafb; border-radius: 8px; padding: 15px;">
+                <tr>
+                  <td style="padding: 8px 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="color: #6b7280; font-size: 14px; padding: 5px 0;">📅 Date:</td>
+                        <td style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; padding: 5px 0;">${formattedDate}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #6b7280; font-size: 14px; padding: 5px 0;">⏰ Time:</td>
+                        <td style="color: #111827; font-size: 14px; font-weight: 600; text-align: right; padding: 5px 0;">${formattedTime}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #6b7280; font-size: 14px; padding: 5px 0;">📦 Total Products Affected:</td>
+                        <td style="color: #7c3aed; font-size: 18px; font-weight: bold; text-align: right; padding: 5px 0;">${
+                          problemItems.length
+                        }</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Statistics Cards -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px;">
+                <tr>
+                  ${
+                    outOfStock.length > 0
+                      ? `
+                  <td style="width: 48%; padding-right: ${
+                    lowStock.length > 0 ? "2%" : "0"
+                  };">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fef2f2; border: 2px solid #fecaca; border-radius: 8px; padding: 15px; text-align: center;">
+                      <tr>
+                        <td>
+                          <div style="font-size: 36px; font-weight: bold; color: #dc2626; margin-bottom: 5px;">${
+                            outOfStock.length
+                          }</div>
+                          <div style="font-size: 12px; color: #991b1b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">OUT OF STOCK</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  `
+                      : ""
+                  }
+                  ${
+                    lowStock.length > 0
+                      ? `
+                  <td style="width: ${
+                    outOfStock.length > 0 ? "48%" : "100%"
+                  }; padding-left: ${outOfStock.length > 0 ? "2%" : "0"};">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #fffbeb; border: 2px solid #fde68a; border-radius: 8px; padding: 15px; text-align: center;">
+                      <tr>
+                        <td>
+                          <div style="font-size: 36px; font-weight: bold; color: #d97706; margin-bottom: 5px;">${
+                            lowStock.length
+                          }</div>
+                          <div style="font-size: 12px; color: #92400e; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">LOW STOCK</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  `
+                      : ""
+                  }
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          ${
+            outOfStock.length > 0
+              ? `
+          <!-- Out of Stock Section -->
+          <tr>
+            <td style="padding: 0 30px 30px 30px;">
+              <div style="background: #fef2f2; border-radius: 8px; padding: 20px; border-left: 4px solid #dc2626;">
+                <h3 style="margin: 0 0 15px 0; color: #991b1b; font-size: 18px; font-weight: bold;">
+                  🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${
+                  outOfStock.length === 1 ? "Item" : "Items"
+                })
+                </h3>
+                <p style="margin: 0 0 15px 0; color: #7f1d1d; font-size: 14px;">
+                  These products have <strong>ZERO</strong> stock available and need immediate restocking:
+                </p>
+                
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: white; border-radius: 6px; overflow: hidden; border: 1px solid #fecaca;">
                   <thead>
                     <tr style="background: #fee2e2;">
-                      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #fecaca;">Product</th>
-                      <th style="padding: 10px; text-align: center; border-bottom: 2px solid #fecaca;">Stock</th>
-                      <th style="padding: 10px; text-align: center; border-bottom: 2px solid #fecaca;">Reorder Level</th>
+                      <th style="padding: 12px; text-align: left; color: #991b1b; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fecaca;">PRODUCT NAME</th>
+                      <th style="padding: 12px; text-align: center; color: #991b1b; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fecaca; width: 120px;">CURRENT STOCK</th>
+                      <th style="padding: 12px; text-align: center; color: #991b1b; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fecaca; width: 120px;">REORDER AT</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${outOfStock
                       .map(
-                        (p) => `
-                      <tr style="border-bottom: 1px solid #fecaca;">
-                        <td style="padding: 10px;">${
-                          p.brand_name || p.generic_name
-                        }</td>
-                        <td style="padding: 10px; text-align: center; color: #dc2626; font-weight: bold;">0</td>
-                        <td style="padding: 10px; text-align: center;">${
-                          p.reorder_level || 10
-                        }</td>
-                      </tr>
+                        (p, index) => `
+                    <tr style="border-bottom: ${
+                      index < outOfStock.length - 1
+                        ? "1px solid #fecaca"
+                        : "none"
+                    };">
+                      <td style="padding: 12px; color: #111827; font-size: 14px;">
+                        <strong>${
+                          p.brand_name || p.generic_name || "Unknown Product"
+                        }</strong>
+                        ${
+                          p.brand_name &&
+                          p.generic_name &&
+                          p.brand_name !== p.generic_name
+                            ? `<br><span style="color: #6b7280; font-size: 12px;">${p.generic_name}</span>`
+                            : ""
+                        }
+                      </td>
+                      <td style="padding: 12px; text-align: center;">
+                        <span style="display: inline-block; background: #dc2626; color: white; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">0</span>
+                      </td>
+                      <td style="padding: 12px; text-align: center; color: #6b7280; font-size: 14px; font-weight: 500;">${
+                        p.reorder_level || 10
+                      }</td>
+                    </tr>
                     `
                       )
                       .join("")}
                   </tbody>
                 </table>
               </div>
-            `
-                : ""
-            }
+            </td>
+          </tr>
+          `
+              : ""
+          }
 
-            ${
-              lowStock.length > 0
-                ? `
-              <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                <h3 style="color: #d97706; margin: 0 0 10px 0;">⚠️ LOW STOCK (${
-                  lowStock.length
-                } items)</h3>
-                <table style="width: 100%; border-collapse: collapse;">
+          ${
+            lowStock.length > 0
+              ? `
+          <!-- Low Stock Section -->
+          <tr>
+            <td style="padding: 0 30px 30px 30px;">
+              <div style="background: #fffbeb; border-radius: 8px; padding: 20px; border-left: 4px solid #f59e0b;">
+                <h3 style="margin: 0 0 15px 0; color: #92400e; font-size: 18px; font-weight: bold;">
+                  ⚠️ LOW STOCK - WARNING (${lowStock.length} ${
+                  lowStock.length === 1 ? "Item" : "Items"
+                })
+                </h3>
+                <p style="margin: 0 0 15px 0; color: #78350f; font-size: 14px;">
+                  These products are at or below their reorder level and should be restocked soon:
+                </p>
+                
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: white; border-radius: 6px; overflow: hidden; border: 1px solid #fde68a;">
                   <thead>
                     <tr style="background: #fef3c7;">
-                      <th style="padding: 10px; text-align: left; border-bottom: 2px solid #fde68a;">Product</th>
-                      <th style="padding: 10px; text-align: center; border-bottom: 2px solid #fde68a;">Current Stock</th>
-                      <th style="padding: 10px; text-align: center; border-bottom: 2px solid #fde68a;">Reorder Level</th>
+                      <th style="padding: 12px; text-align: left; color: #92400e; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fde68a;">PRODUCT NAME</th>
+                      <th style="padding: 12px; text-align: center; color: #92400e; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fde68a; width: 120px;">CURRENT STOCK</th>
+                      <th style="padding: 12px; text-align: center; color: #92400e; font-size: 13px; font-weight: 600; border-bottom: 2px solid #fde68a; width: 120px;">REORDER AT</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${lowStock
                       .map(
-                        (p) => `
-                      <tr style="border-bottom: 1px solid #fde68a;">
-                        <td style="padding: 10px;">${
-                          p.brand_name || p.generic_name
-                        }</td>
-                        <td style="padding: 10px; text-align: center; color: #d97706; font-weight: bold;">${
+                        (p, index) => `
+                    <tr style="border-bottom: ${
+                      index < lowStock.length - 1 ? "1px solid #fde68a" : "none"
+                    };">
+                      <td style="padding: 12px; color: #111827; font-size: 14px;">
+                        <strong>${
+                          p.brand_name || p.generic_name || "Unknown Product"
+                        }</strong>
+                        ${
+                          p.brand_name &&
+                          p.generic_name &&
+                          p.brand_name !== p.generic_name
+                            ? `<br><span style="color: #6b7280; font-size: 12px;">${p.generic_name}</span>`
+                            : ""
+                        }
+                      </td>
+                      <td style="padding: 12px; text-align: center;">
+                        <span style="display: inline-block; background: #f59e0b; color: white; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">${
                           p.stock_in_pieces
-                        }</td>
-                        <td style="padding: 10px; text-align: center;">${
-                          p.reorder_level || 10
-                        }</td>
-                      </tr>
+                        }</span>
+                      </td>
+                      <td style="padding: 12px; text-align: center; color: #6b7280; font-size: 14px; font-weight: 500;">${
+                        p.reorder_level || 10
+                      }</td>
+                    </tr>
                     `
                       )
                       .join("")}
                   </tbody>
                 </table>
               </div>
-            `
-                : ""
-            }
+            </td>
+          </tr>
+          `
+              : ""
+          }
 
-            <div style="background: #f3f4f6; padding: 15px; margin-top: 30px; border-radius: 5px;">
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                <strong>📋 Action Required:</strong><br>
-                Please review these items and place orders as needed to maintain optimal inventory levels.
+          <!-- Action Required Section -->
+          <tr>
+            <td style="padding: 0 30px 30px 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 8px; padding: 20px; border: 2px solid #3b82f6;">
+                <tr>
+                  <td style="padding-right: 15px; vertical-align: top; width: 40px;">
+                    <div style="font-size: 32px;">📋</div>
+                  </td>
+                  <td>
+                    <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px; font-weight: bold;">ACTION REQUIRED</h3>
+                    <p style="margin: 0; color: #1e3a8a; font-size: 14px; line-height: 1.6;">
+                      Please review these inventory items and take appropriate action:
+                    </p>
+                    <ul style="margin: 10px 0 0 0; padding-left: 20px; color: #1e3a8a; font-size: 14px; line-height: 1.8;">
+                      ${
+                        outOfStock.length > 0
+                          ? "<li><strong>OUT OF STOCK items</strong>: Place emergency orders immediately</li>"
+                          : ""
+                      }
+                      ${
+                        lowStock.length > 0
+                          ? "<li><strong>LOW STOCK items</strong>: Schedule restocking orders this week</li>"
+                          : ""
+                      }
+                      <li>Update your purchase orders and contact suppliers</li>
+                      <li>Check for any pending deliveries that may resolve these issues</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #f9fafb; padding: 25px 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb; text-align: center;">
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 13px; line-height: 1.6;">
+                <strong style="color: #111827;">MedCure Pharmacy Management System</strong><br>
+                Automated Inventory Monitoring & Alert Service
               </p>
-            </div>
-          </div>
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                © ${new Date().getFullYear()} MedCure. All rights reserved.<br>
+                This is an automated message. Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
 
-          <div style="background: #f9fafb; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
-            <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-              © ${new Date().getFullYear()} MedCure Pharmacy Management System<br>
-              This is an automated alert from your inventory monitoring system.
-            </p>
-          </div>
-        </div>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `;
+
+      // Generate professional plain text version for FormSubmit
+      const plainTextContent = `
+═══════════════════════════════════════════════════════════════════
+🏥 MEDCURE PHARMACY - INVENTORY STATUS ALERT
+═══════════════════════════════════════════════════════════════════
+
+${
+  outOfStock.length > 0 ? "🚨 CRITICAL ALERT" : "⚠️ WARNING ALERT"
+} - Immediate Attention Required
+
+───────────────────────────────────────────────────────────────────
+📊 ALERT SUMMARY
+───────────────────────────────────────────────────────────────────
+Generated: ${formattedDate} at ${formattedTime}
+Total Products Requiring Attention: ${problemItems.length}
+
+Statistics:
+  • OUT OF STOCK: ${outOfStock.length} ${
+        outOfStock.length === 1 ? "item" : "items"
+      }
+  • LOW STOCK:    ${lowStock.length} ${lowStock.length === 1 ? "item" : "items"}
+
+${
+  outOfStock.length > 0
+    ? `
+═══════════════════════════════════════════════════════════════════
+🚨 OUT OF STOCK - CRITICAL (${outOfStock.length} ${
+        outOfStock.length === 1 ? "Item" : "Items"
+      })
+═══════════════════════════════════════════════════════════════════
+These products have ZERO stock available and need IMMEDIATE restocking:
+
+${outOfStock
+  .map(
+    (p, index) =>
+      `${index + 1}. ${p.brand_name || p.generic_name || "Unknown Product"}
+   ${
+     p.brand_name && p.generic_name && p.brand_name !== p.generic_name
+       ? `   (Generic: ${p.generic_name})`
+       : ""
+   }
+   Current Stock: 0 units
+   Reorder Level: ${p.reorder_level || 10} units
+   ⚠️ STATUS: CRITICAL - ORDER IMMEDIATELY
+   ─────────────────────────────────────────────────────────────`
+  )
+  .join("\n\n")}
+`
+    : ""
+}
+
+${
+  lowStock.length > 0
+    ? `
+═══════════════════════════════════════════════════════════════════
+⚠️ LOW STOCK - WARNING (${lowStock.length} ${
+        lowStock.length === 1 ? "Item" : "Items"
+      })
+═══════════════════════════════════════════════════════════════════
+These products are at or below their reorder level:
+
+${lowStock
+  .map(
+    (p, index) =>
+      `${index + 1}. ${p.brand_name || p.generic_name || "Unknown Product"}
+   ${
+     p.brand_name && p.generic_name && p.brand_name !== p.generic_name
+       ? `   (Generic: ${p.generic_name})`
+       : ""
+   }
+   Current Stock: ${p.stock_in_pieces} units
+   Reorder Level: ${p.reorder_level || 10} units
+   ⚠️ STATUS: RESTOCK SOON
+   ─────────────────────────────────────────────────────────────`
+  )
+  .join("\n\n")}
+`
+    : ""
+}
+
+═══════════════════════════════════════════════════════════════════
+📋 ACTION REQUIRED
+═══════════════════════════════════════════════════════════════════
+Please take the following actions:
+
+${
+  outOfStock.length > 0
+    ? "1. 🚨 OUT OF STOCK ITEMS: Place emergency orders IMMEDIATELY\n"
+    : ""
+}${
+        lowStock.length > 0
+          ? `${
+              outOfStock.length > 0 ? "2" : "1"
+            }. ⚠️ LOW STOCK ITEMS: Schedule restocking orders this week\n`
+          : ""
+      }${
+        outOfStock.length > 0 || lowStock.length > 0
+          ? `${
+              outOfStock.length > 0 && lowStock.length > 0 ? "3" : "2"
+            }. 📝 Update your purchase orders and contact suppliers\n`
+          : ""
+      }${
+        outOfStock.length > 0 || lowStock.length > 0
+          ? `${
+              outOfStock.length > 0 && lowStock.length > 0 ? "4" : "3"
+            }. 📦 Check for any pending deliveries that may resolve these issues\n`
+          : ""
+      }
+───────────────────────────────────────────────────────────────────
+
+Need Help?
+• Log into MedCure Pharmacy Management System for full details
+• Contact your procurement team with this report
+• Review supplier contracts for expedited delivery options
+
+═══════════════════════════════════════════════════════════════════
+MedCure Pharmacy Management System
+Automated Inventory Monitoring & Alert Service
+© ${new Date().getFullYear()} MedCure. All rights reserved.
+
+This is an automated message. Please do not reply to this email.
+═══════════════════════════════════════════════════════════════════
       `;
 
       // Send email alert
@@ -251,7 +607,7 @@ function NotificationManagement({ user, showSuccess, showError }) {
         to: emailRecipient,
         subject: `🚨 MedCure Inventory Alert - ${outOfStock.length} Out of Stock, ${lowStock.length} Low Stock`,
         html: emailContent,
-        text: `MedCure Inventory Alert:\n\nOut of Stock: ${outOfStock.length} items\nLow Stock: ${lowStock.length} items\n\nPlease check your inventory management system for details.`,
+        text: plainTextContent,
       });
 
       setStockAlert({
