@@ -31,7 +31,7 @@ export function Header({ onToggleSidebar }) {
             </button>
           </div>
 
-          {/* center intentionally removed (search not needed) */}
+          {/* center search removed intentionally */}
 
           {/* Right side - Notifications and User menu */}
           <div className="flex items-center space-x-4">

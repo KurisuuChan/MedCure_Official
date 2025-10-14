@@ -323,7 +323,7 @@ export default function DashboardPage() {
                 icon={UserCheck}
                 title="User Management"
                 description="System administration"
-                href="/user-management"
+                href="/management"
                 color="gray"
               />
               <MemoizedCleanActionCard
