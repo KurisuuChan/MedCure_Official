@@ -89,4 +89,9 @@ export const authService = {
   hasPermission: (user, permission) => {
     return user?.permissions?.includes(permission) || false;
   },
+
+  // Validate credentials without signing in (for supervisor authentication)
+  validateCredentials: async (email, password) => {
+    return await AuthService.validateCredentials(email, password);
+  },
 };

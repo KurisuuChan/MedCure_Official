@@ -2,7 +2,9 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
 import { UnifiedTransactionService } from "../../../services/domains/sales/transactionService";
 import { useAuth } from "../../../hooks/useAuth";
+import { UserManagementService } from "../../../services/domains/auth/userManagementService";
 import SimpleReceipt from "../../ui/SimpleReceipt";
+import SupervisorAuthModal from "../auth/SupervisorAuthModal";
 
 // Enhanced scrollbar styles matching inventory page
 const scrollbarStyles = `
@@ -45,6 +47,10 @@ const EnhancedTransactionHistory = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptTransaction, setReceiptTransaction] = useState(null);
   const [notification, setNotification] = useState(null); // Toast notification state
+
+  // Supervisor authentication state
+  const [showSupervisorAuth, setShowSupervisorAuth] = useState(false);
+  const [pendingRefundTransaction, setPendingRefundTransaction] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,6 +214,66 @@ const EnhancedTransactionHistory = () => {
   const closeReceipt = () => {
     setShowReceipt(false);
     setReceiptTransaction(null);
+  };
+
+  const handleRefundTransaction = (transaction) => {
+    console.log("💳 Refund button clicked for transaction:", transaction);
+
+    // Validate transaction can be refunded
+    if (!transaction) {
+      showNotification("❌ No transaction data available", "error");
+      return;
+    }
+
+    if (transaction.status !== "completed") {
+      showNotification("❌ Only completed transactions can be refunded", "error");
+      return;
+    }
+
+    // Check if user has refund permission
+    const hasRefundPermission = UserManagementService.userHasPermission(
+      user?.role, 
+      UserManagementService.PERMISSIONS.REFUND_TRANSACTIONS
+    );
+
+    if (hasRefundPermission) {
+      // User has permission, proceed directly with refund
+      console.log("✅ User has refund permission, opening refund modal");
+      setEditingTransaction(transaction);
+    } else {
+      // User doesn't have permission, require supervisor authentication
+      console.log("🔒 User lacks refund permission, requesting supervisor auth");
+      setPendingRefundTransaction(transaction);
+      setShowSupervisorAuth(true);
+    }
+  };
+
+  const handleSupervisorAuthorized = (authData) => {
+    console.log("✅ Supervisor authorized refund:", authData);
+    
+    // Store supervisor authorization data for the refund
+    const transactionWithAuth = {
+      ...pendingRefundTransaction,
+      supervisorAuth: authData
+    };
+
+    showNotification(
+      `✅ Refund authorized by ${authData.supervisorName} (${authData.supervisorRole})`,
+      "success"
+    );
+
+    // Open the refund modal with the authorized transaction
+    setEditingTransaction(transactionWithAuth);
+    
+    // Clear pending state
+    setPendingRefundTransaction(null);
+    setShowSupervisorAuth(false);
+  };
+
+  const handleSupervisorAuthCancel = () => {
+    console.log("❌ Supervisor authentication cancelled");
+    setPendingRefundTransaction(null);
+    setShowSupervisorAuth(false);
   };
 
   const formatCurrency = (amount) => {
@@ -964,6 +1030,15 @@ const EnhancedTransactionHistory = () => {
           onClose={closeReceipt}
         />
 
+        {/* Supervisor Authentication Modal */}
+        <SupervisorAuthModal
+          isOpen={showSupervisorAuth}
+          onClose={handleSupervisorAuthCancel}
+          onAuthorized={handleSupervisorAuthorized}
+          requiredPermission={UserManagementService.PERMISSIONS.REFUND_TRANSACTIONS}
+          actionName="process refunds"
+        />
+
         {/* Toast Notification */}
         {notification && (
           <div className="fixed top-4 right-4 z-[60] max-w-md">
@@ -1241,6 +1316,12 @@ const RefundTransactionModal = ({
 
       const newTotal = calculateNewTotal();
 
+      // Check if this is a supervisor-authorized refund
+      const isRefund = transaction.supervisorAuth ? true : false;
+      const finalReason = isRefund ? 
+        `REFUND: ${editReason.trim()} (Authorized by ${transaction.supervisorAuth?.supervisorName} - ${transaction.supervisorAuth?.supervisorRole})` : 
+        editReason.trim();
+
       const editData = {
         sale_items: validatedItems,
         customer_name: customerName.trim() || null,
@@ -1249,9 +1330,22 @@ const RefundTransactionModal = ({
         discount_type: transaction.discount_type || "none",
         discount_percentage: transaction.discount_percentage || 0,
         discount_amount: transaction.discount_amount || 0,
-        edit_reason: editReason.trim(),
+        edit_reason: finalReason,
         edited_by: currentUser?.id || "admin-user",
         edited_at: new Date().toISOString(),
+        // Add supervisor authorization data if present
+        ...(isRefund && {
+          supervisor_auth: {
+            supervisor_id: transaction.supervisorAuth.supervisor?.id,
+            supervisor_name: transaction.supervisorAuth.supervisorName,
+            supervisor_email: transaction.supervisorAuth.supervisorEmail,
+            supervisor_role: transaction.supervisorAuth.supervisorRole,
+            authorized_at: transaction.supervisorAuth.authorizedAt,
+            authorized_by_employee: currentUser?.id || "admin-user"
+          },
+          is_refund: true,
+          refund_status: newTotal === 0 ? 'full_refund' : 'partial_refund'
+        })
       };
 
       console.log("🔄 Submitting edit data:", editData);

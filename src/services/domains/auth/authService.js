@@ -52,7 +52,50 @@ export class AuthService {
     }
   }
 
-  static async mockSignIn(email, password) {
+  static async validateCredentials(email, password) {
+    try {
+      logDebug(`Validating credentials for email: ${email}`);
+
+      // In development mode, use mock validation
+      if (!isProductionSupabase) {
+        return this.mockValidateCredentials(email, password);
+      }
+
+      // For production, we need to validate without actually signing in
+      // We can try to sign in and then immediately sign out
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        console.error("🚫 [AuthService] Credential validation failed:", error.message);
+        return { success: false, error: error.message };
+      }
+
+      if (!data.user) {
+        return { success: false, error: "Authentication failed - no user data returned" };
+      }
+
+      // Get user profile data from our custom users table
+      const userProfile = await UserService.getUserByEmail(email);
+      
+      if (!userProfile) {
+        return { success: false, error: "User profile not found in database" };
+      }
+
+      // Sign them back out since this was just validation
+      await supabase.auth.signOut();
+
+      logDebug("Successfully validated credentials for user", userProfile);
+      return { success: true, user: userProfile };
+    } catch (error) {
+      console.error("❌ [AuthService] Credential validation completely failed:", error.message);
+      return { success: false, error: error.message };
+    }
+  }
+
+  static async mockValidateCredentials(email, password) {
     // Mock authentication for development
     const mockUsers = [
       {
@@ -82,6 +125,24 @@ export class AuthService {
         role: "staff",
         is_active: true,
       },
+      {
+        id: "4",
+        email: "pharmacist@medcure.com",
+        password: "pharma123",
+        first_name: "Pharmacist",
+        last_name: "User",
+        role: "pharmacist",
+        is_active: true,
+      },
+      {
+        id: "5",
+        email: "employee@medcure.com",
+        password: "employee123",
+        first_name: "Employee",
+        last_name: "User",
+        role: "employee",
+        is_active: true,
+      },
     ];
 
     const user = mockUsers.find(
@@ -89,15 +150,25 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new Error("Invalid email or password");
+      return { success: false, error: "Invalid email or password" };
     }
 
     // Remove password from response
     const { password: _, ...userProfile } = user;
 
+    return { success: true, user: userProfile };
+  }
+
+  static async mockSignIn(email, password) {
+    const result = await this.mockValidateCredentials(email, password);
+    
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+
     return {
-      user: userProfile,
-      session: { access_token: "mock-token", user: userProfile },
+      user: result.user,
+      session: { access_token: "mock-token", user: result.user },
     };
   }
 
