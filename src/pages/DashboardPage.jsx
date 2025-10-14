@@ -31,6 +31,7 @@ import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import SalesChart from "../components/charts/SalesChart";
 import VerticalBarChart from "../components/charts/VerticalBarChart";
 import StandardizedProductDisplay from "../components/ui/StandardizedProductDisplay";
+import { useAuth } from "../hooks/useAuth";
 // Test imports removed - using real notification system in Settings
 import {
   Chart as ChartJS,
@@ -63,6 +64,7 @@ ChartJS.register(
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { role } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -347,74 +349,78 @@ export default function DashboardPage() {
 
         {/* Quick Actions and Inventory Analysis */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Quick Actions
-                </h3>
-                <p className="text-gray-500 text-sm">Essential tasks</p>
+          {/* Quick Actions - Hidden for employees */}
+          {role !== 'employee' && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Quick Actions
+                  </h3>
+                  <p className="text-gray-500 text-sm">Essential tasks</p>
+                </div>
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Stethoscope className="h-5 w-5 text-gray-600" />
+                </div>
               </div>
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Stethoscope className="h-5 w-5 text-gray-600" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <MemoizedCleanActionCard
-                icon={ShoppingCart}
-                title="Process Sale"
-                description="Quick POS transaction"
-                href="/pos"
-                color="blue"
-                badge="Popular"
-              />
-              <MemoizedCleanActionCard
-                icon={Pill}
-                title="Add Medication"
-                description="Add new products"
-                href="/inventory"
-                color="green"
-              />
-              <MemoizedCleanActionCard
-                icon={Package}
-                title="Batch Management"
-                description="Track product batches"
-                href="/batch-management"
-                color="purple"
-              />
-              <MemoizedCleanActionCard
-                icon={UserCheck}
-                title="User Management"
-                description="System administration"
-                href="/user-management"
-                color="gray"
-              />
-              <MemoizedCleanActionCard
-                icon={Users}
-                title="Customer Information"
-                description="View customer database"
-                href="/customers"
-                color="orange"
-              />
-              {/* Development-only email testing */}
-              {import.meta.env.DEV && (
+              <div className="space-y-3">
                 <MemoizedCleanActionCard
-                  icon={Activity}
-                  title="Test Email System"
-                  description="Resend integration testing"
-                  href="/debug/email"
-                  color="purple"
-                  badge="Debug"
+                  icon={ShoppingCart}
+                  title="Process Sale"
+                  description="Quick POS transaction"
+                  href="/pos"
+                  color="blue"
+                  badge="Popular"
                 />
-              )}
+                <MemoizedCleanActionCard
+                  icon={Pill}
+                  title="Add Medication"
+                  description="Add new products"
+                  href="/inventory"
+                  color="green"
+                />
+                <MemoizedCleanActionCard
+                  icon={Package}
+                  title="Batch Management"
+                  description="Track product batches"
+                  href="/batch-management"
+                  color="purple"
+                />
+                <MemoizedCleanActionCard
+                  icon={UserCheck}
+                  title="User Management"
+                  description="System administration"
+                  href="/user-management"
+                  color="gray"
+                />
+                <MemoizedCleanActionCard
+                  icon={Users}
+                  title="Customer Information"
+                  description="View customer database"
+                  href="/customers"
+                  color="orange"
+                />
+                {/* Development-only email testing */}
+                {import.meta.env.DEV && (
+                  <MemoizedCleanActionCard
+                    icon={Activity}
+                    title="Test Email System"
+                    description="Resend integration testing"
+                    href="/debug/email"
+                    color="purple"
+                    badge="Debug"
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Inventory Analysis */}
           <div
             onClick={() => navigate("/inventory")}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-full flex flex-col"
+            className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.01] h-full flex flex-col ${
+              role === 'employee' ? 'lg:col-span-2' : ''
+            }`}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === "Enter" && navigate("/inventory")}
