@@ -80,7 +80,7 @@ export default function CheckoutModal({
 
               {/* Payment Method */}
               <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-semibold text-gray-700 mb-3 text-center">
                   Payment Method
                 </label>
                 <div className="flex justify-center">
