@@ -19,7 +19,8 @@ export class CSVImportService {
   // Medicine-specific field mappings for both old and new formats
   static FIELD_MAPPINGS = {
     // Primary medicine fields (new format)
-    generic_name: ["generic_name", "Product Name", "name"],
+    product_name: ["product_name", "Product Name", "name", "product"],
+    generic_name: ["generic_name", "Generic Name", "generic"],
     brand_name: ["brand_name", "Brand", "brand"],
     category_name: ["category_name", "Category", "category"],
 
@@ -717,6 +718,9 @@ export class CSVImportService {
     }
 
     const transformed = {
+      // Display name for UI
+      name: cleanString(row.product_name) || cleanString(row.generic_name) || cleanString(row.brand_name),
+      
       // Primary fields - REQUIRED
       generic_name: cleanString(row.generic_name),
       brand_name: cleanString(row.brand_name) || cleanString(row.generic_name),

@@ -879,7 +879,13 @@ export function EnhancedImportModalV2({ isOpen, onClose, onImport, addToast }) {
                     <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                          Product
+                          Generic Name
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                          Brand
+                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                          Dosage Strength
                         </th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">
                           Category
@@ -900,15 +906,18 @@ export function EnhancedImportModalV2({ isOpen, onClose, onImport, addToast }) {
                           style={{ animationDelay: `${index * 0.03}s` }}
                         >
                           <td className="py-3 px-4">
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {item.name}
-                              </div>
-                              {item.description && (
-                                <div className="text-sm text-gray-600">
-                                  {item.description}
-                                </div>
-                              )}
+                            <div className="font-medium text-gray-900">
+                              {item.generic_name || '-'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-gray-700">
+                              {item.brand_name || '-'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-gray-700">
+                              {item.dosage_strength || '-'}
                             </div>
                           </td>
                           <td className="py-3 px-4">

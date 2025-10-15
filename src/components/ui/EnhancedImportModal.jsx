@@ -739,7 +739,13 @@ export function EnhancedImportModal({ isOpen, onClose, onImport, addToast }) {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="text-left py-3 px-4 font-medium text-gray-600">
-                          Product
+                          Generic Name
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-600">
+                          Brand
+                        </th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-600">
+                          Dosage Strength
                         </th>
                         <th className="text-left py-3 px-4 font-medium text-gray-600">
                           Category
@@ -756,13 +762,18 @@ export function EnhancedImportModal({ isOpen, onClose, onImport, addToast }) {
                       {previewData.slice(0, 10).map((item, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="py-3 px-4">
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {item.name}
-                              </div>
-                              <div className="text-sm text-gray-600">
-                                {item.description}
-                              </div>
+                            <div className="font-medium text-gray-900">
+                              {item.generic_name || '-'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-gray-700">
+                              {item.brand_name || '-'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-gray-700">
+                              {item.dosage_strength || '-'}
                             </div>
                           </td>
                           <td className="py-3 px-4 text-gray-600">

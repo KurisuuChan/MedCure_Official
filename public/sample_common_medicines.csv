@@ -1,0 +1,6 @@
+product_name,generic_name,brand,category,dosage_form,dosage_strength,unit,price,quantity,reorder_level,expiry_date,supplier,description,barcode,sku
+Decolgen Forte,Phenylpropanolamine + Chlorphenamine + Paracetamol,Decolgen,Cold & Flu,Tablet,650mg,Box of 10,60.00,150,30,2026-12-15,United Laboratories,Complete relief from cold and flu symptoms,4800999100011,DCG-COMB-10
+Kremil-S,Aluminum Hydroxide + Magnesium Hydroxide + Simethicone,Kremil-S,Gastrointestinal,Tablet,178mg,Box of 10,55.00,200,40,2026-11-30,United Laboratories,Fast relief from hyperacidity and gas,4800999200022,KRM-COMB-10
+Diatabs,Attapulgite,Diatabs,Gastrointestinal,Tablet,750mg,Box of 6,45.00,180,35,2026-10-25,Pascual Laboratories,Relief from diarrhea and LBM,4800999300033,DIA-ATT-6
+Solmux 500mg,Carbocisteine,Solmux,Respiratory,Capsule,500mg,Box of 10,70.00,120,25,2026-09-18,United Laboratories,Mucolytic for productive cough with phlegm,4800999400044,SOL-CARB-500
+Lagundi,Vitex Negundo,Ascof,Respiratory,Tablet,600mg,Box of 10,65.00,100,20,2026-08-22,Pascual Laboratories,Herbal cough remedy for relief of cough,4800999500055,ASC-VIT-600

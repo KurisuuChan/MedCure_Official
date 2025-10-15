@@ -1,0 +1,11 @@
+product_name,generic_name,brand,category,dosage_form,dosage_strength,unit,price,quantity,reorder_level,expiry_date,supplier,description,barcode,sku
+Biogesic 500mg,Paracetamol,Biogesic,Pain Relief,Tablet,500mg,Box of 10,45.00,100,20,2026-12-31,United Laboratories,Paracetamol tablet for fever and pain relief,4800888100023,BIO-PARA-500
+Tempra Forte 500mg,Paracetamol,Tempra,Pain Relief,Tablet,500mg,Box of 10,52.00,80,20,2026-08-15,Bristol-Myers Squibb,Paracetamol for fast relief of fever and pain,4800888200034,TMP-PARA-500
+Paracetamol Syrup 120mg/5ml,Paracetamol,Generic,Pain Relief,Syrup,120mg/5ml,60ml Bottle,65.00,50,15,2026-06-30,Generic Pharma,Paracetamol suspension for children,4800888300045,GEN-PARA-SYR
+Bioflu Tablet,Paracetamol + Phenylephrine + Chlorphenamine,Bioflu,Cold & Flu,Tablet,512mg,Box of 10,55.00,120,25,2026-10-20,United Laboratories,For relief of flu symptoms with fever and body pain,4800888400056,BFL-COMB-10
+Paracetamol 500mg Generic,Paracetamol,Generic,Pain Relief,Tablet,500mg,Box of 100,380.00,200,30,2027-03-15,Philippine Pharma,Generic paracetamol bulk pack,4800888500067,GEN-PARA-100
+Alaxan FR,Ibuprofen + Paracetamol,Alaxan,Pain Relief,Capsule,525mg,Box of 10,65.00,90,20,2026-11-25,United Laboratories,Fast relief for muscle and joint pain,4800888600078,ALX-COMB-10
+Medicol Advance 200mg,Ibuprofen,Medicol,Pain Relief,Tablet,200mg,Box of 10,48.00,110,25,2026-09-10,United Laboratories,Ibuprofen for pain and inflammation,4800888700089,MED-IBU-200
+Neozep Forte,Paracetamol + Phenylephrine + Chlorphenamine,Neozep,Cold & Flu,Tablet,512mg,Box of 10,58.00,95,20,2026-07-18,United Laboratories,Relief from cold and flu symptoms,4800888800090,NEO-COMB-10
+Amoxicillin 500mg,Amoxicillin,Generic,Antibiotic,Capsule,500mg,Box of 100,450.00,75,15,2026-05-30,Pharmawealth,Antibiotic for bacterial infections,4800888900101,AMX-500-100
+Cetirizine 10mg,Cetirizine,Generic,Antihistamine,Tablet,10mg,Box of 100,280.00,130,30,2027-01-20,Generic Pharma,Antihistamine for allergy relief,4800889000112,CET-10-100
