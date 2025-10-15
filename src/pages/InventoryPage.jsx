@@ -579,25 +579,10 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
     "25%",
   ];
 
+  // ✅ Drug Classification should ONLY be Prescription or OTC
   const drugClassificationOptions = [
     "Prescription (Rx)",
     "Over-the-Counter (OTC)",
-    "Controlled Substance",
-    "Generic",
-    "Brand",
-    "Antibiotic",
-    "Analgesic",
-    "Antacid",
-    "Vitamin",
-    "Supplement",
-    "Antiseptic",
-    "Anti-inflammatory",
-    "Antihypertensive",
-    "Antihistamine",
-    "Antidiabetic",
-    "Schedule I",
-    "Schedule II",
-    "Schedule III",
   ];
 
   // Smart batch number generation
