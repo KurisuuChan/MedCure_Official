@@ -83,20 +83,20 @@ export default function CheckoutModal({
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Payment Method
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="flex justify-center">
                   <button
                     onClick={() =>
                       setPaymentData((prev) => ({ ...prev, method: "cash" }))
                     }
-                    className={`p-4 border rounded-lg transition-colors ${
+                    className={`w-full max-w-xs p-4 border-2 rounded-xl transition-all ${
                       paymentData.method === "cash"
-                        ? "border-green-500 bg-green-50 text-green-700"
+                        ? "border-green-500 bg-green-50 text-green-700 shadow-sm"
                         : "border-gray-300 hover:border-gray-400 text-gray-700"
                     }`}
                   >
                     <div className="flex items-center justify-center space-x-2">
-                      <DollarSign className="h-5 w-5" />
-                      <span className="font-medium">Cash</span>
+                      <DollarSign className="h-6 w-6" />
+                      <span className="font-semibold text-lg">Cash</span>
                     </div>
                   </button>
                 </div>
