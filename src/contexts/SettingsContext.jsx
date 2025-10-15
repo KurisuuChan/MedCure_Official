@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useCallback,
 } from "react";
 import { supabase } from "../config/supabase";
 
@@ -128,72 +129,113 @@ export function SettingsProvider({ children }) {
     }
   };
 
-  const updateSettings = async (newSettings) => {
-    try {
-      const updatedSettings = { ...settings, ...newSettings };
+  const updateSettings = useCallback(
+    async (newSettings) => {
+      try {
+        const updatedSettings = { ...settings, ...newSettings };
 
-      console.log("🔄 Updating settings:", updatedSettings);
+        console.log("🔄 Updating settings:", {
+          before: settings,
+          changes: newSettings,
+          after: updatedSettings,
+        });
 
-      // Update state immediately
-      setSettings(updatedSettings);
-
-      // Save to localStorage immediately for quick access
-      localStorage.setItem("medcure-settings", JSON.stringify(updatedSettings));
-      console.log("💾 Saved to localStorage");
-
-      // Save to Supabase
-      const settingsMap = {
-        businessName: "business_name",
-        businessLogo: "business_logo",
-        currency: "currency",
-        taxRate: "tax_rate",
-        timezone: "timezone",
-        enableNotifications: "enable_notifications",
-        enableEmailAlerts: "enable_email_alerts",
-        lowStockCheckInterval: "low_stock_check_interval",
-        expiringCheckInterval: "expiring_check_interval",
-        emailAlertsEnabled: "email_alerts_enabled",
-      };
-
-      const updates = [];
-      for (const [key, value] of Object.entries(newSettings)) {
-        const settingKey = settingsMap[key];
-        if (settingKey) {
-          updates.push({
-            setting_key: settingKey,
-            setting_value: value,
-            setting_type: getSettingType(settingKey),
-          });
+        // Validate that businessName and businessLogo are not being unintentionally cleared
+        if (settings.businessName && !updatedSettings.businessName) {
+          console.warn("⚠️ Warning: businessName is being cleared!");
         }
-      }
+        if (
+          settings.businessLogo &&
+          !updatedSettings.businessLogo &&
+          newSettings.businessLogo !== null
+        ) {
+          console.warn(
+            "⚠️ Warning: businessLogo is being cleared unintentionally!"
+          );
+          // Preserve the existing logo if it's not explicitly being removed
+          updatedSettings.businessLogo = settings.businessLogo;
+        }
 
-      // Save each setting to Supabase
-      for (const update of updates) {
-        const { error } = await supabase.from("system_settings").upsert(
-          {
-            setting_key: update.setting_key,
-            setting_value: update.setting_value,
-            setting_type: update.setting_type,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "setting_key" }
+        // Update state immediately
+        setSettings(updatedSettings);
+
+        // Save to localStorage immediately for quick access
+        localStorage.setItem(
+          "medcure-settings",
+          JSON.stringify(updatedSettings)
         );
+        console.log("💾 Saved to localStorage:", updatedSettings);
 
-        if (error) {
-          console.error(`❌ Error updating ${update.setting_key}:`, error);
-          throw error;
-        } else {
-          console.log(`✅ Saved ${update.setting_key} to Supabase`);
+        // Save to Supabase
+        const settingsMap = {
+          businessName: "business_name",
+          businessLogo: "business_logo",
+          currency: "currency",
+          taxRate: "tax_rate",
+          timezone: "timezone",
+          enableNotifications: "enable_notifications",
+          enableEmailAlerts: "enable_email_alerts",
+          lowStockCheckInterval: "low_stock_check_interval",
+          expiringCheckInterval: "expiring_check_interval",
+          emailAlertsEnabled: "email_alerts_enabled",
+        };
+
+        const updates = [];
+        for (const [key, value] of Object.entries(newSettings)) {
+          const settingKey = settingsMap[key];
+          if (settingKey) {
+            updates.push({
+              setting_key: settingKey,
+              setting_value: value,
+              setting_type: getSettingType(settingKey),
+            });
+          }
         }
-      }
 
-      console.log("✅ All settings saved to Supabase successfully");
-      return true;
-    } catch (error) {
-      console.error("❌ Error updating settings:", error);
-      throw error;
-    }
-  };
+        // Save each setting to Supabase with better error handling
+        const savePromises = updates.map(async (update) => {
+          try {
+            const { error } = await supabase.from("system_settings").upsert(
+              {
+                setting_key: update.setting_key,
+                setting_value: update.setting_value,
+                setting_type: update.setting_type,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "setting_key" }
+            );
+
+            if (error) {
+              console.error(`❌ Error updating ${update.setting_key}:`, error);
+              throw error;
+            } else {
+              console.log(
+                `✅ Saved ${update.setting_key} to Supabase:`,
+                update.setting_value
+              );
+            }
+          } catch (err) {
+            console.error(`❌ Failed to save ${update.setting_key}:`, err);
+            throw err;
+          }
+        });
+
+        await Promise.all(savePromises);
+
+        console.log("✅ All settings saved to Supabase successfully");
+        return true;
+      } catch (error) {
+        console.error("❌ Error updating settings:", error);
+        // Even if Supabase fails, we've already updated localStorage and state
+        // so the user will see their changes
+        console.log(
+          "ℹ️ Settings saved to localStorage even though Supabase failed"
+        );
+        return false;
+      }
+    },
+    [settings]
+  );
 
   const getSettingType = (key) => {
     // Return the actual data type that matches the database constraint
@@ -224,7 +266,7 @@ export function SettingsProvider({ children }) {
 
   const contextValue = useMemo(
     () => ({ settings, updateSettings, resetSettings, isLoading }),
-    [settings, isLoading]
+    [settings, updateSettings, isLoading]
   );
 
   return (

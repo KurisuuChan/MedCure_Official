@@ -25,28 +25,28 @@ function GeneralSettings() {
 
   const [saved, setSaved] = useState(false);
   const [logoPreview, setLogoPreview] = useState(globalSettings.businessLogo);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Only sync with global settings on initial mount or when specifically needed
+  // Only sync with global settings on INITIAL mount, not on every change
   useEffect(() => {
-    setSettings({
-      businessName: globalSettings.businessName || "MedCure Pharmacy",
-      businessLogo: globalSettings.businessLogo || null,
-      currency: globalSettings.currency || "PHP",
-      taxRate: globalSettings.taxRate || "12",
-      timezone: globalSettings.timezone || "Asia/Manila",
-      enableNotifications: globalSettings.enableNotifications ?? true,
-      enableEmailAlerts: globalSettings.enableEmailAlerts ?? true,
-    });
-    setLogoPreview(globalSettings.businessLogo);
-  }, [
-    globalSettings.businessName,
-    globalSettings.businessLogo,
-    globalSettings.currency,
-    globalSettings.taxRate,
-    globalSettings.timezone,
-    globalSettings.enableNotifications,
-    globalSettings.enableEmailAlerts,
-  ]);
+    if (!hasInitialized) {
+      console.log(
+        "🔄 Initializing settings from global context:",
+        globalSettings
+      );
+      setSettings({
+        businessName: globalSettings.businessName || "MedCure Pharmacy",
+        businessLogo: globalSettings.businessLogo || null,
+        currency: globalSettings.currency || "PHP",
+        taxRate: globalSettings.taxRate || "12",
+        timezone: globalSettings.timezone || "Asia/Manila",
+        enableNotifications: globalSettings.enableNotifications ?? true,
+        enableEmailAlerts: globalSettings.enableEmailAlerts ?? true,
+      });
+      setLogoPreview(globalSettings.businessLogo);
+      setHasInitialized(true);
+    }
+  }, [globalSettings, hasInitialized]);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
