@@ -53,7 +53,9 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold text-white">MedCure Pro</h1>
-              <p className="text-blue-100 text-sm">Professional Pharmacy Management</p>
+              <p className="text-blue-100 text-sm">
+                Professional Pharmacy Management
+              </p>
             </div>
           </div>
 
@@ -164,24 +166,24 @@ export default function LoginPage() {
                 to="/"
                 className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors duration-300 group"
               >
-                <ArrowLeft 
-                  size={16} 
-                  className="group-hover:-translate-x-0.5 transition-transform duration-300" 
+                <ArrowLeft
+                  size={16}
+                  className="group-hover:-translate-x-0.5 transition-transform duration-300"
                 />
                 <span>Back to Homepage</span>
               </Link>
             </div>
-            
+
             {/* Support Link */}
             <div className="text-center">
               <p className="text-sm text-gray-600">
                 Need help?{" "}
-                <a
-                  href="#"
-                  className="text-blue-600 hover:text-blue-700 font-medium"
+                <Link
+                  to="/contact-support"
+                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   Contact Support
-                </a>
+                </Link>
               </p>
             </div>
           </div>

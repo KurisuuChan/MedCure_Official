@@ -6,30 +6,35 @@ export default function HeroLanding() {
   const features = [
     {
       icon: <Package className="h-4 w-4" />,
-      title: "Inventory-first",
-      description: "Accurate stock tracking with batch-level control.",
+      title: "Real-time Inventory",
+      description:
+        "Live stock tracking with automatic deduction and batch management.",
     },
     {
       icon: <Layers className="h-4 w-4" />,
-      title: "Flexible packaging",
-      description: "Support bottles, sachets, boxes and custom units.",
+      title: "Smart Notifications",
+      description:
+        "Intelligent alerts for low stock, expiring products, and critical events.",
     },
     {
       icon: <Box className="h-4 w-4" />,
-      title: "Sales-ready",
-      description: "Smooth POS integration and reliable analytics.",
+      title: "Professional POS",
+      description:
+        "Complete transaction processing with discounts, receipts, and analytics.",
     },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50">
       <HeroSection
-        title={<span>MedCure Pro — Pharmacy inventory made modern</span>}
+        title={
+          <span>MedCure Pro — Professional Pharmacy Management System</span>
+        }
         subtitle={
           <>
-            A focused, professional inventory and POS system tailored for
-            pharmacies. Manage batches, packaging, and reports with clarity —
-            without the clutter.
+            Enterprise-grade POS and inventory management system specifically
+            designed for pharmaceutical operations. Real-time tracking, batch
+            management, intelligent notifications, and comprehensive reporting.
           </>
         }
         features={features}
@@ -47,21 +52,24 @@ export default function HeroLanding() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h4 className="font-semibold mb-2">Batch-aware inventory</h4>
+            <h4 className="font-semibold mb-2">Batch & Expiry Tracking</h4>
             <p className="text-sm text-gray-600">
-              Track expiry and batches per purchase. Never sell expired stock.
+              Complete batch management with lot numbers, expiry dates, and FIFO
+              support. Never sell expired stock with automated alerts.
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h4 className="font-semibold mb-2">Flexible units</h4>
+            <h4 className="font-semibold mb-2">Smart CSV Import</h4>
             <p className="text-sm text-gray-600">
-              Configure bottles, sachets, sheets or custom units per product.
+              Intelligent bulk import with auto-creation of categories and
+              dosage forms. Medicine-specific validation ensures data accuracy.
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow-sm">
-            <h4 className="font-semibold mb-2">Built for pharmacies</h4>
+            <h4 className="font-semibold mb-2">Built for Pharmacies</h4>
             <p className="text-sm text-gray-600">
-              Domain-specific UX patterns for speed and accuracy at the counter.
+              PWD/Senior discounts, transaction history, customer management,
+              and professional receipt generation built-in.
             </p>
           </div>
         </div>

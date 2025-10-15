@@ -32,6 +32,7 @@ const SystemSettingsPage = React.lazy(() =>
 );
 const HeroLanding = React.lazy(() => import("./pages/HeroLanding"));
 const LearnMore = React.lazy(() => import("./pages/LearnMore"));
+const ContactSupport = React.lazy(() => import("./pages/ContactSupport"));
 const UnauthorizedPage = React.lazy(() => import("./pages/UnauthorizedPage"));
 const UserManagementPage = React.lazy(() =>
   import("./pages/UserManagementPage")
@@ -318,6 +319,15 @@ function AppContent() {
         element={
           <PageErrorBoundary title="Learn More">
             <LearnMore />
+          </PageErrorBoundary>
+        }
+      />
+
+      <Route
+        path="/contact-support"
+        element={
+          <PageErrorBoundary title="Contact Support">
+            <ContactSupport />
           </PageErrorBoundary>
         }
       />
