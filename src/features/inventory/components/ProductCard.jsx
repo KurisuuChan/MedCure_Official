@@ -92,8 +92,24 @@ export default function ProductCard({
     product.drug_classification
   );
 
+  // Get card background color based on stock status
+  const getCardBackgroundColor = () => {
+    const stock = product.stock_in_pieces || 0;
+    const reorderLevel = product.reorder_level || 10;
+
+    if (stock === 0) {
+      return "bg-red-50 border-red-300"; // Out of stock - darker red
+    } else if (stock <= reorderLevel * 0.5) {
+      return "bg-red-50/50 border-red-200"; // Critical stock - medium red
+    } else if (stock <= reorderLevel) {
+      return "bg-yellow-50 border-yellow-300"; // Low stock - darker yellow
+    } else {
+      return "bg-white border-gray-200"; // Good stock - white
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden">
+    <div className={`rounded-lg border shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden ${getCardBackgroundColor()}`}>
       {/* Header with Status Badge */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-start justify-between gap-3 mb-3">

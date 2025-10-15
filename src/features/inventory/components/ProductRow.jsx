@@ -22,16 +22,20 @@ function ProductRow({ product, onView, onEdit, onDelete, style }) {
 
   const getStatusColor = (status) => {
     switch (status) {
+      case "out_of_stock":
       case "critical_stock":
       case "expired":
-        return "text-red-600 bg-red-50";
+        return "text-red-700 bg-red-100 border border-red-300";
       case "low_stock":
       case "expiring_soon":
-        return "text-yellow-600 bg-yellow-50";
+        return "text-yellow-700 bg-yellow-100 border border-yellow-300";
       case "expiring_warning":
-        return "text-orange-600 bg-orange-50";
+        return "text-orange-700 bg-orange-100 border border-orange-300";
+      case "in_stock":
+      case "good":
+        return "text-green-700 bg-green-100 border border-green-300";
       default:
-        return "text-green-600 bg-green-50";
+        return "text-gray-700 bg-gray-100 border border-gray-300";
     }
   };
 
@@ -143,24 +147,6 @@ function ProductRow({ product, onView, onEdit, onDelete, style }) {
           >
             {product.stock_in_pieces} pcs
           </span>
-          {(stockBreakdown.boxes > 0 ||
-            stockBreakdown.sheets > 0 ||
-            stockBreakdown.pieces > 0) && (
-            <div className="text-xs text-gray-500 mt-1 leading-tight">
-              {stockBreakdown.boxes > 0 &&
-                `${stockBreakdown.boxes} box${
-                  stockBreakdown.boxes > 1 ? "es" : ""
-                } `}
-              {stockBreakdown.sheets > 0 &&
-                `${stockBreakdown.sheets} sheet${
-                  stockBreakdown.sheets > 1 ? "s" : ""
-                } `}
-              {stockBreakdown.pieces > 0 &&
-                `${stockBreakdown.pieces} pc${
-                  stockBreakdown.pieces > 1 ? "s" : ""
-                }`}
-            </div>
-          )}
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
