@@ -50,6 +50,7 @@ import { UserManagementService } from "../../../services/domains/auth/userManage
 const ACTIVITY_TYPES = [
   // Sales & Transactions
   "SALE_CREATED",
+  "SALE_UPDATED",
   "SALE_VOIDED",
   "SALE_REFUNDED",
   "PAYMENT_RECEIVED",
@@ -129,9 +130,11 @@ const SEVERITY_LEVELS = {
 
   // Medium severity - Important actions
   SALE_CREATED: "medium",
+  SALE_UPDATED: "medium",
   PRODUCT_CREATED: "medium",
   PRODUCT_UPDATED: "medium",
   PRODUCT_ARCHIVED: "medium",
+  PRODUCT_RESTORED: "medium",
   STOCK_ADJUSTED: "medium",
   USER_CREATED: "medium",
   LOGIN_ATTEMPT: "medium",
@@ -503,6 +506,7 @@ const ActivityLogDashboard = () => {
     const icons = {
       // Sales & Transactions
       SALE_CREATED: <ShoppingCart className="h-4 w-4 text-green-600" />,
+      SALE_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
       SALE_VOIDED: <XCircle className="h-4 w-4 text-red-600" />,
       SALE_REFUNDED: <RotateCcw className="h-4 w-4 text-orange-600" />,
       PAYMENT_RECEIVED: <DollarSign className="h-4 w-4 text-green-600" />,
@@ -573,75 +577,76 @@ const ActivityLogDashboard = () => {
   };
 
   const getActivityColor = (type) => {
-    const colors = {
-      // Sales & Transactions
-      SALE_CREATED: "bg-green-50 border-green-200",
-      SALE_VOIDED: "bg-red-50 border-red-200",
-      SALE_REFUNDED: "bg-orange-50 border-orange-200",
-      PAYMENT_RECEIVED: "bg-green-50 border-green-200",
+  const colors = {
+    // Sales & Transactions
+    SALE_CREATED: "bg-green-50 border-green-200",
+    SALE_UPDATED: "bg-blue-50 border-blue-200",
+    SALE_VOIDED: "bg-red-50 border-red-200",
+    SALE_REFUNDED: "bg-orange-50 border-orange-200",
+    PAYMENT_RECEIVED: "bg-green-50 border-green-200",
 
-      // Inventory Management
-      PRODUCT_CREATED: "bg-green-50 border-green-200",
-      PRODUCT_UPDATED: "bg-blue-50 border-blue-200",
-      PRODUCT_DELETED: "bg-red-50 border-red-200",
-      PRODUCT_ARCHIVED: "bg-gray-50 border-gray-200",
-      PRODUCT_RESTORED: "bg-green-50 border-green-200",
-      STOCK_ADJUSTED: "bg-yellow-50 border-yellow-200",
-      STOCK_ADDED: "bg-green-50 border-green-200",
-      STOCK_REMOVED: "bg-red-50 border-red-200",
+    // Inventory Management
+    PRODUCT_CREATED: "bg-green-50 border-green-200",
+    PRODUCT_UPDATED: "bg-blue-50 border-blue-200",
+    PRODUCT_DELETED: "bg-red-50 border-red-200",
+    PRODUCT_ARCHIVED: "bg-gray-50 border-gray-200",
+    PRODUCT_RESTORED: "bg-green-50 border-green-200",
+    STOCK_ADJUSTED: "bg-yellow-50 border-yellow-200",
+    STOCK_ADDED: "bg-green-50 border-green-200",
+    STOCK_REMOVED: "bg-red-50 border-red-200",
 
-      // Batch Management
-      BATCH_CREATED: "bg-green-50 border-green-200",
-      BATCH_UPDATED: "bg-blue-50 border-blue-200",
-      BATCH_DELETED: "bg-red-50 border-red-200",
+    // Batch Management
+    BATCH_CREATED: "bg-green-50 border-green-200",
+    BATCH_UPDATED: "bg-blue-50 border-blue-200",
+    BATCH_DELETED: "bg-red-50 border-red-200",
 
-      // Category Management
-      CATEGORY_CREATED: "bg-green-50 border-green-200",
-      CATEGORY_UPDATED: "bg-blue-50 border-blue-200",
-      CATEGORY_DELETED: "bg-red-50 border-red-200",
+    // Category Management
+    CATEGORY_CREATED: "bg-green-50 border-green-200",
+    CATEGORY_UPDATED: "bg-blue-50 border-blue-200",
+    CATEGORY_DELETED: "bg-red-50 border-red-200",
 
-      // Customer Management
-      CUSTOMER_CREATED: "bg-green-50 border-green-200",
-      CUSTOMER_UPDATED: "bg-blue-50 border-blue-200",
-      CUSTOMER_DELETED: "bg-red-50 border-red-200",
+    // Customer Management
+    CUSTOMER_CREATED: "bg-green-50 border-green-200",
+    CUSTOMER_UPDATED: "bg-blue-50 border-blue-200",
+    CUSTOMER_DELETED: "bg-red-50 border-red-200",
 
-      // User Management
-      USER_CREATED: "bg-green-50 border-green-200",
-      USER_UPDATED: "bg-blue-50 border-blue-200",
-      USER_DEACTIVATED: "bg-red-50 border-red-200",
-      USER_ACTIVATED: "bg-green-50 border-green-200",
-      PERMISSION_CHANGED: "bg-purple-50 border-purple-200",
-      ROLE_CHANGED: "bg-purple-50 border-purple-200",
+    // User Management
+    USER_CREATED: "bg-green-50 border-green-200",
+    USER_UPDATED: "bg-blue-50 border-blue-200",
+    USER_DEACTIVATED: "bg-red-50 border-red-200",
+    USER_ACTIVATED: "bg-green-50 border-green-200",
+    PERMISSION_CHANGED: "bg-purple-50 border-purple-200",
+    ROLE_CHANGED: "bg-purple-50 border-purple-200",
 
-      // Authentication
-      LOGIN_SUCCESS: "bg-green-50 border-green-200",
-      LOGIN_FAILED: "bg-red-50 border-red-200",
-      LOGOUT: "bg-gray-50 border-gray-200",
-      PASSWORD_CHANGED: "bg-blue-50 border-blue-200",
-      PASSWORD_RESET: "bg-yellow-50 border-yellow-200",
-      PASSWORD_RESET_REQUESTED: "bg-yellow-50 border-yellow-200",
+    // Authentication
+    LOGIN_SUCCESS: "bg-green-50 border-green-200",
+    LOGIN_FAILED: "bg-red-50 border-red-200",
+    LOGOUT: "bg-gray-50 border-gray-200",
+    PASSWORD_CHANGED: "bg-blue-50 border-blue-200",
+    PASSWORD_RESET: "bg-yellow-50 border-yellow-200",
+    PASSWORD_RESET_REQUESTED: "bg-yellow-50 border-yellow-200",
 
-      // Reports & Analytics
-      REPORT_GENERATED: "bg-blue-50 border-blue-200",
-      REPORT_EXPORTED: "bg-green-50 border-green-200",
+    // Reports & Analytics
+    REPORT_GENERATED: "bg-blue-50 border-blue-200",
+    REPORT_EXPORTED: "bg-green-50 border-green-200",
 
-      // System Configuration
-      SETTINGS_CHANGED: "bg-purple-50 border-purple-200",
-      NOTIFICATION_SENT: "bg-yellow-50 border-yellow-200",
+    // System Configuration
+    SETTINGS_CHANGED: "bg-purple-50 border-purple-200",
+    NOTIFICATION_SENT: "bg-yellow-50 border-yellow-200",
 
-      // CSV Import
-      CSV_IMPORT_STARTED: "bg-blue-50 border-blue-200",
-      CSV_IMPORT_COMPLETED: "bg-green-50 border-green-200",
-      CSV_IMPORT_FAILED: "bg-red-50 border-red-200",
+    // CSV Import
+    CSV_IMPORT_STARTED: "bg-blue-50 border-blue-200",
+    CSV_IMPORT_COMPLETED: "bg-green-50 border-green-200",
+    CSV_IMPORT_FAILED: "bg-red-50 border-red-200",
 
-      // Legacy types
-      SESSION_STARTED: "bg-green-50 border-green-200",
-      SESSION_ENDED: "bg-gray-50 border-gray-200",
-      BULK_USER_UPDATE: "bg-blue-50 border-blue-200",
-      LOGIN_ATTEMPT: "bg-green-50 border-green-200",
-    };
-    return colors[type] || "bg-gray-50 border-gray-200";
+    // Legacy types
+    SESSION_STARTED: "bg-green-50 border-green-200",
+    SESSION_ENDED: "bg-gray-50 border-gray-200",
+    BULK_USER_UPDATE: "bg-blue-50 border-blue-200",
+    LOGIN_ATTEMPT: "bg-green-50 border-green-200",
   };
+  return colors[type] || "bg-gray-50 border-gray-200";
+};
 
   const getSeverityBadge = (type) => {
     const severity = SEVERITY_LEVELS[type] || "low";

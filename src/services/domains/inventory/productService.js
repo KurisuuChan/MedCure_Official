@@ -6,6 +6,7 @@ import { supabase } from "../../../config/supabase";
 import { logDebug, handleError } from "../../core/serviceUtils";
 import { UnifiedCategoryService } from "./unifiedCategoryService.js";
 import { EnhancedProductSearchService } from "./enhancedProductSearchService.js";
+import { AuditLogService } from "../audit/auditLogService";
 
 export class ProductService {
   // Enhanced search methods
@@ -307,6 +308,22 @@ export class ProductService {
         "Successfully updated product with new medicine schema",
         data[0]
       );
+      
+      // Log the product update to audit log
+      try {
+        const currentUser = await supabase.auth.getUser();
+        const productName = data[0].generic_name || data[0].brand_name || 'Unknown Product';
+        const changedFields = Object.keys(updates).filter(k => k !== 'updated_at');
+        await AuditLogService.logProductUpdated(
+          id,
+          productName,
+          updates,
+          currentUser?.data?.user?.id
+        );
+      } catch (auditError) {
+        console.error("Failed to log product update to audit:", auditError);
+      }
+      
       return data[0];
     } catch (error) {
       console.error("❌ ProductService.updateProduct() failed:", error);
@@ -415,6 +432,20 @@ export class ProductService {
         "✅ Successfully added product with new medicine schema",
         data[0]
       );
+      
+      // Log the product creation to audit log
+      try {
+        const currentUser = await supabase.auth.getUser();
+        const productName = data[0].generic_name || data[0].brand_name || 'Unknown Product';
+        await AuditLogService.logProductCreated(
+          data[0].id,
+          productName,
+          currentUser?.data?.user?.id
+        );
+      } catch (auditError) {
+        console.error("Failed to log product creation to audit:", auditError);
+      }
+      
       return data[0];
     } catch (error) {
       console.error("❌ ProductService.addProduct() failed:", error);
@@ -434,6 +465,26 @@ export class ProductService {
       if (error) throw error;
 
       logDebug("Successfully processed product deletion", data);
+      
+      // Log the product deletion to audit log
+      try {
+        const currentUser = await supabase.auth.getUser();
+        // Fetch product name before deletion
+        const { data: product } = await supabase
+          .from('products')
+          .select('generic_name, brand_name')
+          .eq('id', id)
+          .single();
+        const productName = product?.generic_name || product?.brand_name || 'Unknown Product';
+        await AuditLogService.logProductDeleted(
+          id,
+          productName,
+          currentUser?.data?.user?.id
+        );
+      } catch (auditError) {
+        console.error("Failed to log product deletion to audit:", auditError);
+      }
+      
       return data;
     } catch (error) {
       handleError(error, "Delete product");
@@ -527,6 +578,19 @@ export class ProductService {
 
       if (error) throw error;
       logDebug("Product archived successfully", data);
+      
+      // Log the product archive to audit log
+      try {
+        const productName = data.generic_name || data.brand_name || 'Unknown Product';
+        await AuditLogService.logProductArchived(
+          productId,
+          productName,
+          userId
+        );
+      } catch (auditError) {
+        console.error("Failed to log product archive to audit:", auditError);
+      }
+      
       return data;
     } catch (error) {
       handleError(error, "Archive product");
@@ -551,6 +615,25 @@ export class ProductService {
 
       if (error) throw error;
       logDebug("Product unarchived successfully", data);
+      
+      // Log the product restore to audit log
+      try {
+        const currentUser = await supabase.auth.getUser();
+        const productName = data.generic_name || data.brand_name || 'Unknown Product';
+        await AuditLogService.log(
+          AuditLogService.ACTIVITY_TYPES.PRODUCT_RESTORED,
+          `Restored product: ${productName}`,
+          {
+            userId: currentUser?.data?.user?.id,
+            entityType: 'product',
+            entityId: productId,
+            metadata: { product_name: productName },
+          }
+        );
+      } catch (auditError) {
+        console.error("Failed to log product restore to audit:", auditError);
+      }
+      
       return data;
     } catch (error) {
       handleError(error, "Unarchive product");

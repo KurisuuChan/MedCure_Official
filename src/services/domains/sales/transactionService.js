@@ -7,6 +7,7 @@
 
 import { supabase } from "../../../config/supabase";
 import { CustomerService } from "../../CustomerService";
+import { AuditLogService } from "../audit/auditLogService";
 
 class UnifiedTransactionService {
   constructor() {
@@ -520,6 +521,19 @@ class UnifiedTransactionService {
       }
 
       console.log("✅ Transaction undone successfully:", response);
+      
+      // Log the void action to audit log
+      try {
+        await AuditLogService.logSaleVoided(
+          transactionId,
+          reason,
+          userId
+        );
+        console.log("✅ [AuditLog] Sale void logged successfully");
+      } catch (auditError) {
+        console.error("❌ Failed to log sale void to audit:", auditError);
+      }
+      
       return response;
     } catch (error) {
       console.error("❌ Undo transaction failed:", error);
@@ -1172,6 +1186,31 @@ class UnifiedTransactionService {
       const finalTransaction = await this.getTransactionById(transactionId);
 
       console.log("✅ Transaction edit completed successfully");
+      
+      // Log the transaction edit to audit log
+      try {
+        await AuditLogService.log(
+          AuditLogService.ACTIVITY_TYPES.SALE_UPDATED,
+          `Edited sale #${transactionId} - Reason: ${reason || 'No reason provided'}`,
+          {
+            userId: userId,
+            entityType: 'sale',
+            entityId: transactionId,
+            changes: {
+              total_before: transaction.total_amount,
+              total_after: finalTotal,
+            },
+            metadata: {
+              edit_reason: reason,
+              items_count: editData.sale_items?.length || 0,
+              stock_movements: stockMovements.length,
+            },
+          }
+        );
+        console.log("✅ [AuditLog] Sale edit logged successfully");
+      } catch (auditError) {
+        console.error("❌ Failed to log sale edit to audit:", auditError);
+      }
 
       // Workaround: If database total wasn't updated, override it in the response
       let correctedTransaction = finalTransaction;
@@ -1279,6 +1318,23 @@ class UnifiedTransactionService {
         "✅ Payment completed successfully - transaction created as completed:",
         result
       );
+
+      // Log the sale creation to audit log
+      try {
+        await AuditLogService.logSaleCreated(
+          result.data?.sale_id || result.data?.id || result.transaction_id,
+          {
+            total: saleData.total,
+            items: saleData.items,
+            customer_id: saleData.customer?.id,
+            payment_method: saleData.paymentMethod,
+          },
+          saleData.cashierId
+        );
+        console.log("✅ [AuditLog] Sale creation logged successfully");
+      } catch (auditError) {
+        console.error("❌ Failed to log sale creation to audit:", auditError);
+      }
 
       return {
         success: true,
