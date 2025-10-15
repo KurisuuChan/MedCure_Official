@@ -470,6 +470,12 @@ export const ReportsService = {
           generic_name,
           brand_name,
           category,
+          manufacturer,
+          dosage_form,
+          dosage_strength,
+          drug_classification,
+          supplier,
+          batch_number,
           stock_in_pieces,
           reorder_level,
           price_per_piece,
@@ -477,7 +483,8 @@ export const ReportsService = {
           expiry_date,
           is_active,
           is_archived,
-          created_at
+          created_at,
+          updated_at
         `
         )
         .eq("is_active", true)
@@ -534,6 +541,28 @@ export const ReportsService = {
           (p) => p.stock_in_pieces <= (p.reorder_level || 10)
         ),
       };
+
+      // Debug logging to check data completeness
+      console.log("📊 [ReportsService] Sample product data:");
+      if (productsData.length > 0) {
+        console.log("First product:", {
+          name: productsData[0].generic_name,
+          brand: productsData[0].brand_name,
+          manufacturer: productsData[0].manufacturer,
+          dosage: productsData[0].dosage_strength,
+          supplier: productsData[0].supplier,
+          batch: productsData[0].batch_number,
+        });
+      }
+      
+      console.log("📊 [ReportsService] Low stock alerts count:", report.lowStockAlerts?.length || 0);
+      if (report.lowStockAlerts?.length > 0) {
+        console.log("Sample low stock item:", {
+          name: report.lowStockAlerts[0].generic_name,
+          manufacturer: report.lowStockAlerts[0].manufacturer,
+          dosage: report.lowStockAlerts[0].dosage_strength,
+        });
+      }
 
       console.log(
         "✅ [ReportsService] Inventory report generated successfully"
@@ -929,6 +958,8 @@ function getExpiryAnalysis(products) {
     expiring30: 0,
     expiring90: 0,
     valid: 0,
+    expiringProducts: [], // Add array to track specific expiring products
+    expiredProducts: [],  // Add array to track expired products
   };
 
   products.forEach((product) => {
@@ -944,8 +975,10 @@ function getExpiryAnalysis(products) {
 
     if (daysUntilExpiry < 0) {
       analysis.expired++;
+      analysis.expiredProducts.push(product);
     } else if (daysUntilExpiry <= 30) {
       analysis.expiring30++;
+      analysis.expiringProducts.push(product);
     } else if (daysUntilExpiry <= 90) {
       analysis.expiring90++;
     } else {
