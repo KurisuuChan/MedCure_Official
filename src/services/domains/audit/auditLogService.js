@@ -20,6 +20,7 @@ export class AuditLogService {
   static ACTIVITY_TYPES = {
     // Sales & Transactions
     SALE_CREATED: "SALE_CREATED",
+    SALE_UPDATED: "SALE_UPDATED",
     SALE_VOIDED: "SALE_VOIDED",
     SALE_REFUNDED: "SALE_REFUNDED",
     PAYMENT_RECEIVED: "PAYMENT_RECEIVED",
@@ -121,27 +122,27 @@ export class AuditLogService {
       const ipAddress = await this.getClientIP();
       const userAgent = navigator.userAgent;
 
-      // Prepare activity log entry
+      // Prepare activity log entry - match exact table schema
+      // Table has: user_id, action_type, metadata (JSONB), created_at (auto)
       const activityLog = {
         user_id: userId,
-        activity_type: activityType,
-        description: description,
-        ip_address: ipAddress,
-        user_agent: userAgent,
+        action_type: activityType,
         metadata: {
-          ...options.metadata,
+          ip_address: ipAddress,
+          user_agent: userAgent,
           entity_type: options.entityType,
           entity_id: options.entityId,
           changes: options.changes,
-          timestamp_local: new Date().toISOString(),
-          user_email: userDetails?.email,
-          user_name: userDetails
-            ? `${userDetails.first_name} ${userDetails.last_name}`
-            : null,
-          user_role: userDetails?.role,
+          ...options.metadata,
         },
-        created_at: new Date().toISOString(),
       };
+
+      console.log("🔍 [AuditLog] About to insert activity log:", {
+        action_type: activityType,
+        user_id: userId,
+        description: description,
+        table: "user_activity_logs"
+      });
 
       // Insert into database
       const { data, error } = await supabase
@@ -152,10 +153,17 @@ export class AuditLogService {
 
       if (error) {
         console.error("❌ [AuditLog] Failed to log activity:", error);
+        console.error("❌ [AuditLog] Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
 
       console.log(`✅ [AuditLog] Logged ${activityType}:`, description);
+      console.log(`✅ [AuditLog] Inserted record ID:`, data?.id);
       return data;
     } catch (error) {
       console.error("❌ [AuditLog] Error logging activity:", error);
@@ -485,7 +493,7 @@ export class AuditLogService {
       }
 
       if (filters.activityType) {
-        query = query.eq("activity_type", filters.activityType);
+        query = query.eq("action_type", filters.activityType);
       }
 
       if (filters.entityType) {
@@ -586,8 +594,8 @@ export class AuditLogService {
 
       logs.forEach((log) => {
         // Count by type
-        stats.by_type[log.activity_type] =
-          (stats.by_type[log.activity_type] || 0) + 1;
+        stats.by_type[log.action_type] =
+          (stats.by_type[log.action_type] || 0) + 1;
 
         // Count by user
         const userName = log.user_name || "System";

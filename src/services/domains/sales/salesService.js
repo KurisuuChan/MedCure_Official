@@ -4,6 +4,7 @@
 
 import { supabase } from "../../../config/supabase";
 import { logDebug, handleError } from "../../core/serviceUtils";
+import { AuditLogService } from "../audit/auditLogService";
 
 export class SalesService {
 
@@ -53,6 +54,23 @@ export class SalesService {
       if (error) throw error;
 
       logDebug("Successfully processed sale with discount", data);
+      
+      // Log the sale creation to audit log
+      try {
+        await AuditLogService.logSaleCreated(
+          data.sale_id || data.id,
+          {
+            total: saleData.total,
+            items: saleData.items,
+            customer_id: saleData.customer?.id,
+            payment_method: saleData.paymentMethod,
+          },
+          saleData.cashierId
+        );
+      } catch (auditError) {
+        console.error("Failed to log sale creation to audit:", auditError);
+      }
+      
       return data;
     } catch (error) {
       handleError(error, "Process sale");
@@ -160,6 +178,19 @@ export class SalesService {
       if (error) throw error;
 
       logDebug("Successfully voided sale", data);
+      
+      // Log the void action to audit log
+      try {
+        const currentUser = await supabase.auth.getUser();
+        await AuditLogService.logSaleVoided(
+          saleId,
+          reason,
+          currentUser?.data?.user?.id
+        );
+      } catch (auditError) {
+        console.error("Failed to log sale void to audit:", auditError);
+      }
+      
       return data;
     } catch (error) {
       handleError(error, "Void sale");
@@ -268,6 +299,29 @@ export class SalesService {
         .single();
 
       if (fetchError) throw fetchError;
+      
+      // Log the transaction edit to audit log
+      try {
+        await AuditLogService.log(
+          AuditLogService.ACTIVITY_TYPES.SALE_UPDATED,
+          `Edited sale #${transactionId} - Reason: ${editData.edit_reason || 'No reason provided'}`,
+          {
+            userId: editData.edited_by,
+            entityType: 'sale',
+            entityId: transactionId,
+            changes: {
+              total_before: editData.original_total,
+              total_after: editData.total_amount,
+            },
+            metadata: {
+              edit_reason: editData.edit_reason,
+              items_count: editData.items?.length || 0,
+            },
+          }
+        );
+      } catch (auditError) {
+        console.error("Failed to log transaction edit to audit:", auditError);
+      }
 
       return fullTransaction;
     } catch (error) {
