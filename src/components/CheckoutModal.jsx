@@ -99,22 +99,6 @@ export default function CheckoutModal({
                       <span className="font-medium">Cash</span>
                     </div>
                   </button>
-
-                  <button
-                    onClick={() =>
-                      setPaymentData((prev) => ({ ...prev, method: "gcash" }))
-                    }
-                    className={`p-4 border rounded-lg transition-colors ${
-                      paymentData.method === "gcash"
-                        ? "border-green-500 bg-green-50 text-green-700"
-                        : "border-gray-300 hover:border-gray-400 text-gray-700"
-                    }`}
-                  >
-                    <div className="flex items-center justify-center space-x-2">
-                      <Smartphone className="h-5 w-5" />
-                      <span className="font-medium">GCash</span>
-                    </div>
-                  </button>
                 </div>
               </div>
 
