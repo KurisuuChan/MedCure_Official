@@ -18,6 +18,8 @@ import {
   BarChart3,
   Pill,
   Shield,
+  ChevronDown,
+  Search,
 } from "lucide-react";
 import AnalyticsReportsPage from "../features/analytics/components/AnalyticsReportsPage";
 import ArchiveReasonModal from "../components/modals/ArchiveReasonModal";
@@ -182,18 +184,22 @@ export default function InventoryPage() {
     }
   };
 
-  // Get categories to use (dynamic or fallback)
+  // Get categories to use (dynamic or fallback) - ✅ Always sorted A-Z
   const getCategoriesToUse = () => {
+    let cats = [];
     if (dynamicCategories.length > 0) {
-      return dynamicCategories;
+      cats = dynamicCategories;
+    } else {
+      // Fallback with consistent object format
+      cats = productCategories.slice(1).map((name, index) => ({
+        id: `fallback-${index}`,
+        name,
+        description: `Fallback category: ${name}`,
+        is_active: true,
+      }));
     }
-    // Fallback with consistent object format
-    return productCategories.slice(1).map((name, index) => ({
-      id: `fallback-${index}`,
-      name,
-      description: `Fallback category: ${name}`,
-      is_active: true,
-    }));
+    // ✅ Sort alphabetically A-Z
+    return cats.sort((a, b) => a.name.localeCompare(b.name));
   };
 
   // Pagination
@@ -524,6 +530,10 @@ export default function InventoryPage() {
 
 // Product Modal Component - Ultra-Compact Crosswise Design
 function ProductModal({ title, product, categories, onClose, onSave }) {
+  // Category search state (local to modal)
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  
   // Predefined options for dropdowns - Auto-create will handle new values
   const dosageFormOptions = [
     "Tablet",
@@ -850,27 +860,87 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
                           Category *
                         </label>
-                        <select
-                          required
-                          value={formData.category}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              category: e.target.value,
-                            })
-                          }
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          {categories.map((cat) => (
-                            <option key={cat.id || cat.name} value={cat.name}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            required
+                            value={categorySearchTerm || formData.category}
+                            onChange={(e) => {
+                              setCategorySearchTerm(e.target.value);
+                              setShowCategoryDropdown(true);
+                              setFormData({
+                                ...formData,
+                                category: e.target.value,
+                              });
+                            }}
+                            onFocus={() => setShowCategoryDropdown(true)}
+                            className="w-full px-2 py-1.5 pr-8 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Search or select category..."
+                          />
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                        </div>
+                        
+                        {/* Searchable Dropdown */}
+                        {showCategoryDropdown && (
+                          <>
+                            <div 
+                              className="fixed inset-0 z-10" 
+                              onClick={() => setShowCategoryDropdown(false)}
+                            />
+                            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              <div className="sticky top-0 bg-gray-50 p-2 border-b border-gray-200">
+                                <div className="relative">
+                                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400" />
+                                  <input
+                                    type="text"
+                                    value={categorySearchTerm}
+                                    onChange={(e) => setCategorySearchTerm(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Type to search categories..."
+                                  />
+                                </div>
+                              </div>
+                              <div className="max-h-48 overflow-y-auto">
+                                {categories
+                                  .filter(cat => 
+                                    cat.name.toLowerCase().includes((categorySearchTerm || '').toLowerCase())
+                                  )
+                                  .map((cat) => (
+                                    <button
+                                      key={cat.id || cat.name}
+                                      type="button"
+                                      onClick={() => {
+                                        setFormData({
+                                          ...formData,
+                                          category: cat.name,
+                                        });
+                                        setCategorySearchTerm('');
+                                        setShowCategoryDropdown(false);
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
+                                        formData.category === cat.name ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-700'
+                                      }`}
+                                    >
+                                      {cat.name}
+                                    </button>
+                                  ))}
+                                {categories
+                                  .filter(cat => 
+                                    cat.name.toLowerCase().includes((categorySearchTerm || '').toLowerCase())
+                                  ).length === 0 && (
+                                  <div className="px-3 py-2 text-sm text-gray-500 text-center">
+                                    No categories found
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
