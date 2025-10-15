@@ -103,8 +103,8 @@ export function Sidebar({ isOpen, onClose }) {
       `}
       >
         <div className="flex flex-col h-full">
-          {/* Logo section for desktop */}
-          <div className="hidden lg:flex items-center gap-3 p-6 border-b border-gray-200">
+          {/* Logo section for desktop - matches header height */}
+          <div className="hidden lg:flex items-center gap-3 px-6 h-16 border-b border-gray-200">
             {businessLogo ? (
               <img
                 src={businessLogo}
