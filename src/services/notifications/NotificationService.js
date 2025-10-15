@@ -67,6 +67,9 @@ class NotificationService {
     this.isInitialized = false;
     this.lastHealthCheckRun = null; // ✅ Local debounce timestamp
     this.healthCheckDebounceMs = 15 * 60 * 1000; // 15 minutes in milliseconds (default)
+    this.lastLowStockCheck = null; // Track low stock checks separately
+    this.lastExpiringCheck = null; // Track expiring checks separately
+    this.lastOutOfStockCheck = null; // Track out-of-stock checks separately
     this.lastLowStockCheck = null; // Track last low stock check
     this.lastExpiringCheck = null; // Track last expiring check
   }
@@ -89,6 +92,7 @@ class NotificationService {
     return {
       lowStockCheckInterval: 60, // 1 hour default
       expiringCheckInterval: 360, // 6 hours default
+      outOfStockCheckInterval: 30, // 30 minutes default
       emailAlertsEnabled: false,
     };
   }
@@ -1722,6 +1726,14 @@ ${
       !this.lastExpiringCheck ||
       now - this.lastExpiringCheck >= expiringIntervalMs;
 
+    // Check if enough time has passed for out-of-stock check
+    const outOfStockIntervalMs =
+      userSettings.outOfStockCheckInterval * 60 * 1000;
+    const shouldCheckOutOfStock =
+      force ||
+      !this.lastOutOfStockCheck ||
+      now - this.lastOutOfStockCheck >= outOfStockIntervalMs;
+
     // Calculate time since last checks (for logging)
     const minutesSinceLowStock = this.lastLowStockCheck
       ? Math.floor((now - this.lastLowStockCheck) / (60 * 1000))
@@ -1729,20 +1741,23 @@ ${
     const minutesSinceExpiring = this.lastExpiringCheck
       ? Math.floor((now - this.lastExpiringCheck) / (60 * 1000))
       : "Never";
+    const minutesSinceOutOfStock = this.lastOutOfStockCheck
+      ? Math.floor((now - this.lastOutOfStockCheck) / (60 * 1000))
+      : "Never";
 
     logger.info(
-      `⏱️ User Settings: Low Stock=${userSettings.lowStockCheckInterval}min, Expiring=${userSettings.expiringCheckInterval}min`
+      `⏱️ User Settings: Low Stock=${userSettings.lowStockCheckInterval}min, Expiring=${userSettings.expiringCheckInterval}min, Out-of-Stock=${userSettings.outOfStockCheckInterval}min`
     );
     logger.info(
-      `📊 Last Checks: Low Stock=${minutesSinceLowStock}min ago, Expiring=${minutesSinceExpiring}min ago`
+      `📊 Last Checks: Low Stock=${minutesSinceLowStock}min ago, Expiring=${minutesSinceExpiring}min ago, Out-of-Stock=${minutesSinceOutOfStock}min ago`
     );
     logger.info(
       `🎯 Running Checks: Low Stock=${
         shouldCheckLowStock ? "✅ YES" : "⏭️ SKIP"
       }, ` +
-        `Expiring=${
-          shouldCheckExpiring ? "✅ YES" : "⏭️ SKIP"
-        }, Out-of-Stock=✅ ALWAYS`
+        `Expiring=${shouldCheckExpiring ? "✅ YES" : "⏭️ SKIP"}, Out-of-Stock=${
+          shouldCheckOutOfStock ? "✅ YES" : "⏭️ SKIP"
+        }`
     );
 
     // Run checks and collect detailed results instead of just counts
@@ -1754,7 +1769,9 @@ ${
         shouldCheckExpiring
           ? this.checkExpiringProductsDetailed(users)
           : Promise.resolve({ count: 0, products: [] }),
-        this.checkOutOfStockDetailed(users), // Always check (critical safety feature)
+        shouldCheckOutOfStock
+          ? this.checkOutOfStockDetailed(users)
+          : Promise.resolve({ count: 0, products: [] }),
       ]);
 
     // Update last check timestamps
@@ -1765,6 +1782,10 @@ ${
     if (shouldCheckExpiring) {
       this.lastExpiringCheck = now;
       logger.debug(`✅ Updated lastExpiringCheck timestamp`);
+    }
+    if (shouldCheckOutOfStock) {
+      this.lastOutOfStockCheck = now;
+      logger.debug(`✅ Updated lastOutOfStockCheck timestamp`);
     }
 
     const totalNotifications =

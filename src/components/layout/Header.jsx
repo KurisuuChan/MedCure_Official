@@ -45,19 +45,21 @@ export function Header({ onToggleSidebar }) {
               <div className="flex items-center space-x-3">
                 <div className="hidden md:block text-right">
                   <div className="text-sm font-medium text-gray-900">
-                    {user?.user_metadata?.first_name ||
-                      user?.email?.split("@")[0] ||
-                      "User"}
+                    {user?.first_name && user?.last_name
+                      ? `${user.first_name} ${user.last_name}`
+                      : user?.first_name ||
+                        user?.email?.split("@")[0] ||
+                        "User"}
                   </div>
                   <div className="text-xs text-gray-500 capitalize">
-                    {user?.user_metadata?.role || "Cashier"}
+                    {user?.role || "Cashier"}
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-medium text-sm">
-                      {(user?.user_metadata?.first_name ||
+                      {(user?.first_name ||
                         user?.email ||
                         "U")[0].toUpperCase()}
                     </span>

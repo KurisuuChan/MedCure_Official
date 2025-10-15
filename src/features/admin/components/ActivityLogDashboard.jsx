@@ -25,33 +25,135 @@ import {
   ExternalLink,
   Zap,
   Globe,
+  ShoppingCart,
+  Package,
+  Archive,
+  Edit,
+  Trash2,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  Lock,
+  Key,
+  Settings,
+  FileUp,
+  FolderPlus,
+  DollarSign,
+  RotateCcw,
+  Plus,
+  Minus,
+  Layers,
 } from "lucide-react";
 import { UserManagementService } from "../../../services/domains/auth/userManagementService";
 
 // Constants
 const ACTIVITY_TYPES = [
+  // Sales & Transactions
+  "SALE_CREATED",
+  "SALE_VOIDED",
+  "SALE_REFUNDED",
+  "PAYMENT_RECEIVED",
+
+  // Inventory Management
+  "PRODUCT_CREATED",
+  "PRODUCT_UPDATED",
+  "PRODUCT_DELETED",
+  "PRODUCT_ARCHIVED",
+  "PRODUCT_RESTORED",
+  "STOCK_ADJUSTED",
+  "STOCK_ADDED",
+  "STOCK_REMOVED",
+
+  // Batch Management
+  "BATCH_CREATED",
+  "BATCH_UPDATED",
+  "BATCH_DELETED",
+
+  // Category Management
+  "CATEGORY_CREATED",
+  "CATEGORY_UPDATED",
+  "CATEGORY_DELETED",
+
+  // Customer Management
+  "CUSTOMER_CREATED",
+  "CUSTOMER_UPDATED",
+  "CUSTOMER_DELETED",
+
+  // User Management
   "USER_CREATED",
   "USER_UPDATED",
   "USER_DEACTIVATED",
+  "USER_ACTIVATED",
+  "PERMISSION_CHANGED",
+  "ROLE_CHANGED",
+
+  // Authentication
+  "LOGIN_SUCCESS",
+  "LOGIN_FAILED",
+  "LOGOUT",
+  "PASSWORD_CHANGED",
+  "PASSWORD_RESET",
+
+  // Reports & Analytics
+  "REPORT_GENERATED",
+  "REPORT_EXPORTED",
+
+  // System Configuration
+  "SETTINGS_CHANGED",
+  "NOTIFICATION_SENT",
+
+  // CSV Import
+  "CSV_IMPORT_STARTED",
+  "CSV_IMPORT_COMPLETED",
+  "CSV_IMPORT_FAILED",
+
+  // Legacy types (for backwards compatibility)
   "SESSION_STARTED",
   "SESSION_ENDED",
   "PASSWORD_RESET_REQUESTED",
-  "PERMISSION_CHANGED",
   "BULK_USER_UPDATE",
   "LOGIN_ATTEMPT",
-  "LOGOUT",
 ];
 
 const SEVERITY_LEVELS = {
+  // High severity - Critical actions
+  SALE_VOIDED: "high",
+  SALE_REFUNDED: "high",
+  PRODUCT_DELETED: "high",
   USER_DEACTIVATED: "high",
   PASSWORD_RESET_REQUESTED: "high",
+  PASSWORD_RESET: "high",
   PERMISSION_CHANGED: "high",
-  LOGIN_ATTEMPT: "medium",
+  ROLE_CHANGED: "high",
+  CUSTOMER_DELETED: "high",
+
+  // Medium severity - Important actions
+  SALE_CREATED: "medium",
+  PRODUCT_CREATED: "medium",
+  PRODUCT_UPDATED: "medium",
+  PRODUCT_ARCHIVED: "medium",
+  STOCK_ADJUSTED: "medium",
   USER_CREATED: "medium",
+  LOGIN_ATTEMPT: "medium",
+  LOGIN_FAILED: "medium",
+  CUSTOMER_CREATED: "medium",
+  CUSTOMER_UPDATED: "medium",
+  CATEGORY_CREATED: "medium",
+  CATEGORY_UPDATED: "medium",
+  SETTINGS_CHANGED: "medium",
+  CSV_IMPORT_COMPLETED: "medium",
+
+  // Low severity - Routine actions
   USER_UPDATED: "low",
+  LOGIN_SUCCESS: "low",
+  LOGOUT: "low",
   SESSION_STARTED: "low",
   SESSION_ENDED: "low",
-  LOGOUT: "low",
+  STOCK_ADDED: "low",
+  BATCH_CREATED: "low",
+  REPORT_GENERATED: "low",
+  REPORT_EXPORTED: "low",
+  CSV_IMPORT_STARTED: "low",
 };
 
 const ActivityLogDashboard = () => {
@@ -399,34 +501,144 @@ const ActivityLogDashboard = () => {
   // Helper functions
   const getActivityIcon = (type) => {
     const icons = {
-      USER_CREATED: <User className="h-4 w-4 text-green-600" />,
-      USER_UPDATED: <User className="h-4 w-4 text-blue-600" />,
-      USER_DEACTIVATED: <XCircle className="h-4 w-4 text-red-600" />,
-      SESSION_STARTED: <CheckCircle className="h-4 w-4 text-green-600" />,
-      SESSION_ENDED: <XCircle className="h-4 w-4 text-gray-600" />,
+      // Sales & Transactions
+      SALE_CREATED: <ShoppingCart className="h-4 w-4 text-green-600" />,
+      SALE_VOIDED: <XCircle className="h-4 w-4 text-red-600" />,
+      SALE_REFUNDED: <RotateCcw className="h-4 w-4 text-orange-600" />,
+      PAYMENT_RECEIVED: <DollarSign className="h-4 w-4 text-green-600" />,
+
+      // Inventory Management
+      PRODUCT_CREATED: <Package className="h-4 w-4 text-green-600" />,
+      PRODUCT_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
+      PRODUCT_DELETED: <Trash2 className="h-4 w-4 text-red-600" />,
+      PRODUCT_ARCHIVED: <Archive className="h-4 w-4 text-gray-600" />,
+      PRODUCT_RESTORED: <Package className="h-4 w-4 text-green-600" />,
+      STOCK_ADJUSTED: <TrendingUp className="h-4 w-4 text-yellow-600" />,
+      STOCK_ADDED: <Plus className="h-4 w-4 text-green-600" />,
+      STOCK_REMOVED: <Minus className="h-4 w-4 text-red-600" />,
+
+      // Batch Management
+      BATCH_CREATED: <Layers className="h-4 w-4 text-green-600" />,
+      BATCH_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
+      BATCH_DELETED: <Trash2 className="h-4 w-4 text-red-600" />,
+
+      // Category Management
+      CATEGORY_CREATED: <FolderPlus className="h-4 w-4 text-green-600" />,
+      CATEGORY_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
+      CATEGORY_DELETED: <Trash2 className="h-4 w-4 text-red-600" />,
+
+      // Customer Management
+      CUSTOMER_CREATED: <UserPlus className="h-4 w-4 text-green-600" />,
+      CUSTOMER_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
+      CUSTOMER_DELETED: <UserMinus className="h-4 w-4 text-red-600" />,
+
+      // User Management
+      USER_CREATED: <UserPlus className="h-4 w-4 text-green-600" />,
+      USER_UPDATED: <Edit className="h-4 w-4 text-blue-600" />,
+      USER_DEACTIVATED: <UserMinus className="h-4 w-4 text-red-600" />,
+      USER_ACTIVATED: <UserCheck className="h-4 w-4 text-green-600" />,
+      PERMISSION_CHANGED: <Shield className="h-4 w-4 text-purple-600" />,
+      ROLE_CHANGED: <Shield className="h-4 w-4 text-purple-600" />,
+
+      // Authentication
+      LOGIN_SUCCESS: <CheckCircle className="h-4 w-4 text-green-600" />,
+      LOGIN_FAILED: <XCircle className="h-4 w-4 text-red-600" />,
+      LOGOUT: <XCircle className="h-4 w-4 text-gray-600" />,
+      PASSWORD_CHANGED: <Key className="h-4 w-4 text-blue-600" />,
+      PASSWORD_RESET: <Lock className="h-4 w-4 text-yellow-600" />,
       PASSWORD_RESET_REQUESTED: (
         <AlertTriangle className="h-4 w-4 text-yellow-600" />
       ),
-      PERMISSION_CHANGED: <Eye className="h-4 w-4 text-purple-600" />,
+
+      // Reports & Analytics
+      REPORT_GENERATED: <FileText className="h-4 w-4 text-blue-600" />,
+      REPORT_EXPORTED: <Download className="h-4 w-4 text-green-600" />,
+
+      // System Configuration
+      SETTINGS_CHANGED: <Settings className="h-4 w-4 text-purple-600" />,
+      NOTIFICATION_SENT: <Zap className="h-4 w-4 text-yellow-600" />,
+
+      // CSV Import
+      CSV_IMPORT_STARTED: <FileUp className="h-4 w-4 text-blue-600" />,
+      CSV_IMPORT_COMPLETED: <CheckCircle className="h-4 w-4 text-green-600" />,
+      CSV_IMPORT_FAILED: <XCircle className="h-4 w-4 text-red-600" />,
+
+      // Legacy types
+      SESSION_STARTED: <CheckCircle className="h-4 w-4 text-green-600" />,
+      SESSION_ENDED: <XCircle className="h-4 w-4 text-gray-600" />,
       BULK_USER_UPDATE: <User className="h-4 w-4 text-blue-600" />,
       LOGIN_ATTEMPT: <CheckCircle className="h-4 w-4 text-green-600" />,
-      LOGOUT: <XCircle className="h-4 w-4 text-gray-600" />,
     };
     return icons[type] || <Info className="h-4 w-4 text-gray-600" />;
   };
 
   const getActivityColor = (type) => {
     const colors = {
+      // Sales & Transactions
+      SALE_CREATED: "bg-green-50 border-green-200",
+      SALE_VOIDED: "bg-red-50 border-red-200",
+      SALE_REFUNDED: "bg-orange-50 border-orange-200",
+      PAYMENT_RECEIVED: "bg-green-50 border-green-200",
+
+      // Inventory Management
+      PRODUCT_CREATED: "bg-green-50 border-green-200",
+      PRODUCT_UPDATED: "bg-blue-50 border-blue-200",
+      PRODUCT_DELETED: "bg-red-50 border-red-200",
+      PRODUCT_ARCHIVED: "bg-gray-50 border-gray-200",
+      PRODUCT_RESTORED: "bg-green-50 border-green-200",
+      STOCK_ADJUSTED: "bg-yellow-50 border-yellow-200",
+      STOCK_ADDED: "bg-green-50 border-green-200",
+      STOCK_REMOVED: "bg-red-50 border-red-200",
+
+      // Batch Management
+      BATCH_CREATED: "bg-green-50 border-green-200",
+      BATCH_UPDATED: "bg-blue-50 border-blue-200",
+      BATCH_DELETED: "bg-red-50 border-red-200",
+
+      // Category Management
+      CATEGORY_CREATED: "bg-green-50 border-green-200",
+      CATEGORY_UPDATED: "bg-blue-50 border-blue-200",
+      CATEGORY_DELETED: "bg-red-50 border-red-200",
+
+      // Customer Management
+      CUSTOMER_CREATED: "bg-green-50 border-green-200",
+      CUSTOMER_UPDATED: "bg-blue-50 border-blue-200",
+      CUSTOMER_DELETED: "bg-red-50 border-red-200",
+
+      // User Management
       USER_CREATED: "bg-green-50 border-green-200",
       USER_UPDATED: "bg-blue-50 border-blue-200",
       USER_DEACTIVATED: "bg-red-50 border-red-200",
+      USER_ACTIVATED: "bg-green-50 border-green-200",
+      PERMISSION_CHANGED: "bg-purple-50 border-purple-200",
+      ROLE_CHANGED: "bg-purple-50 border-purple-200",
+
+      // Authentication
+      LOGIN_SUCCESS: "bg-green-50 border-green-200",
+      LOGIN_FAILED: "bg-red-50 border-red-200",
+      LOGOUT: "bg-gray-50 border-gray-200",
+      PASSWORD_CHANGED: "bg-blue-50 border-blue-200",
+      PASSWORD_RESET: "bg-yellow-50 border-yellow-200",
+      PASSWORD_RESET_REQUESTED: "bg-yellow-50 border-yellow-200",
+
+      // Reports & Analytics
+      REPORT_GENERATED: "bg-blue-50 border-blue-200",
+      REPORT_EXPORTED: "bg-green-50 border-green-200",
+
+      // System Configuration
+      SETTINGS_CHANGED: "bg-purple-50 border-purple-200",
+      NOTIFICATION_SENT: "bg-yellow-50 border-yellow-200",
+
+      // CSV Import
+      CSV_IMPORT_STARTED: "bg-blue-50 border-blue-200",
+      CSV_IMPORT_COMPLETED: "bg-green-50 border-green-200",
+      CSV_IMPORT_FAILED: "bg-red-50 border-red-200",
+
+      // Legacy types
       SESSION_STARTED: "bg-green-50 border-green-200",
       SESSION_ENDED: "bg-gray-50 border-gray-200",
-      PASSWORD_RESET_REQUESTED: "bg-yellow-50 border-yellow-200",
-      PERMISSION_CHANGED: "bg-purple-50 border-purple-200",
       BULK_USER_UPDATE: "bg-blue-50 border-blue-200",
       LOGIN_ATTEMPT: "bg-green-50 border-green-200",
-      LOGOUT: "bg-gray-50 border-gray-200",
     };
     return colors[type] || "bg-gray-50 border-gray-200";
   };

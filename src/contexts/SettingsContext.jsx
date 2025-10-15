@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS = {
   enableEmailAlerts: true,
   lowStockCheckInterval: 60, // minutes (1 hour default)
   expiringCheckInterval: 360, // minutes (6 hours default)
+  outOfStockCheckInterval: 30, // minutes (30 minutes default)
   emailAlertsEnabled: false,
 };
 
@@ -86,6 +87,9 @@ export function SettingsProvider({ children }) {
               break;
             case "expiring_check_interval":
               loadedSettings.expiringCheckInterval = setting_value;
+              break;
+            case "out_of_stock_check_interval":
+              loadedSettings.outOfStockCheckInterval = setting_value;
               break;
             case "email_alerts_enabled":
               loadedSettings.emailAlertsEnabled = setting_value;
@@ -177,6 +181,7 @@ export function SettingsProvider({ children }) {
           enableEmailAlerts: "enable_email_alerts",
           lowStockCheckInterval: "low_stock_check_interval",
           expiringCheckInterval: "expiring_check_interval",
+          outOfStockCheckInterval: "out_of_stock_check_interval",
           emailAlertsEnabled: "email_alerts_enabled",
         };
 

@@ -69,7 +69,7 @@ const navigationItems = [
 export function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const { user, role } = useAuth();
-  const { settings, isLoading } = useSettings();
+  const { settings } = useSettings();
 
   // Filter navigation items based on user role
   const filteredNavigation = navigationItems.filter((item) =>
@@ -292,7 +292,7 @@ export function Sidebar({ isOpen, onClose }) {
               {/* User info */}
               <div className="p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-100 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
+                  <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white flex-shrink-0">
                     <span className="text-sm font-bold text-white">
                       {user?.first_name?.[0]?.toUpperCase() ||
                         user?.email?.[0]?.toUpperCase() ||
@@ -300,13 +300,11 @@ export function Sidebar({ isOpen, onClose }) {
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
-                      {user?.first_name
-                        ? `${user.first_name} ${user.last_name || ""}`.trim()
-                        : user?.email || "User"}
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">
+                      Logged in as
                     </p>
-                    <p className="text-xs text-blue-600 capitalize font-medium bg-blue-100 px-2 py-0.5 rounded-full inline-block">
-                      {role || "cashier"}
+                    <p className="text-xs font-medium text-gray-900 break-words leading-relaxed">
+                      {user?.email || "user@medcure.com"}
                     </p>
                   </div>
                 </div>

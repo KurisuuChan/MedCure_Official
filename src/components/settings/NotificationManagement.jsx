@@ -36,6 +36,7 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
   const [notificationSettings, setNotificationSettings] = useState({
     lowStockCheckInterval: 60, // minutes (default: 1 hour)
     expiringCheckInterval: 360, // minutes (default: 6 hours)
+    outOfStockCheckInterval: 30, // minutes (default: 30 minutes)
     emailAlertsEnabled: false,
     dailyEmailEnabled: false,
     dailyEmailTime: "09:00",
@@ -71,6 +72,7 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
         ...prev,
         lowStockCheckInterval: globalSettings.lowStockCheckInterval || 60,
         expiringCheckInterval: globalSettings.expiringCheckInterval || 360,
+        outOfStockCheckInterval: globalSettings.outOfStockCheckInterval || 30,
         emailAlertsEnabled: globalSettings.emailAlertsEnabled || false,
         dailyEmailEnabled: globalSettings.dailyEmailEnabled || false,
         dailyEmailTime: globalSettings.dailyEmailTime || "09:00",
@@ -98,6 +100,7 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
       await updateSettings({
         lowStockCheckInterval: notificationSettings.lowStockCheckInterval,
         expiringCheckInterval: notificationSettings.expiringCheckInterval,
+        outOfStockCheckInterval: notificationSettings.outOfStockCheckInterval,
         emailAlertsEnabled: notificationSettings.emailAlertsEnabled,
       });
 
@@ -306,22 +309,59 @@ function NotificationManagement({ showSuccess, showError, showInfo }) {
             </div>
           </div>
 
-          {/* Out of Stock - Always Immediate */}
+          {/* Out of Stock - Configurable Interval */}
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="flex items-start space-x-3">
               <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="h-5 w-5 text-red-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h4 className="font-semibold text-gray-900 mb-1">
                   Out of Stock Alerts
                 </h4>
-                <p className="text-sm text-gray-600">
-                  <strong>Always Immediate</strong> - Critical alerts when stock
-                  reaches zero cannot be delayed
+                <p className="text-sm text-gray-600 mb-3">
+                  How often the system checks for products with zero stock
                 </p>
-                <div className="mt-2 inline-flex items-center px-3 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                  🚨 Real-time monitoring (cannot be configured)
+
+                <label
+                  htmlFor="outOfStockInterval"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Check Every
+                </label>
+                <select
+                  id="outOfStockInterval"
+                  className="w-full sm:w-64 px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white text-sm"
+                  value={notificationSettings.outOfStockCheckInterval}
+                  onChange={(e) =>
+                    setNotificationSettings({
+                      ...notificationSettings,
+                      outOfStockCheckInterval: parseInt(e.target.value),
+                    })
+                  }
+                >
+                  <option value={15}>15 minutes (Most Frequent)</option>
+                  <option value={30}>30 minutes (Recommended)</option>
+                  <option value={60}>1 hour</option>
+                  <option value={120}>2 hours</option>
+                  <option value={180}>3 hours</option>
+                  <option value={360}>6 hours</option>
+                </select>
+
+                <div className="mt-2 flex items-center text-xs text-red-600">
+                  <Clock className="h-3 w-3 mr-1" />
+                  <p>
+                    Current:{" "}
+                    {notificationSettings.outOfStockCheckInterval >= 60
+                      ? `Every ${
+                          notificationSettings.outOfStockCheckInterval / 60
+                        } hour${
+                          notificationSettings.outOfStockCheckInterval / 60 > 1
+                            ? "s"
+                            : ""
+                        }`
+                      : `Every ${notificationSettings.outOfStockCheckInterval} minutes`}
+                  </p>
                 </div>
               </div>
             </div>

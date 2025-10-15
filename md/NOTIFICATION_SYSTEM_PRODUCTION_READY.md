@@ -28,7 +28,7 @@ Navigate to **System Settings** → **Notifications & Alerts** tab to access:
 - ✅ **Customizable intervals** for inventory checks
 - ✅ **Low stock monitoring** (15 min to 24 hours)
 - ✅ **Expiry date checking** (1 hour to 24 hours)
-- ✅ **Out of stock alerts** (always immediate - cannot be disabled)
+- ✅ **Out of stock alerts** (configurable 15 min to 6 hours, default 30 min)
 - ✅ **Email toggle** for your account (`kurisuuuchannn@gmail.com`)
 
 ## 📧 **Email Integration Details**
@@ -65,7 +65,7 @@ Status: ✅ CORS-free, professional delivery
 3. Set your preferred check intervals:
    - **Low Stock**: Recommended 1 hour
    - **Expiry Check**: Recommended 6 hours
-   - **Out of Stock**: Always immediate (automatic)
+   - **Out of Stock**: Recommended 30 minutes (configurable 15 min to 6 hours)
 4. **Enable Email Alerts** toggle
 5. Click **"Save Settings"**
 
