@@ -793,6 +793,25 @@ class NotificationService {
 
       const subject = `${icon} [MedCure] ${priority} - Pharmacy Health Report (${healthData.totalNotifications} issues)`;
 
+      // Debug: Log the actual data structure being passed to email template
+      logger.debug("📊 [Email Debug] Health Data Structure:", {
+        outOfStock: {
+          count: healthData.outOfStock.count,
+          productsCount: healthData.outOfStock.products.length,
+          firstProduct: healthData.outOfStock.products[0] || "none",
+        },
+        lowStock: {
+          count: healthData.lowStock.count,
+          productsCount: healthData.lowStock.products.length,
+          firstProduct: healthData.lowStock.products[0] || "none",
+        },
+        expiring: {
+          count: healthData.expiring.count,
+          productsCount: healthData.expiring.products.length,
+          firstProduct: healthData.expiring.products[0] || "none",
+        },
+      });
+
       const html = this.generateComprehensiveHealthEmailTemplate(
         healthData,
         userName,
@@ -957,16 +976,16 @@ Time: ${timestamp}
 System: MedCure Pharmacy Management
 
 🔗 QUICK ACTIONS:
-• View Dashboard: http://localhost:5173/dashboard
-• Check Inventory: http://localhost:5173/inventory
+• View Dashboard: https://www.medcure-official.me/dashboard
+• Check Inventory: https://www.medcure-official.me/inventory
 ${
   productInfo.actionUrl
-    ? `• Product Details: http://localhost:5173${productInfo.actionUrl}`
+    ? `• Product Details: https://www.medcure-official.me${productInfo.actionUrl}`
     : ""
 }
 
 This is an automated notification from your MedCure Pharmacy Management System.
-For support, visit: http://localhost:5173/help
+For support, visit: https://www.medcure-official.me/help
 
 ─────────────────────────────────────────
 © ${new Date().getFullYear()} MedCure Pharmacy | Inventory Management System
@@ -979,6 +998,14 @@ For support, visit: http://localhost:5173/help
    */
   generateComprehensiveHealthEmailTemplate(healthData, userName, timestamp) {
     const { outOfStock, lowStock, expiring, totalNotifications } = healthData;
+
+    // Debug: Log what the template is receiving
+    logger.debug("📧 [Template Debug] Received data:", {
+      outOfStockProducts: outOfStock?.products?.length || 0,
+      lowStockProducts: lowStock?.products?.length || 0,
+      expiringProducts: expiring?.products?.length || 0,
+      totalNotifications,
+    });
 
     // Count critical issues
     const criticalOutOfStock = outOfStock.products.length;
@@ -998,8 +1025,15 @@ For support, visit: http://localhost:5173/help
 🚨 URGENT: OUT OF STOCK PRODUCTS (${outOfStock.products.length})
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${outOfStock.products
-  .map((p) => `❌ ${p.name} - COMPLETELY OUT OF STOCK`)
-  .join("\n")}
+  .map(
+    (p) => `❌ ${p.name}
+   • Status: COMPLETELY OUT OF STOCK
+   • Manufacturer: ${p.manufacturer || "Not Specified"}
+   • Dosage: ${p.dosage || "Not Specified"}
+   • Supplier: ${p.supplier || "Not Specified"}
+   • Batch: ${p.batchNumber || "Not Specified"}`
+  )
+  .join("\n\n")}
 
 ⚡ IMMEDIATE ACTIONS REQUIRED:
 • Contact suppliers for emergency restocking
@@ -1025,9 +1059,14 @@ ${outOfStock.products
 🔥 CRITICAL LOW STOCK (${critical.length}):
 ${critical
   .map(
-    (p) => `   🚨 ${p.name} - ${p.stock} pieces (Reorder: ${p.reorderLevel})`
+    (p) => `   🚨 ${p.name}
+      • Stock: ${p.stock} pieces (Reorder Level: ${p.reorderLevel})
+      • Manufacturer: ${p.manufacturer || "Not Specified"}
+      • Dosage: ${p.dosage || "Not Specified"}
+      • Supplier: ${p.supplier || "Not Specified"}
+      • Batch: ${p.batchNumber || "Not Specified"}`
   )
-  .join("\n")}
+  .join("\n\n")}
 `;
       }
 
@@ -1036,9 +1075,14 @@ ${critical
 ⚠️ WARNING LOW STOCK (${warning.length}):
 ${warning
   .map(
-    (p) => `   📉 ${p.name} - ${p.stock} pieces (Reorder: ${p.reorderLevel})`
+    (p) => `   📉 ${p.name}
+      • Stock: ${p.stock} pieces (Reorder Level: ${p.reorderLevel})
+      • Manufacturer: ${p.manufacturer || "Not Specified"}
+      • Dosage: ${p.dosage || "Not Specified"}
+      • Supplier: ${p.supplier || "Not Specified"}
+      • Batch: ${p.batchNumber || "Not Specified"}`
   )
-  .join("\n")}
+  .join("\n\n")}
 `;
       }
 
@@ -1066,8 +1110,15 @@ ${warning
         expiringSection += `
 🚨 EXPIRES WITHIN 7 DAYS (${critical.length}):
 ${critical
-  .map((p) => `   ⏰ ${p.name} - ${p.daysRemaining} days (${p.expiryDate})`)
-  .join("\n")}
+  .map(
+    (p) => `   ⏰ ${p.name}
+      • Days Remaining: ${p.daysRemaining} days (Expires: ${p.expiryDate})
+      • Manufacturer: ${p.manufacturer || "Not Specified"}
+      • Dosage: ${p.dosage || "Not Specified"}
+      • Supplier: ${p.supplier || "Not Specified"}
+      • Batch: ${p.batchNumber || "Not Specified"}`
+  )
+  .join("\n\n")}
 `;
       }
 
@@ -1075,8 +1126,15 @@ ${critical
         expiringSection += `
 📆 EXPIRES WITHIN 30 DAYS (${warning.length}):
 ${warning
-  .map((p) => `   📅 ${p.name} - ${p.daysRemaining} days (${p.expiryDate})`)
-  .join("\n")}
+  .map(
+    (p) => `   📅 ${p.name}
+      • Days Remaining: ${p.daysRemaining} days (Expires: ${p.expiryDate})
+      • Manufacturer: ${p.manufacturer || "Not Specified"}
+      • Dosage: ${p.dosage || "Not Specified"}
+      • Supplier: ${p.supplier || "Not Specified"}
+      • Batch: ${p.batchNumber || "Not Specified"}`
+  )
+  .join("\n\n")}
 `;
       }
 
@@ -1191,9 +1249,9 @@ ${
 <div style="background: #f8fafc; border-radius: 10px; padding: 25px; margin-bottom: 30px;">
     <h3 style="color: #1f2937; margin-top: 0;">🔗 Quick Actions</h3>
     <div style="display: grid; gap: 10px;">
-        <a href="http://localhost:5173/dashboard" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📊 View Dashboard</a>
-        <a href="http://localhost:5173/inventory" style="display: inline-block; background: #059669; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📦 Manage Inventory</a>
-        <a href="http://localhost:5173/settings" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">⚙️ Notification Settings</a>
+        <a href="https://www.medcure-official.me/dashboard" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📊 View Dashboard</a>
+        <a href="https://www.medcure-official.me/inventory" style="display: inline-block; background: #059669; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">📦 Manage Inventory</a>
+        <a href="https://www.medcure-official.me/system-settings" style="display: inline-block; background: #7c3aed; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">⚙️ Notification Settings</a>
     </div>
 </div>
 
@@ -1539,7 +1597,10 @@ ${
 
       // Run all health checks
       logger.info("🔍 Executing all health checks...");
-      const totalNotifications = await this.executeHealthChecks([primaryUser]);
+      const totalNotifications = await this.executeHealthChecks(
+        [primaryUser],
+        force
+      );
 
       // Record successful completion
       await this.recordHealthCheckRun(totalNotifications, null);
@@ -1634,21 +1695,30 @@ ${
    * Execute all health checks
    * @private
    */
-  async executeHealthChecks(users) {
+  async executeHealthChecks(users, force = false) {
     logger.info("🔍 Starting comprehensive health check...");
 
     const userSettings = this.getUserNotificationSettings();
     const now = Date.now();
 
+    // For manual/forced runs, always check everything
+    if (force) {
+      logger.info(
+        "🚀 FORCED RUN - Checking ALL categories regardless of intervals"
+      );
+    }
+
     // Check if enough time has passed for low stock check
     const lowStockIntervalMs = userSettings.lowStockCheckInterval * 60 * 1000;
     const shouldCheckLowStock =
+      force ||
       !this.lastLowStockCheck ||
       now - this.lastLowStockCheck >= lowStockIntervalMs;
 
     // Check if enough time has passed for expiring check
     const expiringIntervalMs = userSettings.expiringCheckInterval * 60 * 1000;
     const shouldCheckExpiring =
+      force ||
       !this.lastExpiringCheck ||
       now - this.lastExpiringCheck >= expiringIntervalMs;
 
@@ -1768,10 +1838,11 @@ ${
     try {
       logger.debug("🔍 [Health Check] Starting ENHANCED low stock check...");
 
+      // Query products with stock > 0 AND <= reorder level (excluding out of stock)
       const { data: allProducts, error } = await supabase
         .from("products")
         .select(
-          "id, brand_name, generic_name, stock_in_pieces, reorder_level, category_id"
+          "id, brand_name, generic_name, stock_in_pieces, reorder_level, category_id, manufacturer, dosage_strength, dosage_form, supplier, batch_number"
         )
         .gt("stock_in_pieces", 0)
         .eq("is_active", true);
@@ -1789,7 +1860,9 @@ ${
           return stock > 0 && stock <= reorderLevel;
         }) || [];
 
-      logger.debug(`🚨 Found ${lowStockProducts.length} low stock products`);
+      logger.debug(
+        `🚨 Found ${lowStockProducts.length} low stock products (stock > 0 and stock <= reorder level)`
+      );
 
       // Create notifications in database (but don't send individual emails)
       let notificationCount = 0;
@@ -1810,13 +1883,20 @@ ${
         );
         const isCritical = stock <= criticalThreshold;
 
-        // Store product details for email summary (only once per product)
+        // Store product details for email summary with complete information
         productDetails.push({
           name: productName,
           stock,
           reorderLevel,
           isCritical,
           severity: isCritical ? "CRITICAL" : "LOW",
+          manufacturer: product.manufacturer || "Not Specified",
+          dosage:
+            `${product.dosage_strength || "N/A"} ${
+              product.dosage_form || ""
+            }`.trim() || "Not Specified",
+          supplier: product.supplier || "Not Specified",
+          batchNumber: product.batch_number || "Not Specified",
         });
       }
 
@@ -1921,7 +2001,9 @@ ${
 
       const { data: products, error } = await supabase
         .from("products")
-        .select("id, brand_name, generic_name, expiry_date")
+        .select(
+          "id, brand_name, generic_name, expiry_date, manufacturer, dosage_strength, dosage_form, supplier, batch_number"
+        )
         .not("expiry_date", "is", null)
         .gte("expiry_date", today.toISOString().split("T")[0])
         .lte("expiry_date", thirtyDaysFromNow.toISOString().split("T")[0])
@@ -1949,13 +2031,20 @@ ${
 
         const isCritical = daysRemaining <= 7;
 
-        // Store product details for email summary (only once per product)
+        // Store product details for email summary with complete information
         productDetails.push({
           name: productName,
           expiryDate: product.expiry_date,
           daysRemaining,
           isCritical,
           severity: isCritical ? "CRITICAL" : "WARNING",
+          manufacturer: product.manufacturer || "Not Specified",
+          dosage:
+            `${product.dosage_strength || "N/A"} ${
+              product.dosage_form || ""
+            }`.trim() || "Not Specified",
+          supplier: product.supplier || "Not Specified",
+          batchNumber: product.batch_number || "Not Specified",
         });
       }
 
@@ -2031,7 +2120,9 @@ ${
 
       const { data: products, error } = await supabase
         .from("products")
-        .select("id, brand_name, generic_name, stock_in_pieces")
+        .select(
+          "id, brand_name, generic_name, stock_in_pieces, manufacturer, dosage_strength, dosage_form, supplier, batch_number"
+        )
         .eq("stock_in_pieces", 0)
         .eq("is_active", true);
 
@@ -2054,6 +2145,26 @@ ${
       let dedupedCount = 0;
       const productDetails = [];
 
+      // First, process products for email details (only once per product)
+      for (const product of products) {
+        const productName =
+          product.brand_name || product.generic_name || "Unknown Product";
+
+        productDetails.push({
+          name: productName,
+          stock: 0,
+          severity: "CRITICAL",
+          manufacturer: product.manufacturer || "Not Specified",
+          dosage:
+            `${product.dosage_strength || "N/A"} ${
+              product.dosage_form || ""
+            }`.trim() || "Not Specified",
+          supplier: product.supplier || "Not Specified",
+          batchNumber: product.batch_number || "Not Specified",
+        });
+      }
+
+      // Then, create notifications for each user
       for (const user of users) {
         logger.debug(
           `📧 Preparing out of stock notifications for user: ${user.email}`
@@ -2062,13 +2173,6 @@ ${
         for (const product of products) {
           const productName =
             product.brand_name || product.generic_name || "Unknown Product";
-
-          // Store product details for email summary
-          productDetails.push({
-            name: productName,
-            stock: 0,
-            severity: "CRITICAL",
-          });
 
           logger.debug(
             `🚨 Creating IMMEDIATE out of stock alert for: ${productName}`

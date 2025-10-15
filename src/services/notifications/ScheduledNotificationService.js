@@ -377,9 +377,9 @@ class ScheduledNotificationService {
         <div style="background: white; padding: 24px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <h3 style="color: #059669; margin-top: 0;">🚀 Quick Actions</h3>
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <a href="http://localhost:5174/dashboard" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">📊 View Dashboard</a>
-            <a href="http://localhost:5174/inventory" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">📦 Manage Inventory</a>
-            <a href="http://localhost:5174/settings" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">⚙️ Notification Settings</a>
+            <a href="https://www.medcure-official.me/dashboard" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">📊 View Dashboard</a>
+            <a href="https://www.medcure-official.me/inventory" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">📦 Manage Inventory</a>
+            <a href="https://www.medcure-official.me/system-settings" style="display: block; padding: 12px; background: #f3f4f6; text-decoration: none; color: #374151; border-radius: 6px; font-weight: 500;">⚙️ Notification Settings</a>
           </div>
         </div>
 

@@ -335,15 +335,18 @@ const AnalyticsReportsPage = () => {
             const reorderLevel = Number(item.reorder_level) || 10;
             const pricePerPiece = Number(item.price_per_piece) || 0;
             const stockValue = currentStock * pricePerPiece;
-            const medName = item.brand_name || item.generic_name || "Unknown Medication";
+            const medName =
+              item.brand_name || item.generic_name || "Unknown Medication";
             const shortage = Math.max(0, reorderLevel - currentStock);
-            
+
             txtContent += `${index + 1}. ${medName}\n`;
             txtContent += `   Generic Name:    ${item.generic_name || "N/A"}\n`;
             txtContent += `   Brand Name:      ${item.brand_name || "N/A"}\n`;
             txtContent += `   Category:        ${item.category || "N/A"}\n`;
             txtContent += `   Manufacturer:    ${item.manufacturer || "N/A"}\n`;
-            txtContent += `   Dosage Strength: ${item.dosage_strength || "N/A"}\n`;
+            txtContent += `   Dosage Strength: ${
+              item.dosage_strength || "N/A"
+            }\n`;
             txtContent += `   Dosage Form:     ${item.dosage_form || "N/A"}\n`;
             txtContent += `   Current Stock:   ${currentStock} pieces\n`;
             txtContent += `   Reorder Level:   ${reorderLevel} pieces\n`;
@@ -353,7 +356,10 @@ const AnalyticsReportsPage = () => {
             txtContent += `   Supplier:        ${item.supplier || "N/A"}\n`;
             txtContent += `   Batch Number:    ${item.batch_number || "N/A"}\n`;
             if (item.expiry_date) {
-              txtContent += `   Expiry Date:     ${format(new Date(item.expiry_date), "MMM dd, yyyy")}\n`;
+              txtContent += `   Expiry Date:     ${format(
+                new Date(item.expiry_date),
+                "MMM dd, yyyy"
+              )}\n`;
             }
             txtContent += "\n";
           });
@@ -366,15 +372,19 @@ const AnalyticsReportsPage = () => {
           txtContent += "=".repeat(80) + "\n\n";
           outOfStockItems.forEach((item, index) => {
             const reorderLevel = Number(item.reorder_level) || 10;
-            const medName = item.brand_name || item.generic_name || "Unknown Medication";
-            const urgency = reorderLevel > 50 ? "HIGH" : reorderLevel > 20 ? "MEDIUM" : "LOW";
-            
+            const medName =
+              item.brand_name || item.generic_name || "Unknown Medication";
+            const urgency =
+              reorderLevel > 50 ? "HIGH" : reorderLevel > 20 ? "MEDIUM" : "LOW";
+
             txtContent += `${index + 1}. ${medName}\n`;
             txtContent += `   Generic Name:    ${item.generic_name || "N/A"}\n`;
             txtContent += `   Brand Name:      ${item.brand_name || "N/A"}\n`;
             txtContent += `   Category:        ${item.category || "N/A"}\n`;
             txtContent += `   Manufacturer:    ${item.manufacturer || "N/A"}\n`;
-            txtContent += `   Dosage Strength: ${item.dosage_strength || "N/A"}\n`;
+            txtContent += `   Dosage Strength: ${
+              item.dosage_strength || "N/A"
+            }\n`;
             txtContent += `   Dosage Form:     ${item.dosage_form || "N/A"}\n`;
             txtContent += `   Current Stock:   0 pieces (OUT OF STOCK)\n`;
             txtContent += `   Reorder Level:   ${reorderLevel} pieces\n`;
@@ -385,7 +395,10 @@ const AnalyticsReportsPage = () => {
               "MMM dd, yyyy"
             )}\n`;
             if (item.expiry_date) {
-              txtContent += `   Last Expiry:     ${format(new Date(item.expiry_date), "MMM dd, yyyy")}\n`;
+              txtContent += `   Last Expiry:     ${format(
+                new Date(item.expiry_date),
+                "MMM dd, yyyy"
+              )}\n`;
             }
             txtContent += `   Action Required: ORDER IMMEDIATELY\n\n`;
           });
@@ -402,12 +415,13 @@ const AnalyticsReportsPage = () => {
             const daysUntilExpiry = Math.ceil(
               (expiryDate - today) / (1000 * 60 * 60 * 24)
             );
-            
+
             const currentStock = Number(item.stock_in_pieces) || 0;
             const pricePerPiece = Number(item.price_per_piece) || 0;
             const stockValue = currentStock * pricePerPiece;
-            const medName = item.brand_name || item.generic_name || "Unknown Medication";
-            
+            const medName =
+              item.brand_name || item.generic_name || "Unknown Medication";
+
             // Determine priority and recommended actions
             let priority = "LOW";
             let action = "Monitor closely";
@@ -427,12 +441,17 @@ const AnalyticsReportsPage = () => {
             txtContent += `   Brand Name:      ${item.brand_name || "N/A"}\n`;
             txtContent += `   Category:        ${item.category || "N/A"}\n`;
             txtContent += `   Manufacturer:    ${item.manufacturer || "N/A"}\n`;
-            txtContent += `   Dosage Strength: ${item.dosage_strength || "N/A"}\n`;
+            txtContent += `   Dosage Strength: ${
+              item.dosage_strength || "N/A"
+            }\n`;
             txtContent += `   Dosage Form:     ${item.dosage_form || "N/A"}\n`;
             txtContent += `   Current Stock:   ${currentStock} pieces\n`;
             txtContent += `   Stock Value:     ₱${stockValue.toFixed(2)}\n`;
             txtContent += `   Batch Number:    ${item.batch_number || "N/A"}\n`;
-            txtContent += `   Expiry Date:     ${format(expiryDate, "MMM dd, yyyy")}\n`;
+            txtContent += `   Expiry Date:     ${format(
+              expiryDate,
+              "MMM dd, yyyy"
+            )}\n`;
             txtContent += `   Days Until Exp:  ${daysUntilExpiry} days\n`;
             txtContent += `   Priority Level:  ${priority}\n`;
             txtContent += `   Recommended:     ${action}\n`;
@@ -526,7 +545,7 @@ const AnalyticsReportsPage = () => {
             const pricePerPiece = Number(item.price_per_piece) || 0;
             const stockValue = currentStock * pricePerPiece;
             const shortage = Math.max(0, reorderLevel - currentStock);
-            
+
             csvContent += `"${item.brand_name || item.generic_name || "N/A"}",`;
             csvContent += `"${item.generic_name || "N/A"}",`;
             csvContent += `"${item.brand_name || "N/A"}",`;
@@ -540,7 +559,11 @@ const AnalyticsReportsPage = () => {
             csvContent += `₱${stockValue.toFixed(2)},`;
             csvContent += `"${item.supplier || "N/A"}",`;
             csvContent += `"${item.batch_number || "N/A"}",`;
-            csvContent += `"${item.expiry_date ? format(new Date(item.expiry_date), "MMM dd, yyyy") : "N/A"}"\n`;
+            csvContent += `"${
+              item.expiry_date
+                ? format(new Date(item.expiry_date), "MMM dd, yyyy")
+                : "N/A"
+            }"\n`;
           });
           csvContent += "\n";
         }
@@ -548,11 +571,13 @@ const AnalyticsReportsPage = () => {
         // Out of Stock Details
         if (outOfStockItems.length > 0) {
           csvContent += "OUT OF STOCK MEDICATIONS\n";
-          csvContent += "Medication Name,Generic Name,Brand Name,Category,Manufacturer,Dosage Strength,Dosage Form,Reorder Level,Urgency Level,Supplier,Last Updated,Action Required\n";
+          csvContent +=
+            "Medication Name,Generic Name,Brand Name,Category,Manufacturer,Dosage Strength,Dosage Form,Reorder Level,Urgency Level,Supplier,Last Updated,Action Required\n";
           outOfStockItems.forEach((item) => {
             const reorderLevel = Number(item.reorder_level) || 10;
-            const urgency = reorderLevel > 50 ? "HIGH" : reorderLevel > 20 ? "MEDIUM" : "LOW";
-            
+            const urgency =
+              reorderLevel > 50 ? "HIGH" : reorderLevel > 20 ? "MEDIUM" : "LOW";
+
             csvContent += `"${item.brand_name || item.generic_name || "N/A"}",`;
             csvContent += `"${item.generic_name || "N/A"}",`;
             csvContent += `"${item.brand_name || "N/A"}",`;
@@ -583,11 +608,11 @@ const AnalyticsReportsPage = () => {
             const daysUntilExpiry = Math.ceil(
               (expiryDate - today) / (1000 * 60 * 60 * 24)
             );
-            
+
             const currentStock = Number(item.stock_in_pieces) || 0;
             const pricePerPiece = Number(item.price_per_piece) || 0;
             const stockValue = currentStock * pricePerPiece;
-            
+
             // Determine priority and recommended actions
             let priority = "LOW";
             let action = "Monitor closely";
@@ -866,9 +891,11 @@ const AnalyticsReportsPage = () => {
         const profitMargin = reportData.profitMargin || 0;
 
         // Performance indicators
-        const avgTransactionValue = totalTransactions > 0 ? totalSales / totalTransactions : 0;
+        const avgTransactionValue =
+          totalTransactions > 0 ? totalSales / totalTransactions : 0;
         const costRatio = totalSales > 0 ? (totalCost / totalSales) * 100 : 0;
-        const profitPerTransaction = totalTransactions > 0 ? grossProfit / totalTransactions : 0;
+        const profitPerTransaction =
+          totalTransactions > 0 ? grossProfit / totalTransactions : 0;
 
         // Determine performance status
         let performanceStatus = "Good";
@@ -878,24 +905,36 @@ const AnalyticsReportsPage = () => {
         if (profitMargin < 15) {
           performanceStatus = "Needs Improvement";
           performanceColor = [234, 179, 8]; // Orange
-          salesRecommendations.push("Profit margin below 15% - Review pricing strategy and cost management");
+          salesRecommendations.push(
+            "Profit margin below 15% - Review pricing strategy and cost management"
+          );
         } else if (profitMargin < 25) {
           performanceStatus = "Fair";
           performanceColor = [59, 130, 246]; // Blue
-          salesRecommendations.push("Profit margin is acceptable but could be optimized");
+          salesRecommendations.push(
+            "Profit margin is acceptable but could be optimized"
+          );
         } else {
           performanceStatus = "Excellent";
-          salesRecommendations.push("Strong profit margins - Maintain current pricing and cost strategies");
+          salesRecommendations.push(
+            "Strong profit margins - Maintain current pricing and cost strategies"
+          );
         }
 
         if (avgTransactionValue < 200) {
-          salesRecommendations.push("Low average transaction value - Consider upselling and cross-selling strategies");
+          salesRecommendations.push(
+            "Low average transaction value - Consider upselling and cross-selling strategies"
+          );
         }
 
         if (totalTransactions < 10) {
-          salesRecommendations.push("Low transaction volume - Focus on customer acquisition and retention");
+          salesRecommendations.push(
+            "Low transaction volume - Focus on customer acquisition and retention"
+          );
         } else if (totalTransactions > 50) {
-          salesRecommendations.push("High transaction volume - Excellent customer engagement");
+          salesRecommendations.push(
+            "High transaction volume - Excellent customer engagement"
+          );
         }
 
         // Performance insights table
@@ -903,7 +942,12 @@ const AnalyticsReportsPage = () => {
           ["Performance Status", performanceStatus],
           ["Cost Ratio", `${costRatio.toFixed(2)}%`],
           ["Profit per Transaction", formatCurrency(profitPerTransaction)],
-          ["Revenue Efficiency", totalCost > 0 ? `${(grossProfit / totalCost * 100).toFixed(2)}% ROI` : "N/A"]
+          [
+            "Revenue Efficiency",
+            totalCost > 0
+              ? `${((grossProfit / totalCost) * 100).toFixed(2)}% ROI`
+              : "N/A",
+          ],
         ];
 
         autoTable(doc, {
@@ -950,7 +994,10 @@ const AnalyticsReportsPage = () => {
             doc.setFontSize(9);
             doc.setFont(undefined, "normal");
             doc.setTextColor(...colors.text);
-            const recLines = doc.splitTextToSize(`${index + 1}. ${rec}`, pageWidth - 28);
+            const recLines = doc.splitTextToSize(
+              `${index + 1}. ${rec}`,
+              pageWidth - 28
+            );
             doc.text(recLines, 16, yPosition);
             yPosition += recLines.length * 4 + 2;
           });
@@ -1010,19 +1057,20 @@ const AnalyticsReportsPage = () => {
 
         // Get proper counts from report data with clear differentiation
         const allLowStockAlerts = reportData.fullData?.lowStockAlerts || [];
-        
+
         // Separate low stock (above 0, below reorder level) from out of stock (0 pieces)
-        const actualLowStockItems = allLowStockAlerts.filter(item => {
+        const actualLowStockItems = allLowStockAlerts.filter((item) => {
           const stock = Number(item.stock_in_pieces) || 0;
           return stock > 0; // Has stock but below reorder level
         });
-        
-        const outOfStockItems = allLowStockAlerts.filter(item => {
+
+        const outOfStockItems = allLowStockAlerts.filter((item) => {
           const stock = Number(item.stock_in_pieces) || 0;
           return stock === 0; // Completely out of stock
         });
-        
-        const expiringItems = reportData.fullData?.expiryAnalysis?.expiringProducts || [];
+
+        const expiringItems =
+          reportData.fullData?.expiryAnalysis?.expiringProducts || [];
 
         const lowStockCount = actualLowStockItems.length;
         const outOfStockCount = outOfStockItems.length;
@@ -1034,7 +1082,7 @@ const AnalyticsReportsPage = () => {
           actualLowStockItems: lowStockCount,
           outOfStockItems: outOfStockCount,
           expiringItems: expiringCount,
-          totalAlerts
+          totalAlerts,
         });
 
         const metrics = [
@@ -1075,8 +1123,16 @@ const AnalyticsReportsPage = () => {
         doc.setFont(undefined, "normal");
         doc.text("DATA QUALITY NOTICE:", 16, yPosition + 4);
         doc.setFontSize(8);
-        doc.text("Fields showing 'Update Required' indicate missing medication details in your", 16, yPosition + 7);
-        doc.text("inventory system. Consider updating product profiles for better tracking.", 16, yPosition + 10);
+        doc.text(
+          "Fields showing 'Update Required' indicate missing medication details in your",
+          16,
+          yPosition + 7
+        );
+        doc.text(
+          "inventory system. Consider updating product profiles for better tracking.",
+          16,
+          yPosition + 10
+        );
         yPosition += 17;
 
         // LOW STOCK ITEMS DETAILS (excluding out of stock)
@@ -1092,7 +1148,11 @@ const AnalyticsReportsPage = () => {
           doc.setTextColor(...colors.warning);
           doc.setFontSize(11);
           doc.setFont(undefined, "bold");
-          doc.text("LOW STOCK MEDICATIONS (Above 0, Below Reorder Level)", 16, yPosition + 5.5);
+          doc.text(
+            "LOW STOCK MEDICATIONS (Above 0, Below Reorder Level)",
+            16,
+            yPosition + 5.5
+          );
           yPosition += 10;
 
           const lowStockData = actualLowStockItems.map((item) => {
@@ -1101,28 +1161,41 @@ const AnalyticsReportsPage = () => {
             const reorderLevel = Number(item.reorder_level) || 10;
             const pricePerPiece = Number(item.price_per_piece) || 0;
             const stockValue = currentStock * pricePerPiece;
-            
+
             // Use brand name first, then generic, then fallback
-            const medName = (item.brand_name && item.brand_name.trim()) 
-              ? item.brand_name 
-              : (item.generic_name && item.generic_name.trim()) 
-                ? item.generic_name 
+            const medName =
+              item.brand_name && item.brand_name.trim()
+                ? item.brand_name
+                : item.generic_name && item.generic_name.trim()
+                ? item.generic_name
                 : "Unknown Medication";
-                
-            const category = (item.category && item.category.trim()) ? item.category : "Uncategorized";
-            
+
+            const category =
+              item.category && item.category.trim()
+                ? item.category
+                : "Uncategorized";
+
             // Debug log to check what data we're actually getting
             console.log("🔍 PDF Generation - Raw item data:", {
               manufacturer: item.manufacturer,
               dosage_strength: item.dosage_strength,
               dosage_form: item.dosage_form,
-              supplier: item.supplier
+              supplier: item.supplier,
             });
-            
-            const manufacturer = (item.manufacturer && item.manufacturer.trim()) ? item.manufacturer : "Not Specified";
-            const dosageStrength = (item.dosage_strength && item.dosage_strength.trim()) ? item.dosage_strength : "Not Specified";
-            const dosageForm = (item.dosage_form && item.dosage_form.trim()) ? item.dosage_form : "Not Specified";
-            
+
+            const manufacturer =
+              item.manufacturer && item.manufacturer.trim()
+                ? item.manufacturer
+                : "Not Specified";
+            const dosageStrength =
+              item.dosage_strength && item.dosage_strength.trim()
+                ? item.dosage_strength
+                : "Not Specified";
+            const dosageForm =
+              item.dosage_form && item.dosage_form.trim()
+                ? item.dosage_form
+                : "Not Specified";
+
             return [
               medName,
               category,
@@ -1130,7 +1203,7 @@ const AnalyticsReportsPage = () => {
               `${reorderLevel} pcs`,
               formatCurrency(stockValue),
               manufacturer,
-              `${dosageStrength} ${dosageForm}`.trim()
+              `${dosageStrength} ${dosageForm}`.trim(),
             ];
           });
 
@@ -1139,12 +1212,12 @@ const AnalyticsReportsPage = () => {
             head: [
               [
                 "Medication Name",
-                "Category", 
+                "Category",
                 "Current Stock",
                 "Reorder Level",
                 "Stock Value",
                 "Manufacturer",
-                "Dosage"
+                "Dosage",
               ],
             ],
             body: lowStockData,
@@ -1177,7 +1250,7 @@ const AnalyticsReportsPage = () => {
           yPosition = doc.lastAutoTable.finalY + 15;
         }
 
-        // OUT OF STOCK ITEMS DETAILS  
+        // OUT OF STOCK ITEMS DETAILS
         if (outOfStockItems.length > 0) {
           // Check if we need a new page
           if (yPosition > pageHeight - 60) {
@@ -1195,36 +1268,53 @@ const AnalyticsReportsPage = () => {
 
           const outOfStockData = outOfStockItems.map((item) => {
             const reorderLevel = Number(item.reorder_level) || 10;
-            
+
             // Use brand name first, then generic, then fallback
-            const medName = (item.brand_name && item.brand_name.trim()) 
-              ? item.brand_name 
-              : (item.generic_name && item.generic_name.trim()) 
-                ? item.generic_name 
+            const medName =
+              item.brand_name && item.brand_name.trim()
+                ? item.brand_name
+                : item.generic_name && item.generic_name.trim()
+                ? item.generic_name
                 : "Unknown Medication";
-                
-            const category = (item.category && item.category.trim()) ? item.category : "Uncategorized";
-            
+
+            const category =
+              item.category && item.category.trim()
+                ? item.category
+                : "Uncategorized";
+
             // Debug log to check what data we're actually getting for out of stock
             console.log("🔍 PDF Out of Stock - Raw item data:", {
               manufacturer: item.manufacturer,
               dosage_strength: item.dosage_strength,
               dosage_form: item.dosage_form,
-              supplier: item.supplier
+              supplier: item.supplier,
             });
-            
-            const manufacturer = (item.manufacturer && item.manufacturer.trim()) ? item.manufacturer : "Not Specified";
-            const dosageStrength = (item.dosage_strength && item.dosage_strength.trim()) ? item.dosage_strength : "Not Specified";
-            const dosageForm = (item.dosage_form && item.dosage_form.trim()) ? item.dosage_form : "Not Specified";
-            const supplier = (item.supplier && item.supplier.trim()) ? item.supplier : "Not Specified";
-            
-            const lastUpdated = item.created_at 
+
+            const manufacturer =
+              item.manufacturer && item.manufacturer.trim()
+                ? item.manufacturer
+                : "Not Specified";
+            const dosageStrength =
+              item.dosage_strength && item.dosage_strength.trim()
+                ? item.dosage_strength
+                : "Not Specified";
+            const dosageForm =
+              item.dosage_form && item.dosage_form.trim()
+                ? item.dosage_form
+                : "Not Specified";
+            const supplier =
+              item.supplier && item.supplier.trim()
+                ? item.supplier
+                : "Not Specified";
+
+            const lastUpdated = item.created_at
               ? format(new Date(item.created_at), "MMM dd, yyyy")
-              : item.updated_at 
-                ? format(new Date(item.updated_at), "MMM dd, yyyy")
-                : "Unknown";
-            const urgency = reorderLevel > 50 ? "High" : reorderLevel > 20 ? "Medium" : "Low";
-            
+              : item.updated_at
+              ? format(new Date(item.updated_at), "MMM dd, yyyy")
+              : "Unknown";
+            const urgency =
+              reorderLevel > 50 ? "High" : reorderLevel > 20 ? "Medium" : "Low";
+
             return [
               medName,
               category,
@@ -1233,7 +1323,7 @@ const AnalyticsReportsPage = () => {
               urgency,
               manufacturer,
               `${dosageStrength} ${dosageForm}`.trim(),
-              supplier
+              supplier,
             ];
           });
 
@@ -1243,12 +1333,12 @@ const AnalyticsReportsPage = () => {
               [
                 "Medication Name",
                 "Category",
-                "Reorder Level", 
+                "Reorder Level",
                 "Last Updated",
                 "Urgency",
                 "Manufacturer",
                 "Dosage",
-                "Supplier"
+                "Supplier",
               ],
             ],
             body: outOfStockData,
@@ -1295,11 +1385,7 @@ const AnalyticsReportsPage = () => {
           doc.setTextColor(161, 98, 7); // Dark yellow
           doc.setFontSize(11);
           doc.setFont(undefined, "bold");
-          doc.text(
-            "MEDICATIONS EXPIRING SOON (30 DAYS)",
-            16,
-            yPosition + 5.5
-          );
+          doc.text("MEDICATIONS EXPIRING SOON (30 DAYS)", 16, yPosition + 5.5);
           yPosition += 10;
 
           const expiringData = expiringItems.map((item) => {
@@ -1308,32 +1394,49 @@ const AnalyticsReportsPage = () => {
             const daysUntilExpiry = Math.ceil(
               (expiryDate - today) / (1000 * 60 * 60 * 24)
             );
-            
+
             const currentStock = Number(item.stock_in_pieces) || 0;
-            const stockValue = currentStock * (Number(item.price_per_piece) || 0);
-            
+            const stockValue =
+              currentStock * (Number(item.price_per_piece) || 0);
+
             // Use brand name first, then generic, then fallback
-            const medName = (item.brand_name && item.brand_name.trim()) 
-              ? item.brand_name 
-              : (item.generic_name && item.generic_name.trim()) 
-                ? item.generic_name 
+            const medName =
+              item.brand_name && item.brand_name.trim()
+                ? item.brand_name
+                : item.generic_name && item.generic_name.trim()
+                ? item.generic_name
                 : "Unknown Medication";
-                
-            const category = (item.category && item.category.trim()) ? item.category : "Uncategorized";
-            const batchNumber = (item.batch_number && item.batch_number.trim()) ? item.batch_number : "Not Available";
-            
+
+            const category =
+              item.category && item.category.trim()
+                ? item.category
+                : "Uncategorized";
+            const batchNumber =
+              item.batch_number && item.batch_number.trim()
+                ? item.batch_number
+                : "Not Available";
+
             // Debug log to check what data we're actually getting for expiring items
             console.log("🔍 PDF Expiring - Raw item data:", {
               manufacturer: item.manufacturer,
               dosage_strength: item.dosage_strength,
               dosage_form: item.dosage_form,
-              supplier: item.supplier
+              supplier: item.supplier,
             });
-            
-            const manufacturer = (item.manufacturer && item.manufacturer.trim()) ? item.manufacturer : "Not Specified";
-            const dosageStrength = (item.dosage_strength && item.dosage_strength.trim()) ? item.dosage_strength : "Not Specified";
-            const dosageForm = (item.dosage_form && item.dosage_form.trim()) ? item.dosage_form : "Not Specified";
-            
+
+            const manufacturer =
+              item.manufacturer && item.manufacturer.trim()
+                ? item.manufacturer
+                : "Not Specified";
+            const dosageStrength =
+              item.dosage_strength && item.dosage_strength.trim()
+                ? item.dosage_strength
+                : "Not Specified";
+            const dosageForm =
+              item.dosage_form && item.dosage_form.trim()
+                ? item.dosage_form
+                : "Not Specified";
+
             // Determine priority based on days left and stock value
             let priority = "Low";
             if (daysUntilExpiry <= 7) priority = "Critical";
@@ -1350,7 +1453,7 @@ const AnalyticsReportsPage = () => {
               `${daysUntilExpiry} days`,
               formatCurrency(stockValue),
               priority,
-              batchNumber
+              batchNumber,
             ];
           });
 
@@ -1367,7 +1470,7 @@ const AnalyticsReportsPage = () => {
                 "Days Left",
                 "Stock Value",
                 "Priority",
-                "Batch #"
+                "Batch #",
               ],
             ],
             body: expiringData,
@@ -1410,26 +1513,42 @@ const AnalyticsReportsPage = () => {
         }
 
         // Calculate comprehensive metrics
-        const totalStockValue = [...actualLowStockItems, ...outOfStockItems, ...expiringItems]
-          .reduce((sum, item) => sum + ((item.stock_in_pieces || 0) * (item.price_per_piece || 0)), 0);
-        
-        const avgDaysToExpiry = expiringItems.length > 0 
-          ? expiringItems.reduce((sum, item) => {
-              const expiryDate = new Date(item.expiry_date);
-              const today = new Date();
-              const days = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-              return sum + days;
-            }, 0) / expiringItems.length
-          : 0;
+        const totalStockValue = [
+          ...actualLowStockItems,
+          ...outOfStockItems,
+          ...expiringItems,
+        ].reduce(
+          (sum, item) =>
+            sum + (item.stock_in_pieces || 0) * (item.price_per_piece || 0),
+          0
+        );
+
+        const avgDaysToExpiry =
+          expiringItems.length > 0
+            ? expiringItems.reduce((sum, item) => {
+                const expiryDate = new Date(item.expiry_date);
+                const today = new Date();
+                const days = Math.ceil(
+                  (expiryDate - today) / (1000 * 60 * 60 * 24)
+                );
+                return sum + days;
+              }, 0) / expiringItems.length
+            : 0;
 
         const criticalValueAtRisk = expiringItems
-          .filter(item => {
+          .filter((item) => {
             const expiryDate = new Date(item.expiry_date);
             const today = new Date();
-            const days = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            const days = Math.ceil(
+              (expiryDate - today) / (1000 * 60 * 60 * 24)
+            );
             return days <= 7;
           })
-          .reduce((sum, item) => sum + ((item.stock_in_pieces || 0) * (item.price_per_piece || 0)), 0);
+          .reduce(
+            (sum, item) =>
+              sum + (item.stock_in_pieces || 0) * (item.price_per_piece || 0),
+            0
+          );
 
         // FINANCIAL IMPACT ANALYSIS
         doc.setFillColor(254, 242, 242); // Light red background
@@ -1443,9 +1562,18 @@ const AnalyticsReportsPage = () => {
         const financialMetrics = [
           ["Total Value at Risk", formatCurrency(totalStockValue)],
           ["Critical Value (≤7 days)", formatCurrency(criticalValueAtRisk)],
-          ["Out of Stock Revenue Loss", formatCurrency(outOfStockItems.reduce((sum, item) => 
-            sum + ((item.reorder_level || 10) * (item.price_per_piece || 0)), 0))],
-          ["Average Days to Expiry", `${avgDaysToExpiry.toFixed(1)} days`]
+          [
+            "Out of Stock Revenue Loss",
+            formatCurrency(
+              outOfStockItems.reduce(
+                (sum, item) =>
+                  sum +
+                  (item.reorder_level || 10) * (item.price_per_piece || 0),
+                0
+              )
+            ),
+          ],
+          ["Average Days to Expiry", `${avgDaysToExpiry.toFixed(1)} days`],
         ];
 
         autoTable(doc, {
@@ -1482,13 +1610,14 @@ const AnalyticsReportsPage = () => {
 
         // Category Analysis
         const categoryBreakdown = {};
-        [...actualLowStockItems, ...outOfStockItems].forEach(item => {
+        [...actualLowStockItems, ...outOfStockItems].forEach((item) => {
           const category = item.category || "Uncategorized";
           if (!categoryBreakdown[category]) {
             categoryBreakdown[category] = { count: 0, value: 0 };
           }
           categoryBreakdown[category].count++;
-          categoryBreakdown[category].value += (item.stock_in_pieces || 0) * (item.price_per_piece || 0);
+          categoryBreakdown[category].value +=
+            (item.stock_in_pieces || 0) * (item.price_per_piece || 0);
         });
 
         const topAffectedCategories = Object.entries(categoryBreakdown)
@@ -1500,12 +1629,18 @@ const AnalyticsReportsPage = () => {
             category,
             data.count,
             formatCurrency(data.value),
-            `${((data.count / (actualLowStockItems.length + outOfStockItems.length)) * 100).toFixed(1)}%`
+            `${(
+              (data.count /
+                (actualLowStockItems.length + outOfStockItems.length)) *
+              100
+            ).toFixed(1)}%`,
           ]);
 
           autoTable(doc, {
             startY: yPosition,
-            head: [["Most Affected Categories", "Items", "Value", "% of Issues"]],
+            head: [
+              ["Most Affected Categories", "Items", "Value", "% of Issues"],
+            ],
             body: categoryData,
             theme: "striped",
             headStyles: {
@@ -1533,63 +1668,96 @@ const AnalyticsReportsPage = () => {
         const recommendedActions = [];
 
         if (outOfStockItems.length > 0) {
-          const highDemandOOS = outOfStockItems.filter(item => (item.reorder_level || 10) > 20).length;
-          criticalActions.push(`${outOfStockItems.length} medications out of stock (${highDemandOOS} high-demand) - Place emergency orders, contact alternative suppliers`);
+          const highDemandOOS = outOfStockItems.filter(
+            (item) => (item.reorder_level || 10) > 20
+          ).length;
+          criticalActions.push(
+            `${outOfStockItems.length} medications out of stock (${highDemandOOS} high-demand) - Place emergency orders, contact alternative suppliers`
+          );
         }
 
-        const criticalExpiring = expiringItems.filter(item => {
+        const criticalExpiring = expiringItems.filter((item) => {
           const expiryDate = new Date(item.expiry_date);
           const today = new Date();
-          const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+          const daysUntilExpiry = Math.ceil(
+            (expiryDate - today) / (1000 * 60 * 60 * 24)
+          );
           return daysUntilExpiry <= 7;
         }).length;
 
         if (criticalExpiring > 0) {
-          criticalActions.push(`${criticalExpiring} medications expire within 7 days - Implement emergency discount pricing (30-50% off) or return to supplier immediately`);
+          criticalActions.push(
+            `${criticalExpiring} medications expire within 7 days - Implement emergency discount pricing (30-50% off) or return to supplier immediately`
+          );
         }
 
         if (actualLowStockItems.length > 0) {
-          const criticalLowStock = actualLowStockItems.filter(item => 
-            (item.stock_in_pieces || 0) <= Math.max(1, (item.reorder_level || 10) * 0.3)
+          const criticalLowStock = actualLowStockItems.filter(
+            (item) =>
+              (item.stock_in_pieces || 0) <=
+              Math.max(1, (item.reorder_level || 10) * 0.3)
           ).length;
-          urgentActions.push(`${actualLowStockItems.length} medications below reorder level (${criticalLowStock} critically low) - Schedule restocking within 48 hours`);
+          urgentActions.push(
+            `${actualLowStockItems.length} medications below reorder level (${criticalLowStock} critically low) - Schedule restocking within 48 hours`
+          );
         }
 
-        const highValueExpiring = expiringItems.filter(item => {
-          const stockValue = (Number(item.stock_in_pieces) || 0) * (Number(item.price_per_piece) || 0);
+        const highValueExpiring = expiringItems.filter((item) => {
+          const stockValue =
+            (Number(item.stock_in_pieces) || 0) *
+            (Number(item.price_per_piece) || 0);
           const expiryDate = new Date(item.expiry_date);
           const today = new Date();
-          const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+          const daysUntilExpiry = Math.ceil(
+            (expiryDate - today) / (1000 * 60 * 60 * 24)
+          );
           return stockValue > 5000 && daysUntilExpiry <= 15;
         }).length;
 
         if (highValueExpiring > 0) {
-          urgentActions.push(`${highValueExpiring} high-value medications expiring - Contact supplier for return/exchange, promote through patient care programs`);
+          urgentActions.push(
+            `${highValueExpiring} high-value medications expiring - Contact supplier for return/exchange, promote through patient care programs`
+          );
         }
 
         // Enhanced recommendations based on data patterns
         const supplierAnalysis = {};
-        [...actualLowStockItems, ...outOfStockItems].forEach(item => {
+        [...actualLowStockItems, ...outOfStockItems].forEach((item) => {
           const supplier = item.supplier || "Unknown Supplier";
           supplierAnalysis[supplier] = (supplierAnalysis[supplier] || 0) + 1;
         });
 
-        const topProblematicSupplier = Object.entries(supplierAnalysis)
-          .sort((a, b) => b[1] - a[1])[0];
+        const topProblematicSupplier = Object.entries(supplierAnalysis).sort(
+          (a, b) => b[1] - a[1]
+        )[0];
 
         if (topProblematicSupplier && topProblematicSupplier[1] > 2) {
-          recommendedActions.push(`Supplier "${topProblematicSupplier[0]}" has ${topProblematicSupplier[1]} items with stock issues - Consider diversifying suppliers or renegotiating delivery terms`);
+          recommendedActions.push(
+            `Supplier "${topProblematicSupplier[0]}" has ${topProblematicSupplier[1]} items with stock issues - Consider diversifying suppliers or renegotiating delivery terms`
+          );
         }
 
-        recommendedActions.push("Implement automated reorder point system to prevent stockouts");
-        recommendedActions.push("Establish FIFO rotation system for better expiry management");
-        recommendedActions.push("Set up supplier performance monitoring dashboard");
-        
-        const manufacturerIssues = [...actualLowStockItems, ...outOfStockItems]
-          .filter(item => !item.manufacturer || item.manufacturer === "Not Specified").length;
+        recommendedActions.push(
+          "Implement automated reorder point system to prevent stockouts"
+        );
+        recommendedActions.push(
+          "Establish FIFO rotation system for better expiry management"
+        );
+        recommendedActions.push(
+          "Set up supplier performance monitoring dashboard"
+        );
+
+        const manufacturerIssues = [
+          ...actualLowStockItems,
+          ...outOfStockItems,
+        ].filter(
+          (item) => !item.manufacturer || item.manufacturer === "Not Specified"
+        ).length;
 
         if (manufacturerIssues > 0) {
-          recommendedActions.push(`Update manufacturer information for ${manufacturerIssues} items to improve supplier management`);
+          recommendedActions.push(
+            `Update manufacturer information for ${manufacturerIssues} items to improve supplier management`
+          );
         }
 
         // PRIORITIZED ACTION PLAN
@@ -1608,22 +1776,22 @@ const AnalyticsReportsPage = () => {
             type: "🚨 CRITICAL",
             timeline: "IMMEDIATE",
             priority: index + 1,
-            impact: "High Revenue Risk"
+            impact: "High Revenue Risk",
           })),
           ...urgentActions.map((action, index) => ({
             text: action,
             type: "⚠️ URGENT",
             timeline: "24-48 HOURS",
             priority: criticalActions.length + index + 1,
-            impact: "Operations Impact"
+            impact: "Operations Impact",
           })),
           ...recommendedActions.slice(0, 4).map((action, index) => ({
             text: action,
             type: "💡 RECOMMENDATION",
             timeline: "THIS WEEK",
             priority: criticalActions.length + urgentActions.length + index + 1,
-            impact: "Process Improvement"
-          }))
+            impact: "Process Improvement",
+          })),
         ];
 
         if (allActions.length === 0) {
@@ -1632,21 +1800,29 @@ const AnalyticsReportsPage = () => {
             type: "✅ STATUS",
             timeline: "ONGOING",
             priority: 1,
-            impact: "Maintenance"
+            impact: "Maintenance",
           });
         }
 
-        const actionTableData = allActions.map(action => [
+        const actionTableData = allActions.map((action) => [
           action.priority.toString(),
           action.type,
           action.timeline,
           action.impact,
-          action.text
+          action.text,
         ]);
 
         autoTable(doc, {
           startY: yPosition,
-          head: [["#", "Priority Level", "Timeline", "Impact Type", "Action Required"]],
+          head: [
+            [
+              "#",
+              "Priority Level",
+              "Timeline",
+              "Impact Type",
+              "Action Required",
+            ],
+          ],
           body: actionTableData,
           theme: "grid",
           headStyles: {
@@ -1709,14 +1885,14 @@ const AnalyticsReportsPage = () => {
           "Add batch numbers for better traceability and expiry management",
           "Update supplier contact information for easier reordering",
           "Set appropriate reorder levels based on usage patterns",
-          "Implement regular data quality checks and validation"
+          "Implement regular data quality checks and validation",
         ];
 
         improvementTips.forEach((tip, index) => {
           doc.setFontSize(9);
           doc.setFont(undefined, "normal");
           doc.setTextColor(...colors.text);
-          doc.text(`${index + 1}. ${tip}`, 16, yPosition + (index * 6));
+          doc.text(`${index + 1}. ${tip}`, 16, yPosition + index * 6);
         });
 
         yPosition += improvementTips.length * 6 + 10;
@@ -1782,16 +1958,27 @@ const AnalyticsReportsPage = () => {
         const inventoryValue = reportData.inventoryValue || 0;
         const inventoryTurnover = reportData.inventoryTurnover || 0;
         const daysInventory = reportData.daysInventory || 0;
-        const avgTransaction = transactionCount > 0 ? totalRevenue / transactionCount : 0;
+        const avgTransaction =
+          transactionCount > 0 ? totalRevenue / transactionCount : 0;
         const dailyRevenue = reportData.dailyRevenue || 0;
 
         const operationalMetrics = [
           ["Inventory Value", formatCurrency(inventoryValue)],
-          ["Inventory Turnover Ratio", `${inventoryTurnover.toFixed(2)}x per period`],
+          [
+            "Inventory Turnover Ratio",
+            `${inventoryTurnover.toFixed(2)}x per period`,
+          ],
           ["Days Inventory Outstanding", `${daysInventory.toFixed(0)} days`],
           ["Average Transaction Value", formatCurrency(avgTransaction)],
           ["Daily Revenue Average", formatCurrency(dailyRevenue)],
-          ["Cost Efficiency", totalRevenue > 0 ? `${((totalRevenue - totalCost) / totalRevenue * 100).toFixed(1)}%` : "N/A"],
+          [
+            "Cost Efficiency",
+            totalRevenue > 0
+              ? `${(((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(
+                  1
+                )}%`
+              : "N/A",
+          ],
         ];
 
         autoTable(doc, {
@@ -1833,29 +2020,61 @@ const AnalyticsReportsPage = () => {
 
         // Profit margin analysis
         if (profitMargin >= 30) {
-          performanceInsights.push(["Profit Margin", "Excellent (≥30%)", "Maintain current pricing strategy"]);
+          performanceInsights.push([
+            "Profit Margin",
+            "Excellent (≥30%)",
+            "Maintain current pricing strategy",
+          ]);
           overallRating = "Excellent";
         } else if (profitMargin >= 20) {
-          performanceInsights.push(["Profit Margin", "Good (20-29%)", "Consider opportunities for optimization"]);
+          performanceInsights.push([
+            "Profit Margin",
+            "Good (20-29%)",
+            "Consider opportunities for optimization",
+          ]);
         } else if (profitMargin >= 15) {
-          performanceInsights.push(["Profit Margin", "Fair (15-19%)", "Review pricing and cost management"]);
+          performanceInsights.push([
+            "Profit Margin",
+            "Fair (15-19%)",
+            "Review pricing and cost management",
+          ]);
           overallRating = "Fair";
           ratingColor = [234, 179, 8]; // Yellow
         } else {
-          performanceInsights.push(["Profit Margin", "Needs Improvement (<15%)", "Urgent: Review pricing and reduce costs"]);
+          performanceInsights.push([
+            "Profit Margin",
+            "Needs Improvement (<15%)",
+            "Urgent: Review pricing and reduce costs",
+          ]);
           overallRating = "Needs Improvement";
           ratingColor = [220, 38, 38]; // Red
         }
 
         // Inventory turnover analysis
         if (inventoryTurnover >= 12) {
-          performanceInsights.push(["Inventory Turnover", "Excellent (≥12x/year)", "Efficient inventory management"]);
+          performanceInsights.push([
+            "Inventory Turnover",
+            "Excellent (≥12x/year)",
+            "Efficient inventory management",
+          ]);
         } else if (inventoryTurnover >= 6) {
-          performanceInsights.push(["Inventory Turnover", "Good (6-11x/year)", "Room for improvement in turnover"]);
+          performanceInsights.push([
+            "Inventory Turnover",
+            "Good (6-11x/year)",
+            "Room for improvement in turnover",
+          ]);
         } else if (inventoryTurnover >= 3) {
-          performanceInsights.push(["Inventory Turnover", "Fair (3-5x/year)", "Consider reducing stock levels"]);
+          performanceInsights.push([
+            "Inventory Turnover",
+            "Fair (3-5x/year)",
+            "Consider reducing stock levels",
+          ]);
         } else {
-          performanceInsights.push(["Inventory Turnover", "Poor (<3x/year)", "Review inventory levels and ordering"]);
+          performanceInsights.push([
+            "Inventory Turnover",
+            "Poor (<3x/year)",
+            "Review inventory levels and ordering",
+          ]);
           if (overallRating === "Excellent" || overallRating === "Good") {
             overallRating = "Fair";
             ratingColor = [234, 179, 8];
@@ -1864,13 +2083,29 @@ const AnalyticsReportsPage = () => {
 
         // ROI analysis
         if (roi >= 25) {
-          performanceInsights.push(["ROI", "Excellent (≥25%)", "Strong return on investment"]);
+          performanceInsights.push([
+            "ROI",
+            "Excellent (≥25%)",
+            "Strong return on investment",
+          ]);
         } else if (roi >= 15) {
-          performanceInsights.push(["ROI", "Good (15-24%)", "Solid investment returns"]);
+          performanceInsights.push([
+            "ROI",
+            "Good (15-24%)",
+            "Solid investment returns",
+          ]);
         } else if (roi >= 10) {
-          performanceInsights.push(["ROI", "Fair (10-14%)", "Consider investment optimization"]);
+          performanceInsights.push([
+            "ROI",
+            "Fair (10-14%)",
+            "Consider investment optimization",
+          ]);
         } else {
-          performanceInsights.push(["ROI", "Poor (<10%)", "Review investment strategy"]);
+          performanceInsights.push([
+            "ROI",
+            "Poor (<10%)",
+            "Review investment strategy",
+          ]);
         }
 
         autoTable(doc, {
@@ -1907,12 +2142,22 @@ const AnalyticsReportsPage = () => {
         doc.setTextColor(...ratingColor);
         doc.setFontSize(14);
         doc.setFont(undefined, "bold");
-        doc.text(`OVERALL PERFORMANCE: ${overallRating.toUpperCase()}`, 16, yPosition + 8);
+        doc.text(
+          `OVERALL PERFORMANCE: ${overallRating.toUpperCase()}`,
+          16,
+          yPosition + 8
+        );
 
         doc.setTextColor(...colors.text);
         doc.setFontSize(9);
         doc.setFont(undefined, "normal");
-        const summaryText = `Based on profit margin (${profitMargin.toFixed(1)}%), ROI (${roi.toFixed(1)}%), and inventory turnover (${inventoryTurnover.toFixed(1)}x), your pharmacy shows ${overallRating.toLowerCase()} performance. Focus on areas rated as needing improvement for better results.`;
+        const summaryText = `Based on profit margin (${profitMargin.toFixed(
+          1
+        )}%), ROI (${roi.toFixed(
+          1
+        )}%), and inventory turnover (${inventoryTurnover.toFixed(
+          1
+        )}x), your pharmacy shows ${overallRating.toLowerCase()} performance. Focus on areas rated as needing improvement for better results.`;
         const summaryLines = doc.splitTextToSize(summaryText, pageWidth - 32);
         doc.text(summaryLines, 16, yPosition + 14);
 
@@ -2428,45 +2673,61 @@ const AnalyticsReportsPage = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Expiring Soon (30 days):</span>
+                    <span className="text-gray-600">
+                      Expiring Soon (30 days):
+                    </span>
                     <span className="font-semibold text-yellow-600">
-                      {reports.stockAlerts.fullData?.expiryAnalysis?.expiringProducts?.length || 0}
+                      {reports.stockAlerts.fullData?.expiryAnalysis
+                        ?.expiringProducts?.length || 0}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600">Expired Items:</span>
                     <span className="font-semibold text-red-700">
-                      {reports.stockAlerts.fullData?.expiryAnalysis?.expiredProducts?.length || 0}
+                      {reports.stockAlerts.fullData?.expiryAnalysis
+                        ?.expiredProducts?.length || 0}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Show detailed breakdown if there are items */}
-                {(reports.stockAlerts.lowStockItems?.length > 0 || 
-                  reports.stockAlerts.fullData?.lowStockAlerts?.filter(item => item.stock_in_pieces === 0)?.length > 0 ||
-                  reports.stockAlerts.fullData?.expiryAnalysis?.expiringProducts?.length > 0) && (
+                {(reports.stockAlerts.lowStockItems?.length > 0 ||
+                  reports.stockAlerts.fullData?.lowStockAlerts?.filter(
+                    (item) => item.stock_in_pieces === 0
+                  )?.length > 0 ||
+                  reports.stockAlerts.fullData?.expiryAnalysis?.expiringProducts
+                    ?.length > 0) && (
                   <div className="mt-3 p-3 bg-white rounded border">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Critical Items Preview:</h4>
-                    
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                      Critical Items Preview:
+                    </h4>
+
                     {/* Preview of low stock items */}
-                    {reports.stockAlerts.lowStockItems?.slice(0, 3).map((item, index) => (
-                      <div key={index} className="text-xs text-gray-600 mb-1">
-                        <span className="font-medium text-orange-600">
-                          {item.brand_name || item.generic_name}
-                        </span>
-                        {" - "}
-                        <span>{item.stock_in_pieces} pcs remaining (need {item.reorder_level})</span>
-                      </div>
-                    ))}
-                    
+                    {reports.stockAlerts.lowStockItems
+                      ?.slice(0, 3)
+                      .map((item, index) => (
+                        <div key={index} className="text-xs text-gray-600 mb-1">
+                          <span className="font-medium text-orange-600">
+                            {item.brand_name || item.generic_name}
+                          </span>
+                          {" - "}
+                          <span>
+                            {item.stock_in_pieces} pcs remaining (need{" "}
+                            {item.reorder_level})
+                          </span>
+                        </div>
+                      ))}
+
                     {reports.stockAlerts.lowStockItems?.length > 3 && (
                       <div className="text-xs text-gray-500 italic">
-                        ...and {reports.stockAlerts.lowStockItems.length - 3} more items
+                        ...and {reports.stockAlerts.lowStockItems.length - 3}{" "}
+                        more items
                       </div>
                     )}
-                    
+
                     <div className="text-xs text-gray-500 mt-2">
-                      📄 Generate full report for complete details and recommendations
+                      📄 Generate full report for complete details and
+                      recommendations
                     </div>
                   </div>
                 )}

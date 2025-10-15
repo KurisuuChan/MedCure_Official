@@ -554,8 +554,11 @@ export const ReportsService = {
           batch: productsData[0].batch_number,
         });
       }
-      
-      console.log("📊 [ReportsService] Low stock alerts count:", report.lowStockAlerts?.length || 0);
+
+      console.log(
+        "📊 [ReportsService] Low stock alerts count:",
+        report.lowStockAlerts?.length || 0
+      );
       if (report.lowStockAlerts?.length > 0) {
         console.log("Sample low stock item:", {
           name: report.lowStockAlerts[0].generic_name,
@@ -959,7 +962,7 @@ function getExpiryAnalysis(products) {
     expiring90: 0,
     valid: 0,
     expiringProducts: [], // Add array to track specific expiring products
-    expiredProducts: [],  // Add array to track expired products
+    expiredProducts: [], // Add array to track expired products
   };
 
   products.forEach((product) => {
