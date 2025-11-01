@@ -387,6 +387,14 @@ export default function DashboardPage() {
                   color="purple"
                 />
                 <MemoizedCleanActionCard
+                  icon={TrendingUp}
+                  title="Demand Forecasting"
+                  description="AI-powered predictions"
+                  href="/forecasting"
+                  color="green"
+                  badge="New"
+                />
+                <MemoizedCleanActionCard
                   icon={UserCheck}
                   title="User Management"
                   description="System administration"

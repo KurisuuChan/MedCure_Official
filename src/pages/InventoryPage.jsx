@@ -22,6 +22,7 @@ import {
   Search,
 } from "lucide-react";
 import AnalyticsReportsPage from "../features/analytics/components/AnalyticsReportsPage";
+import ForecastingDashboardPage from "./ForecastingDashboardPage";
 import ArchiveReasonModal from "../components/modals/ArchiveReasonModal";
 import {
   getStockStatus,
@@ -433,9 +434,12 @@ export default function InventoryPage() {
             isLoading={isArchiving}
           />
         </>
-      ) : (
+      ) : activeTab === "dashboard" ? (
         // Analytics & Reports Tab
         <AnalyticsReportsPage />
+      ) : (
+        // Demand Forecasting Tab
+        <ForecastingDashboardPage />
       )}
 
       {/* Export Modal */}

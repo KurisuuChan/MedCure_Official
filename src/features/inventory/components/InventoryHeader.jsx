@@ -1,5 +1,5 @@
 import React from "react";
-import { Package, Download, Upload, Plus, BarChart3 } from "lucide-react";
+import { Package, Download, Upload, Plus, BarChart3, TrendingUp } from "lucide-react";
 
 /**
  * Inventory Page Header Component - Redesigned for Modern UX
@@ -101,6 +101,20 @@ function InventoryHeader({
           >
             <BarChart3 className="h-4 w-4" />
             <span>Analytics & Reports</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("forecasting")}
+            className={`flex items-center space-x-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "forecasting"
+                ? "border-green-600 text-green-600"
+                : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+            }`}
+            role="tab"
+            aria-selected={activeTab === "forecasting"}
+          >
+            <TrendingUp className="h-4 w-4" />
+            <span>Demand Forecasting</span>
           </button>
         </nav>
       </div>

@@ -50,6 +50,12 @@ const DiscountDebugTest = React.lazy(() =>
   import("./components/debug/DiscountDebugTest")
 );
 const EmailTestPage = React.lazy(() => import("./pages/EmailTestPage"));
+const ForecastingDashboardPage = React.lazy(() =>
+  import("./pages/ForecastingDashboardPage")
+);
+const GeneralForecastingPage = React.lazy(() =>
+  import("./pages/GeneralForecastingPage")
+);
 
 // Create a client with optimized cache settings for better performance
 const queryClient = new QueryClient({
@@ -227,6 +233,28 @@ function AppContent() {
           <PageErrorBoundary title="Batch Management Error">
             <ProtectedRoute requiredRole={["admin", "manager", "staff"]}>
               <BatchManagementPage />
+            </ProtectedRoute>
+          </PageErrorBoundary>
+        }
+      />
+
+      <Route
+        path="/forecasting"
+        element={
+          <PageErrorBoundary title="Demand Forecasting Error">
+            <ProtectedRoute>
+              <ForecastingDashboardPage />
+            </ProtectedRoute>
+          </PageErrorBoundary>
+        }
+      />
+
+      <Route
+        path="/forecasting/general"
+        element={
+          <PageErrorBoundary title="General Forecasting Error">
+            <ProtectedRoute>
+              <GeneralForecastingPage />
             </ProtectedRoute>
           </PageErrorBoundary>
         }
