@@ -774,20 +774,30 @@ export class ProductService {
   // ============================================
 
   /**
-   * Add a new product batch with quantity and expiry date
+   * Add a new product batch with quantity, pricing, and expiry date
    * @param {Object} batchData - The batch information
    * @param {string} batchData.productId - UUID of the product
    * @param {number} batchData.quantity - Quantity to add
-   * @param {string} batchData.batchNumber - Optional batch number
    * @param {string} batchData.expiryDate - Optional expiry date (YYYY-MM-DD)
-   * @param {number} batchData.costPerUnit - Optional cost per unit (defaults to 0)
+   * @param {number} batchData.purchase_price - Optional purchase price per unit
+   * @param {number} batchData.selling_price - Optional selling price per unit
+   * @param {string} batchData.supplier_name - Optional supplier name
+   * @param {string} batchData.notes - Optional notes
    * @returns {Promise<Object>} Result of the batch addition
    */
   static async addProductBatch(batchData) {
     try {
-      logDebug("Adding new product batch:", batchData);
+      logDebug("Adding new product batch with pricing:", batchData);
 
-      const { productId, quantity, batchNumber, expiryDate } = batchData;
+      const { 
+        productId, 
+        quantity, 
+        expiryDate,
+        purchase_price,
+        selling_price,
+        supplier_name,
+        notes
+      } = batchData;
 
       // Validate required fields
       if (!productId || !quantity || quantity <= 0) {
@@ -798,6 +808,10 @@ export class ProductService {
         p_product_id: productId,
         p_quantity: parseInt(quantity),
         p_expiry_date: expiryDate || null,
+        p_purchase_price: purchase_price ? parseFloat(purchase_price) : null,
+        p_selling_price: selling_price ? parseFloat(selling_price) : null,
+        p_supplier_name: supplier_name || null,
+        p_notes: notes || null,
       });
 
       if (error) {
@@ -808,7 +822,7 @@ export class ProductService {
         throw error;
       }
 
-      console.log("✅ Successfully added product batch:", data);
+      console.log("✅ Successfully added product batch with pricing:", data);
       logDebug("Batch addition result:", data);
 
       return data;

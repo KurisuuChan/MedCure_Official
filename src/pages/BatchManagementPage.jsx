@@ -54,8 +54,8 @@ const BatchManagementPage = () => {
   // Enhanced Filter States
   const [supplierFilter, setSupplierFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
-  const [sortBy, setSortBy] = useState("expiry_date"); // expiry_date, created_at, quantity, product_name
-  const [sortOrder, setSortOrder] = useState("asc"); // asc, desc
+  const [sortBy, setSortBy] = useState("created_at"); // created_at, expiry_date, quantity, product_name
+  const [sortOrder, setSortOrder] = useState("desc"); // desc = newest first, asc = oldest first
   const [quantityFilter, setQuantityFilter] = useState("all"); // all, low_stock, out_of_stock
   const [dateRangeFilter, setDateRangeFilter] = useState({
     startDate: "",

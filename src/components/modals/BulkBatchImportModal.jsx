@@ -46,7 +46,10 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           currentStock: product.stock_in_pieces || product.stock_quantity || 0,
           reorderLevel: product.reorder_level || 10,
           stockStatus: (product.stock_in_pieces || product.stock_quantity || 0) === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
+          currentPrice: product.price_per_piece || 0, // Current selling price
           quantityToAdd: "",
+          purchasePrice: "", // NEW: Cost from supplier
+          sellingPrice: "", // NEW: Price to customer
           expiryDate: "",
         }));
       setLowStockItems(lowStock);
@@ -65,7 +68,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
     }
 
     // Create CSV header
-    const headers = ["generic_name", "brand_name", "current_stock", "stock_status", "expiry_date", "quantity_to_add"];
+    const headers = ["generic_name", "brand_name", "current_stock", "stock_status", "current_price", "quantity_to_add", "purchase_price", "selling_price", "expiry_date"];
     const csvRows = [headers.join(",")];
 
     // Add data rows
@@ -75,8 +78,11 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
         `"${item.brandName}"`,
         item.currentStock,
         item.stockStatus,
-        "", // Empty expiry_date for user to fill
+        item.currentPrice,
         "", // Empty quantity_to_add for user to fill
+        "", // Empty purchase_price for user to fill
+        "", // Empty selling_price for user to fill
+        "", // Empty expiry_date for user to fill
       ];
       csvRows.push(row.join(","));
     });
@@ -105,29 +111,62 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleQuickImport = async () => {
-    const itemsToImport = lowStockItems.filter((item) => item.quantityToAdd && parseInt(item.quantityToAdd) > 0 && item.expiryDate);
+    const itemsToImport = lowStockItems.filter((item) => 
+      item.quantityToAdd && 
+      parseInt(item.quantityToAdd) > 0 && 
+      item.expiryDate &&
+      item.purchasePrice &&
+      parseFloat(item.purchasePrice) >= 0 &&
+      item.sellingPrice &&
+      parseFloat(item.sellingPrice) > 0
+    );
+    
     if (itemsToImport.length === 0) {
-      showError("Please add quantity and expiry date for at least one product");
+      showError("Please fill in quantity, purchase price, selling price, and expiry date for at least one product");
       return;
     }
+    
     setImporting(true);
     const importResults = { total: itemsToImport.length, successful: 0, failed: 0, errors: [] };
+    
     try {
       for (let i = 0; i < itemsToImport.length; i++) {
         const item = itemsToImport[i];
         try {
+          // Validate expiry date
           const expiryDate = new Date(item.expiryDate);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           if (isNaN(expiryDate.getTime())) throw new Error("Invalid expiry date");
           if (expiryDate < today) throw new Error("Expiry date cannot be in the past");
+          
+          // Validate prices
+          const purchasePrice = parseFloat(item.purchasePrice);
+          const sellingPrice = parseFloat(item.sellingPrice);
+          
+          if (purchasePrice < 0) throw new Error("Purchase price cannot be negative");
+          if (sellingPrice <= 0) throw new Error("Selling price must be greater than zero");
+          if (sellingPrice < purchasePrice) {
+            const confirm = window.confirm(
+              `Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}) for ${item.genericName}. Continue?`
+            );
+            if (!confirm) {
+              importResults.failed++;
+              importResults.errors.push(`${item.genericName}: Skipped due to negative margin`);
+              continue;
+            }
+          }
+          
           const batchData = { 
             productId: item.id, 
             quantity: parseInt(item.quantityToAdd), 
-            expiryDate: item.expiryDate, 
-            supplier: null, 
+            expiryDate: item.expiryDate,
+            purchase_price: purchasePrice,
+            selling_price: sellingPrice,
+            supplier_name: null, 
             notes: `Bulk restock - ${item.genericName} (${item.brandName})` 
           };
+          
           await ProductService.addProductBatch(batchData);
           importResults.successful++;
         } catch (error) {
@@ -135,9 +174,13 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           importResults.errors.push(`${item.genericName} (${item.brandName}): ${error.message}`);
         }
       }
+      
       setResults(importResults);
       if (importResults.successful > 0) {
-        showSuccess(`Successfully imported ${importResults.successful} batch${importResults.successful > 1 ? "es" : ""}!${importResults.failed > 0 ? ` (${importResults.failed} failed)` : ""}`, { duration: 5000 });
+        showSuccess(
+          `Successfully imported ${importResults.successful} batch${importResults.successful > 1 ? "es" : ""}!${importResults.failed > 0 ? ` (${importResults.failed} failed)` : ""}`, 
+          { duration: 5000 }
+        );
         onSuccess?.(importResults);
         setTimeout(() => loadLowStockItems(), 1000);
       }
@@ -180,8 +223,8 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
               <div className="flex items-start space-x-3">
                 <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <h4 className="font-semibold text-blue-900 mb-1">Quick Restock - Low Stock Items ({lowStockItems.length})</h4>
-                  <p className="text-sm text-blue-800">Fill in the quantity and expiry date for items you want to restock. Use the search to find specific items quickly.</p>
+                  <h4 className="font-semibold text-blue-900 mb-1">Quick Restock with Batch Pricing ({lowStockItems.length} items)</h4>
+                  <p className="text-sm text-blue-800">Fill in quantity, purchase price (cost from supplier), selling price (price to customer), and expiry date. The system will automatically calculate your markup percentage.</p>
                 </div>
               </div>
             </div>
@@ -244,39 +287,102 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-[30%]">Medicine</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[15%]">Current Stock</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[15%]">Status</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[20%]">Quantity to Add</th>
-                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[20%]">Expiry Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-[20%]">Medicine</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Current Stock</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Status</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Quantity</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Purchase ₱</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Selling ₱</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Markup</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Expiry Date</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredItems.map((item, index) => {
                         const originalIndex = lowStockItems.indexOf(item);
-                        const hasData = item.quantityToAdd && item.expiryDate;
+                        const hasData = item.quantityToAdd && item.purchasePrice && item.sellingPrice && item.expiryDate;
+                        const purchasePrice = parseFloat(item.purchasePrice) || 0;
+                        const sellingPrice = parseFloat(item.sellingPrice) || 0;
+                        const markup = purchasePrice > 0 && sellingPrice > 0 
+                          ? (((sellingPrice - purchasePrice) / purchasePrice) * 100).toFixed(1)
+                          : '0.0';
+                        const isNegativeMargin = sellingPrice > 0 && sellingPrice < purchasePrice;
+                        
                         return (
                           <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${hasData ? "bg-green-50/30" : ""}`}>
-                            <td className="px-6 py-4 w-[30%]">
+                            <td className="px-4 py-3 w-[20%]">
                               <div>
-                                <p className="font-medium text-gray-900">{item.genericName}</p>
-                                <p className="text-sm text-gray-500">{item.brandName}</p>
+                                <p className="font-medium text-gray-900 text-sm">{item.genericName}</p>
+                                <p className="text-xs text-gray-500">{item.brandName}</p>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-center w-[15%]">
-                              <span className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-medium ${item.currentStock === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>{item.currentStock}</span>
+                            <td className="px-4 py-3 text-center w-[10%]">
+                              <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${item.currentStock === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                {item.currentStock}
+                              </span>
                             </td>
-                            <td className="px-6 py-4 text-center w-[15%]">
-                              <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded text-xs font-medium ${item.stockStatus === "OUT_OF_STOCK" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>{item.stockStatus === "OUT_OF_STOCK" ? "Out of Stock" : "Low Stock"}</span>
+                            <td className="px-4 py-3 text-center w-[10%]">
+                              <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${item.stockStatus === "OUT_OF_STOCK" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
+                                {item.stockStatus === "OUT_OF_STOCK" ? "Out" : "Low"}
+                              </span>
                             </td>
-                            <td className="px-6 py-4 text-center w-[20%]">
+                            <td className="px-4 py-3 text-center w-[12%]">
                               <div className="flex justify-center">
-                                <input type="number" min="1" placeholder="0" value={item.quantityToAdd} onChange={(e) => updateItemField(originalIndex, "quantityToAdd", e.target.value)} className="w-full max-w-[120px] px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  placeholder="Qty" 
+                                  value={item.quantityToAdd} 
+                                  onChange={(e) => updateItemField(originalIndex, "quantityToAdd", e.target.value)} 
+                                  className="w-full max-w-[80px] px-2 py-1.5 text-sm border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                />
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-center w-[20%]">
+                            <td className="px-4 py-3 text-center w-[12%]">
                               <div className="flex justify-center">
-                                <input type="date" value={item.expiryDate} onChange={(e) => updateItemField(originalIndex, "expiryDate", e.target.value)} min={new Date().toISOString().split("T")[0]} className="w-full max-w-[160px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                                <input 
+                                  type="number" 
+                                  min="0" 
+                                  step="0.01"
+                                  placeholder="0.00" 
+                                  value={item.purchasePrice} 
+                                  onChange={(e) => updateItemField(originalIndex, "purchasePrice", e.target.value)} 
+                                  className="w-full max-w-[90px] px-2 py-1.5 text-sm border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center w-[12%]">
+                              <div className="flex justify-center">
+                                <input 
+                                  type="number" 
+                                  min="0" 
+                                  step="0.01"
+                                  placeholder="0.00" 
+                                  value={item.sellingPrice} 
+                                  onChange={(e) => updateItemField(originalIndex, "sellingPrice", e.target.value)} 
+                                  className={`w-full max-w-[90px] px-2 py-1.5 text-sm border rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent ${isNegativeMargin ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center w-[12%]">
+                              <span className={`text-sm font-medium ${
+                                markup === '0.0' ? 'text-gray-400' :
+                                isNegativeMargin ? 'text-red-600' :
+                                parseFloat(markup) < 20 ? 'text-yellow-600' :
+                                'text-green-600'
+                              }`}>
+                                {markup}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center w-[12%]">
+                              <div className="flex justify-center">
+                                <input 
+                                  type="date" 
+                                  value={item.expiryDate} 
+                                  onChange={(e) => updateItemField(originalIndex, "expiryDate", e.target.value)} 
+                                  min={new Date().toISOString().split("T")[0]} 
+                                  className="w-full max-w-[130px] px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                />
                               </div>
                             </td>
                           </tr>

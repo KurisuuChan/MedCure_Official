@@ -1,5 +1,5 @@
 ﻿import React, { useState, useContext } from "react";
-import { X, Package, Calendar, AlertCircle } from "lucide-react";
+import { X, Package, Calendar, AlertCircle, DollarSign, TrendingUp } from "lucide-react";
 import StandardizedProductDisplay from "../ui/StandardizedProductDisplay";
 import { useToast } from "../ui/Toast";
 import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
@@ -12,6 +12,8 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
   const [formData, setFormData] = useState({
     quantity: "",
     expiryDate: "",
+    purchasePrice: "",
+    sellingPrice: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -21,10 +23,12 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
       setFormData({
         quantity: "",
         expiryDate: "",
+        purchasePrice: "",
+        sellingPrice: product?.price_per_piece || "", // Pre-fill with current price
       });
       setError("");
     }
-  }, [isOpen]);
+  }, [isOpen, product]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -47,6 +51,30 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
       return;
     }
 
+    // Validate pricing (optional but recommended)
+    const purchasePrice = formData.purchasePrice ? parseFloat(formData.purchasePrice) : null;
+    const sellingPrice = formData.sellingPrice ? parseFloat(formData.sellingPrice) : null;
+
+    if (purchasePrice !== null && purchasePrice < 0) {
+      setError("Purchase price cannot be negative");
+      return;
+    }
+
+    if (sellingPrice !== null && sellingPrice <= 0) {
+      setError("Selling price must be greater than zero");
+      return;
+    }
+
+    // Warn about negative margin
+    if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
+      const confirmNegativeMargin = window.confirm(
+        `⚠️ Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}).\n\nThis will result in a loss. Continue anyway?`
+      );
+      if (!confirmNegativeMargin) {
+        return;
+      }
+    }
+
     setLoading(true);
     setError("");
 
@@ -59,8 +87,10 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
         productId: product.id,
         quantity: parseInt(formData.quantity),
         expiryDate: formData.expiryDate,
-        costPerUnit: 0,
-        supplierName: null,
+        purchase_price: purchasePrice,
+        selling_price: sellingPrice,
+        supplier_name: null,
+        notes: `Added via Add Stock modal`,
       };
 
       const result = await ProductService.addProductBatch(batchData);
@@ -70,17 +100,21 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
         const productName =
           product?.brand_name || product?.generic_name || "product";
 
+        // Build success message
+        let successMessage = `Successfully added ${formData.quantity} units to ${productName}!`;
+        if (sellingPrice && purchasePrice) {
+          const markup = (((sellingPrice - purchasePrice) / purchasePrice) * 100).toFixed(1);
+          successMessage += ` (${markup}% markup)`;
+        }
+
         // ✅ Show success toast notification
-        showSuccess(
-          `Successfully added ${formData.quantity} units to ${productName}!`,
-          {
-            duration: 4000,
-            action: {
-              label: "View Batches",
-              onClick: () => {},
-            },
-          }
-        );
+        showSuccess(successMessage, {
+          duration: 4000,
+          action: {
+            label: "View Batches",
+            onClick: () => {},
+          },
+        });
 
         // 📬 Send notification about stock added and batch received
         if (user?.id) {
@@ -249,6 +283,96 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="purchasePrice"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Purchase Price ₱
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="number"
+                        id="purchasePrice"
+                        name="purchasePrice"
+                        value={formData.purchasePrice}
+                        onChange={handleInputChange}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        disabled={loading}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Cost from supplier</p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="sellingPrice"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Selling Price ₱
+                    </label>
+                    <div className="relative">
+                      <TrendingUp className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="number"
+                        id="sellingPrice"
+                        name="sellingPrice"
+                        value={formData.sellingPrice}
+                        onChange={handleInputChange}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        disabled={loading}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                          formData.purchasePrice && 
+                          formData.sellingPrice && 
+                          parseFloat(formData.sellingPrice) < parseFloat(formData.purchasePrice)
+                            ? 'border-red-500 bg-red-50'
+                            : 'border-gray-300'
+                        }`}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Price to customer</p>
+                  </div>
+                </div>
+
+                {/* Markup Display */}
+                {formData.purchasePrice && formData.sellingPrice && (
+                  <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Markup:</span>
+                      <span className={`text-lg font-bold ${
+                        parseFloat(formData.sellingPrice) < parseFloat(formData.purchasePrice)
+                          ? 'text-red-600'
+                          : parseFloat(formData.sellingPrice) === parseFloat(formData.purchasePrice)
+                          ? 'text-yellow-600'
+                          : 'text-green-600'
+                      }`}>
+                        {(() => {
+                          const purchase = parseFloat(formData.purchasePrice);
+                          const selling = parseFloat(formData.sellingPrice);
+                          if (purchase > 0) {
+                            const markup = ((selling - purchase) / purchase) * 100;
+                            return `${markup.toFixed(1)}%`;
+                          }
+                          return '0%';
+                        })()}
+                      </span>
+                    </div>
+                    {parseFloat(formData.sellingPrice) < parseFloat(formData.purchasePrice) && (
+                      <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Warning: Negative margin (selling below cost)
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label

@@ -39,6 +39,7 @@ function ProductSelector({
   const [selectedDosageForm, setSelectedDosageForm] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
+  const [sortBy, setSortBy] = useState("name"); // name, price-low, price-high, stock, popular
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter options
@@ -190,6 +191,45 @@ function ProductSelector({
       );
     }
 
+    // ============================================================================
+    // 🔥 APPLY SORTING
+    // ============================================================================
+    console.log("🔍 Sorting products by:", sortBy);
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          // A-Z sorting by brand name (what's displayed on the card)
+          const nameA = (a.brand_name || a.brand || a.generic_name || "").toLowerCase();
+          const nameB = (b.brand_name || b.brand || b.generic_name || "").toLowerCase();
+          return nameA.localeCompare(nameB);
+        
+        case "price-low":
+          // Price: Low to High
+          const priceA = a.price_per_piece || a.price || 0;
+          const priceB = b.price_per_piece || b.price || 0;
+          return priceA - priceB;
+        
+        case "price-high":
+          // Price: High to Low
+          const priceHighA = a.price_per_piece || a.price || 0;
+          const priceHighB = b.price_per_piece || b.price || 0;
+          return priceHighB - priceHighA;
+        
+        case "stock":
+          // Stock: High to Low
+          return (b.stock_in_pieces || 0) - (a.stock_in_pieces || 0);
+        
+        case "popular":
+          // Popular items (you can add sales_count logic later)
+          // For now, sort by stock as proxy for popularity
+          return (b.stock_in_pieces || 0) - (a.stock_in_pieces || 0);
+        
+        default:
+          return 0;
+      }
+    });
+    
+    console.log(`✅ Sorted ${filtered.length} products`);
     setFilteredProducts(filtered);
   }, [
     debouncedSearchTerm,
@@ -198,6 +238,7 @@ function ProductSelector({
     selectedDosageForm,
     stockFilter,
     priceRange,
+    sortBy, // Added sortBy dependency
     products,
     cartItems,
   ]);
@@ -352,6 +393,25 @@ function ProductSelector({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Sort By Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <TrendingUp className="h-4 w-4 inline mr-1" />
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                >
+                  <option value="name">Name (A-Z)</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="stock">Stock: Most Available</option>
+                  <option value="popular">Popular Items</option>
+                </select>
+              </div>
+
               {/* Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
