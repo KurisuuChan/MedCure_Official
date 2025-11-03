@@ -118,8 +118,8 @@ export default function VariantSelectionModal({
   const handleAddToCart = () => {
     if (!isOutOfStock && quantity > 0) {
       console.log("🎯 Variant Modal - Adding to cart:", {
-        product: `${product.brand_name || "Generic"} - ${
-          product.generic_name || "Unknown Medicine"
+        product: `${product.generic_name || "Unknown Medicine"} - ${
+          product.brand_name || "Generic"
         }`,
         brand_name: product.brand_name,
         generic_name: product.generic_name,

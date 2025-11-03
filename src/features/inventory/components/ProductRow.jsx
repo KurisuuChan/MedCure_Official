@@ -91,13 +91,13 @@ function ProductRow({ product, onView, onEdit, onDelete, style }) {
             </div>
           </div>
           <div className="min-w-0 flex-1">
-            {/* PRIMARY: Brand Name (largest, most prominent) */}
+            {/* PRIMARY: Generic Name (largest, most prominent) */}
             <div className="text-sm font-bold text-gray-900 truncate">
-              {product.brand_name || product.brand || "Unknown Brand"}
-            </div>
-            {/* PRIMARY: Generic Name (below brand name) */}
-            <div className="text-sm font-medium text-gray-600 truncate">
               {product.generic_name || product.name || "Unknown Generic"}
+            </div>
+            {/* SECONDARY: Brand Name (below generic name) */}
+            <div className="text-sm font-medium text-gray-600 truncate">
+              {product.brand_name || product.brand || "Generic"}
             </div>
           </div>
         </div>

@@ -112,17 +112,17 @@ const StandardizedProductDisplay = ({
 
   return (
     <div className={`${styles.padding} ${styles.spacing} ${className}`}>
-      {/* PRIMARY: Brand Name (Most Prominent) */}
+      {/* PRIMARY: Generic Name (Most Prominent) */}
       <div>
         <h3 className={`${styles.brandText} line-clamp-1`}>
-          {product.brand_name || product.brand || 'Unknown Brand'}
+          {product.generic_name || product.name || 'Unknown Generic'}
         </h3>
       </div>
 
-      {/* PRIMARY: Generic Name */}
+      {/* SECONDARY: Brand Name */}
       <div>
         <p className={`${styles.genericText} line-clamp-1`}>
-          {product.generic_name || product.name || 'Unknown Generic'}
+          {product.brand_name || product.brand || 'Generic'}
         </p>
       </div>
 

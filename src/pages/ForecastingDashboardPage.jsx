@@ -9,6 +9,7 @@ import {
   BarChart3,
   AlertTriangle,
   ArrowUpRight,
+  ArrowLeft,
   Minus,
   ChevronLeft,
   ChevronRight,
@@ -16,11 +17,14 @@ import {
   Clock,
   ShoppingCart,
   Globe,
+  FileText,
 } from "lucide-react";
 import { DemandForecastingService } from "../services/domains/analytics/demandForecastingService";
 import { UnifiedSpinner } from "../components/ui/loading/UnifiedSpinner";
 import DemandForecastingPanel from "../components/analytics/DemandForecastingPanel";
+import ExportForecastModal from "../components/modals/ExportForecastModal";
 import { useToast } from "../components/ui/Toast";
+import { formatCurrency } from "../utils/formatting";
 
 /**
  * 📊 Demand Forecasting Dashboard
@@ -38,7 +42,9 @@ const ForecastingDashboardPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDemand, setFilterDemand] = useState("all");
   const [filterTrend, setFilterTrend] = useState("all");
+  const [filterReorder, setFilterReorder] = useState("all");
   const [sortBy, setSortBy] = useState("demand"); // demand, trend, stock
+  const [showExportModal, setShowExportModal] = useState(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -175,100 +181,137 @@ const ForecastingDashboardPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-10 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-sm">
-                <BarChart3 className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/inventory')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Back to Inventory"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl blur opacity-75"></div>
+                <div className="relative p-3 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-2xl shadow-lg">
+                  <BarChart3 className="w-7 h-7 text-white" />
+                </div>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent">
                   Demand Forecasting
                 </h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-600 font-medium mt-0.5">
                   AI-powered inventory predictions
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowExportModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline font-medium">Export / Print</span>
+              </button>
               <button
                 onClick={() => navigate('/forecasting/general')}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"
               >
                 <Globe className="w-4 h-4" />
-                <span className="hidden sm:inline">Overall View</span>
+                <span className="hidden sm:inline font-medium">Overall View</span>
               </button>
               <button
                 onClick={handleRefresh}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
+                <span className="hidden sm:inline font-medium">Refresh</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Cards */}
         {summary && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">Best Sellers</span>
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Activity className="w-4 h-4 text-green-600" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <button
+              onClick={() => setFilterDemand('High')}
+              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-green-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Best Sellers</span>
+                  <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                  {summary.highDemand}
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {summary.highDemand}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">selling fast 🔥</div>
-            </div>
+            </button>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">Growing Sales</span>
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
+            <button
+              onClick={() => setFilterTrend('Increasing')}
+              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-blue-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Growing Sales</span>
+                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <TrendingUp className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  {summary.trending}
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {summary.trending}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">getting popular 📈</div>
-            </div>
+            </button>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">Need to Order</span>
-                <div className="p-2 bg-orange-50 rounded-lg">
-                  <ShoppingCart className="w-4 h-4 text-orange-600" />
+            <button
+              onClick={() => setFilterReorder('needs-reorder')}
+              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-orange-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Need to Order</span>
+                  <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <ShoppingCart className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                  {summary.needsReorder}
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {summary.needsReorder}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">running low 📦</div>
-            </div>
+            </button>
 
-            <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-gray-600">Urgent Orders</span>
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <AlertTriangle className="w-4 h-4 text-red-600" />
+            <button
+              onClick={() => setFilterReorder('critical')}
+              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-red-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-red-50 to-rose-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Urgent Orders</span>
+                  <div className="p-2.5 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="text-4xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                  {summary.criticalStock}
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {summary.criticalStock}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">order now! ⚠️</div>
-            </div>
+            </button>
           </div>
         )}
 
@@ -528,6 +571,14 @@ const ForecastingDashboardPage = () => {
           </div>
         </div>
       )}
+
+      {/* Export/Print Modal */}
+      <ExportForecastModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        forecasts={filteredForecasts}
+        summary={summary}
+      />
     </div>
   );
 };

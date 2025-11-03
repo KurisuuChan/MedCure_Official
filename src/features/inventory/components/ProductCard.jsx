@@ -159,10 +159,10 @@ export default function ProductCard({
 
         {/* Product Name */}
         <h3 className="font-bold text-gray-900 text-base leading-tight mb-1 line-clamp-1">
-          {product.brand_name || product.brand || "Unknown Brand"}
+          {product.generic_name || product.name || "Unknown Generic"}
         </h3>
         <p className="text-sm text-gray-600 font-medium mb-2 leading-snug line-clamp-1">
-          {product.generic_name || product.name || "Unknown Generic"}
+          {product.brand_name || product.brand || "Generic"}
         </p>
 
         {/* Dosage Strength */}

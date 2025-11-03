@@ -198,9 +198,9 @@ function ProductSelector({
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case "name":
-          // A-Z sorting by brand name (what's displayed on the card)
-          const nameA = (a.brand_name || a.brand || a.generic_name || "").toLowerCase();
-          const nameB = (b.brand_name || b.brand || b.generic_name || "").toLowerCase();
+          // A-Z sorting by generic name (what's displayed on the card)
+          const nameA = (a.generic_name || a.brand_name || a.brand || "").toLowerCase();
+          const nameB = (b.generic_name || b.brand_name || b.brand || "").toLowerCase();
           return nameA.localeCompare(nameB);
         
         case "price-low":
@@ -252,8 +252,8 @@ function ProductSelector({
 
   const handleAddToCart = (product, quantity, selectedVariant) => {
     console.log("🔄 ProductSelector - Received:", {
-      product: `${product.brand_name || "Generic"} - ${
-        product.generic_name || "Unknown Medicine"
+      product: `${product.generic_name || "Unknown Medicine"} - ${
+        product.brand_name || "Generic"
       }`,
       generic_name: product.generic_name,
       brand_name: product.brand_name,
@@ -571,14 +571,14 @@ function ProductSelector({
 
                   {/* Product Info */}
                   <div className="p-4">
-                    {/* Brand Name */}
+                    {/* Generic Name */}
                     <h3 className="font-bold text-gray-900 text-base leading-tight mb-1 line-clamp-1">
-                      {product.brand_name || product.brand || "Unknown Brand"}
+                      {product.generic_name || "Unknown Medicine"}
                     </h3>
 
-                    {/* Generic Name */}
+                    {/* Brand Name */}
                     <p className="text-gray-600 text-sm font-medium mb-3 line-clamp-2">
-                      {product.generic_name || "Unknown Medicine"}
+                      {product.brand_name || product.brand || "Generic"}
                     </p>
 
                     {/* Dosage Info & Drug Classification */}

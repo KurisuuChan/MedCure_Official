@@ -17,18 +17,76 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [lastBatchPrices, setLastBatchPrices] = useState(null);
+  const [loadingPrices, setLoadingPrices] = useState(false);
 
+  // Fetch last batch prices when modal opens
   React.useEffect(() => {
-    if (isOpen) {
+    if (isOpen && product?.id) {
+      fetchLastBatchPrices();
+    }
+  }, [isOpen, product]);
+
+  const fetchLastBatchPrices = async () => {
+    try {
+      setLoadingPrices(true);
+      const { supabase } = await import("../../config/supabase");
+      
+      const { data, error } = await supabase
+        .from("product_batches")
+        .select("purchase_price, selling_price")
+        .eq("product_id", product.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        const lastPrices = {
+          purchase: data.purchase_price || 0,
+          selling: data.selling_price || product?.price_per_piece || 0,
+        };
+        setLastBatchPrices(lastPrices);
+        
+        // Auto-fill form with last batch prices
+        setFormData({
+          quantity: "",
+          expiryDate: "",
+          purchasePrice: lastPrices.purchase,
+          sellingPrice: lastPrices.selling,
+        });
+      } else {
+        // No previous batch - use product price only
+        setFormData({
+          quantity: "",
+          expiryDate: "",
+          purchasePrice: "",
+          sellingPrice: product?.price_per_piece || "",
+        });
+      }
+      setError("");
+    } catch (err) {
+      console.log("No previous batch prices found");
       setFormData({
         quantity: "",
         expiryDate: "",
         purchasePrice: "",
-        sellingPrice: product?.price_per_piece || "", // Pre-fill with current price
+        sellingPrice: product?.price_per_piece || "",
       });
       setError("");
+    } finally {
+      setLoadingPrices(false);
     }
-  }, [isOpen, product]);
+  };
+
+  const usePreviousPrices = () => {
+    if (lastBatchPrices) {
+      setFormData((prev) => ({
+        ...prev,
+        purchasePrice: lastBatchPrices.purchase,
+        sellingPrice: lastBatchPrices.selling,
+      }));
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -283,6 +341,31 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                     />
                   </div>
                 </div>
+
+                {/* Use Previous Price Button */}
+                {lastBatchPrices && !loadingPrices && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-blue-900">
+                          Previous Batch Prices
+                        </p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          Purchase: ₱{lastBatchPrices.purchase.toFixed(2)} | 
+                          Selling: ₱{lastBatchPrices.selling.toFixed(2)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={usePreviousPrices}
+                        disabled={loading}
+                        className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Use These
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>

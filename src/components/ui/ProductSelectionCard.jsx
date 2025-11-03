@@ -24,17 +24,17 @@ const ProductSelectionCard = ({ product, onAddStock }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 overflow-hidden group h-full flex flex-col">
       {/* Card Header - Fixed Height */}
       <div className="p-5 flex-1 flex flex-col">
-        {/* Brand Name & Icon - Fixed Height */}
+        {/* Generic Name & Icon - Fixed Height */}
         <div className="flex items-center space-x-3 mb-4">
           <div className="bg-blue-100 p-2.5 rounded-lg group-hover:bg-blue-200 transition-colors flex-shrink-0">
             <Package className="h-5 w-5 text-blue-600" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1 truncate">
-              {product.brand_name || product.brand || 'Unknown Brand'}
+              {product.generic_name || product.name || 'Unknown Generic'}
             </h3>
             <p className="text-sm text-gray-600 font-medium leading-tight truncate">
-              {product.generic_name || product.name || 'Unknown Generic'}
+              {product.brand_name || product.brand || 'Generic'}
             </p>
             {/* Fixed height for dosage strength */}
             <div className="h-4 mt-1">

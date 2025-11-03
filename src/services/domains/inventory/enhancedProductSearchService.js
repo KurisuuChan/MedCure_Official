@@ -205,7 +205,7 @@ export class EnhancedProductSearchService {
       // Format suggestions for autocomplete
       const suggestions = data?.map(product => ({
         id: product.id,
-        label: `${product.brand_name || product.brand || 'Unknown Brand'} - ${product.generic_name || product.name}`,
+        label: `${product.generic_name || product.name} - ${product.brand_name || product.brand || 'Generic'}`,
         brand: product.brand_name || product.brand,
         generic: product.generic_name || product.name,
         dosage: product.dosage_strength,
