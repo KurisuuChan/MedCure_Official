@@ -509,49 +509,49 @@ const BatchManagementPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
-              <Box className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
+        <div className="px-6 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+                <Box className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   Batch Management
                 </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage inventory batches and track FIFO allocations
+                </p>
               </div>
-              <p className="text-sm text-gray-600 mt-1">
-                View, search, and add new inventory batches
-              </p>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setShowBulkImportModal(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-              title="Bulk import batches from CSV"
-            >
-              <Upload className="h-4 w-4" />
-              <span>Bulk Import</span>
-            </button>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh data"
-            >
-              <RefreshCw
-                className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </button>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowBulkImportModal(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                title="Bulk import batches from CSV"
+              >
+                <Upload className="h-4 w-4" />
+                <span>Bulk Import</span>
+              </button>
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh data"
+              >
+                <RefreshCw
+                  className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Primary Action: Add New Stock Section */}
+      {/* Original Batch Management Content */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-200">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-xl p-6">
