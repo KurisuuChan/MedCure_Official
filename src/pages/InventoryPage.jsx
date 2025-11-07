@@ -627,18 +627,108 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
     reorder_level: product?.reorder_level || "",
     supplier: product?.supplier || "",
     expiry_date: product?.expiry_date?.split("T")[0] || "",
-    batch_number:
-      product?.batch_number ||
-      generateSmartBatchNumber(
-        product?.brand_name || product?.generic_name || "",
-        product?.category || "Pain Relief",
-        product?.expiry_date?.split("T")[0] || ""
-      ),
+    batch_number: "", // Will be fetched from active batch if editing existing product
     // Explicitly set active status for new products
     is_active: product?.is_active !== undefined ? product.is_active : true,
     is_archived:
       product?.is_archived !== undefined ? product.is_archived : false,
   });
+
+  // Fetch current active batch when editing existing product
+  React.useEffect(() => {
+    const fetchCurrentBatch = async () => {
+      if (product?.id) {
+        try {
+          const { supabase } = await import("../config/supabase");
+          // Get the oldest active batch with stock (FIFO) - order by created_at first, then expiry_date
+          // This ensures we get the batch that will be used for the next sale (FIFO principle)
+          const { data: activeBatches, error } = await supabase
+            .from("product_batches")
+            .select("batch_number, expiry_date, purchase_price, selling_price, markup_percentage, quantity, created_at")
+            .eq("product_id", product.id)
+            .eq("status", "active")
+            .gt("quantity", 0)
+            .order("created_at", { ascending: true })
+            .order("expiry_date", { ascending: true, nullsFirst: false })
+            .limit(1);
+
+          if (error) {
+            console.error("❌ Error fetching active batch:", error);
+            return;
+          }
+
+          if (activeBatches && activeBatches.length > 0) {
+            const activeBatch = activeBatches[0];
+            console.log("✅ Active batch found:", activeBatch);
+            console.log("📦 Active batch number (new format):", activeBatch.batch_number);
+            console.log("📅 Batch created at:", activeBatch.created_at);
+            console.log("📊 Batch quantity:", activeBatch.quantity);
+            
+            // Verify batch_number exists and is in the new format
+            if (!activeBatch.batch_number) {
+              console.warn("⚠️ Active batch found but batch_number is missing!");
+            } else if (!activeBatch.batch_number.startsWith('BT-')) {
+              console.warn("⚠️ Batch number may be in old format:", activeBatch.batch_number);
+              console.warn("   Expected format: BT-{MMDDYY}-{HHMMSS}-{Sequence}");
+            }
+            
+            // Calculate margin if we have both prices
+            let margin = "";
+            if (activeBatch.purchase_price && activeBatch.selling_price && activeBatch.purchase_price > 0) {
+              margin = (((activeBatch.selling_price - activeBatch.purchase_price) / activeBatch.purchase_price) * 100).toFixed(2);
+            } else if (activeBatch.markup_percentage) {
+              margin = activeBatch.markup_percentage.toString();
+            }
+            
+            // ✅ CRITICAL: Always use active batch number from product_batches table (new format)
+            // This ensures we get the correct batch number with BT- prefix and timestamp
+            setFormData((prev) => ({
+              ...prev,
+              batch_number: activeBatch.batch_number || "", // Force update from active batch
+              expiry_date: activeBatch.expiry_date
+                ? activeBatch.expiry_date.split("T")[0]
+                : prev.expiry_date,
+              cost_price: activeBatch.purchase_price ? activeBatch.purchase_price.toString() : prev.cost_price || "",
+              price_per_piece: activeBatch.selling_price ? activeBatch.selling_price.toString() : prev.price_per_piece || "",
+              margin_percentage: margin || prev.margin_percentage || "",
+            }));
+            
+            console.log("✅ Form data updated with active batch number:", activeBatch.batch_number);
+          } else {
+            console.log("⚠️ No active batch found for product:", product.id);
+            console.log("   This might mean:");
+            console.log("   1. Product has no batches yet");
+            console.log("   2. All batches are depleted (quantity = 0)");
+            console.log("   3. All batches have status != 'active'");
+            // If no active batch, use product's batch_number as fallback (but this should be rare)
+            setFormData((prev) => ({
+              ...prev,
+              batch_number: product?.batch_number || prev.batch_number || "",
+            }));
+          }
+        } catch (err) {
+          console.error("❌ Error fetching active batch:", err);
+          // On error, fallback to product's batch_number
+          setFormData((prev) => ({
+            ...prev,
+            batch_number: product?.batch_number || prev.batch_number || "",
+          }));
+        }
+      } else {
+        // New product - generate batch number
+        setFormData((prev) => ({
+          ...prev,
+          batch_number: prev.batch_number || generateSmartBatchNumber(
+            prev.brand_name || prev.generic_name || "",
+            prev.category || "Pain Relief",
+            prev.expiry_date || ""
+          ),
+        }));
+      }
+    };
+
+    fetchCurrentBatch();
+  }, [product?.id]);
 
   // Calculate margin percentage when cost price or selling price changes
   const calculateMargin = (cost, sell) => {
@@ -1060,7 +1150,12 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                           onChange={(e) =>
                             handleCostPriceChange(e.target.value)
                           }
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          readOnly={!!product}
+                          className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 ${
+                            product
+                              ? "bg-gray-50 text-gray-700 cursor-not-allowed"
+                              : ""
+                          }`}
                           placeholder="0.00"
                         />
                       </div>
@@ -1076,7 +1171,12 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                           onChange={(e) =>
                             handleSellPriceChange(e.target.value)
                           }
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                          readOnly={!!product}
+                          className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 ${
+                            product
+                              ? "bg-gray-50 text-gray-700 cursor-not-allowed"
+                              : ""
+                          }`}
                           placeholder="0.00"
                         />
                       </div>
@@ -1090,7 +1190,12 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                             step="0.01"
                             value={formData.margin_percentage}
                             onChange={(e) => handleMarginChange(e.target.value)}
-                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 pr-6"
+                            readOnly={!!product}
+                            className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 pr-6 ${
+                              product
+                                ? "bg-gray-50 text-gray-700 cursor-not-allowed"
+                                : ""
+                            }`}
                             placeholder="0"
                           />
                           <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">
@@ -1211,30 +1316,18 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                   <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
                     <h4 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
                       <Shield className="w-4 h-4 mr-1 text-indigo-600" />
-                      Supply Chain & Batch
+                      Batch Information
                     </h4>
                     <div className="space-y-2">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Supplier
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.supplier}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              supplier: e.target.value,
-                            })
-                          }
-                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                          placeholder="Enter supplier name"
-                        />
-                      </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-700 mb-1">
-                            Expiry Date
+                          <label className="flex items-center justify-between text-xs font-semibold text-gray-700 mb-1">
+                            <span>Expiry Date</span>
+                            {product && (
+                              <span className="text-xs text-gray-500 italic">
+                                Read-only when editing
+                              </span>
+                            )}
                           </label>
                           <input
                             type="date"
@@ -1245,7 +1338,12 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                                 expiry_date: e.target.value,
                               })
                             }
-                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                            readOnly={!!product}
+                            className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
+                              product
+                                ? "bg-gray-50 text-gray-700 cursor-not-allowed"
+                                : ""
+                            }`}
                           />
                         </div>
                         <div>

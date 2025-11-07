@@ -67,11 +67,10 @@ BEGIN
   -- Generate batch number in format: BT + MMDDYY + sequential number
   v_date_part := TO_CHAR(NOW(), 'MMDDYY');
   
-  -- Get count of batches created today for this product
+  -- Get count of ALL batches for this product (not just today) to ensure sequential numbering
   SELECT COUNT(*) INTO v_count
   FROM product_batches
-  WHERE product_id = p_product_id
-    AND DATE(created_at) = CURRENT_DATE;
+  WHERE product_id = p_product_id;
   
   v_batch_number := 'BT' || v_date_part || '-' || LPAD((v_count + 1)::TEXT, 3, '0');
   

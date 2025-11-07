@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Upload, CheckCircle2, Info, AlertTriangle, Package, Search, Download } from "lucide-react";
+import { X, Upload, CheckCircle2, Info, AlertTriangle, Package, Search, Download, RefreshCw } from "lucide-react";
 import { useToast } from "../ui/Toast";
 import { ProductService } from "../../services/domains/inventory/productService";
 import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
@@ -7,6 +7,7 @@ import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
 const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
   const [lowStockItems, setLowStockItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [loadingPrices, setLoadingPrices] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [importing, setImporting] = useState(false);
   const [results, setResults] = useState(null);
@@ -29,9 +30,34 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
     };
   }, [isOpen]);
 
+  const fetchLastBatchPrices = async (productId) => {
+    try {
+      const { supabase } = await import("../../config/supabase");
+      const { data, error } = await supabase
+        .from("product_batches")
+        .select("purchase_price, selling_price")
+        .eq("product_id", productId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data) {
+        return {
+          purchase: data.purchase_price || 0,
+          selling: data.selling_price || 0,
+        };
+      }
+      return null;
+    } catch (err) {
+      console.log("No previous batch prices found for product:", productId);
+      return null;
+    }
+  };
+
   const loadLowStockItems = async () => {
     try {
       setLoadingItems(true);
+      setLoadingPrices(true);
       const allProducts = await ProductService.getProducts();
       const lowStock = allProducts
         .filter((product) => {
@@ -48,17 +74,57 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           stockStatus: (product.stock_in_pieces || product.stock_quantity || 0) === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
           currentPrice: product.price_per_piece || 0, // Current selling price
           quantityToAdd: "",
-          purchasePrice: "", // NEW: Cost from supplier
-          sellingPrice: "", // NEW: Price to customer
+          purchasePrice: "", // Cost from supplier
+          sellingPrice: "", // Price to customer
           expiryDate: "",
+          lastBatchPrices: null, // Store last batch prices
         }));
+
       setLowStockItems(lowStock);
+
+      // Fetch last batch prices for each product
+      const itemsWithPrices = await Promise.all(
+        lowStock.map(async (item) => {
+          const lastPrices = await fetchLastBatchPrices(item.id);
+          if (lastPrices) {
+            return {
+              ...item,
+              lastBatchPrices: lastPrices,
+              purchasePrice: lastPrices.purchase || "",
+              sellingPrice: lastPrices.selling || item.currentPrice || "",
+            };
+          }
+          return {
+            ...item,
+            lastBatchPrices: null,
+            sellingPrice: item.currentPrice || "",
+          };
+        })
+      );
+
+      setLowStockItems(itemsWithPrices);
     } catch (error) {
       console.error("Error loading low-stock items:", error);
       showError("Failed to load low-stock items");
     } finally {
       setLoadingItems(false);
+      setLoadingPrices(false);
     }
+  };
+
+  const usePreviousPrices = (index) => {
+    setLowStockItems((prev) => {
+      const updated = [...prev];
+      const item = updated[index];
+      if (item.lastBatchPrices) {
+        updated[index] = {
+          ...item,
+          purchasePrice: item.lastBatchPrices.purchase || "",
+          sellingPrice: item.lastBatchPrices.selling || "",
+        };
+      }
+      return updated;
+    });
   };
 
   const downloadCSVTemplate = () => {
@@ -114,15 +180,11 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
     const itemsToImport = lowStockItems.filter((item) => 
       item.quantityToAdd && 
       parseInt(item.quantityToAdd) > 0 && 
-      item.expiryDate &&
-      item.purchasePrice &&
-      parseFloat(item.purchasePrice) >= 0 &&
-      item.sellingPrice &&
-      parseFloat(item.sellingPrice) > 0
+      item.expiryDate
     );
     
     if (itemsToImport.length === 0) {
-      showError("Please fill in quantity, purchase price, selling price, and expiry date for at least one product");
+      showError("Please fill in quantity and expiry date for at least one product");
       return;
     }
     
@@ -140,17 +202,24 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           if (isNaN(expiryDate.getTime())) throw new Error("Invalid expiry date");
           if (expiryDate < today) throw new Error("Expiry date cannot be in the past");
           
-          // Validate prices
-          const purchasePrice = parseFloat(item.purchasePrice);
-          const sellingPrice = parseFloat(item.sellingPrice);
+          // Validate prices (optional but recommended - same as AddStockModal)
+          const purchasePrice = item.purchasePrice ? parseFloat(item.purchasePrice) : null;
+          const sellingPrice = item.sellingPrice ? parseFloat(item.sellingPrice) : null;
           
-          if (purchasePrice < 0) throw new Error("Purchase price cannot be negative");
-          if (sellingPrice <= 0) throw new Error("Selling price must be greater than zero");
-          if (sellingPrice < purchasePrice) {
-            const confirm = window.confirm(
-              `Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}) for ${item.genericName}. Continue?`
+          if (purchasePrice !== null && purchasePrice < 0) {
+            throw new Error("Purchase price cannot be negative");
+          }
+          
+          if (sellingPrice !== null && sellingPrice <= 0) {
+            throw new Error("Selling price must be greater than zero");
+          }
+          
+          // Warn about negative margin (same as AddStockModal)
+          if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
+            const confirmNegativeMargin = window.confirm(
+              `⚠️ Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}) for ${item.genericName}.\n\nThis will result in a loss. Continue anyway?`
             );
-            if (!confirm) {
+            if (!confirmNegativeMargin) {
               importResults.failed++;
               importResults.errors.push(`${item.genericName}: Skipped due to negative margin`);
               continue;
@@ -224,7 +293,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                 <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-blue-900 mb-1">Quick Restock with Batch Pricing ({lowStockItems.length} items)</h4>
-                  <p className="text-sm text-blue-800">Fill in quantity, purchase price (cost from supplier), selling price (price to customer), and expiry date. The system will automatically calculate your markup percentage.</p>
+                  <p className="text-sm text-blue-800">Fill in quantity and expiry date (required). Purchase price and selling price are optional but recommended. The system will automatically calculate your markup percentage. Previous batch prices are auto-filled when available.</p>
                 </div>
               </div>
             </div>
@@ -287,20 +356,21 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-[20%]">Medicine</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Current Stock</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Status</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Quantity</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Purchase ₱</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Selling ₱</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Markup</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[12%]">Expiry Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-[18%]">Medicine</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[8%]">Current Stock</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[8%]">Status</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Quantity *</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Purchase ₱</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Selling ₱</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Markup</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Expiry Date *</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[13%]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredItems.map((item, index) => {
                         const originalIndex = lowStockItems.indexOf(item);
-                        const hasData = item.quantityToAdd && item.purchasePrice && item.sellingPrice && item.expiryDate;
+                        const hasData = item.quantityToAdd && item.expiryDate;
                         const purchasePrice = parseFloat(item.purchasePrice) || 0;
                         const sellingPrice = parseFloat(item.sellingPrice) || 0;
                         const markup = purchasePrice > 0 && sellingPrice > 0 
@@ -310,23 +380,23 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                         
                         return (
                           <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${hasData ? "bg-green-50/30" : ""}`}>
-                            <td className="px-4 py-3 w-[20%]">
+                            <td className="px-4 py-3 w-[18%]">
                               <div>
                                 <p className="font-medium text-gray-900 text-sm">{item.genericName}</p>
                                 <p className="text-xs text-gray-500">{item.brandName}</p>
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center w-[10%]">
+                            <td className="px-4 py-3 text-center w-[8%]">
                               <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-medium ${item.currentStock === 0 ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
                                 {item.currentStock}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-center w-[10%]">
+                            <td className="px-4 py-3 text-center w-[8%]">
                               <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${item.stockStatus === "OUT_OF_STOCK" ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"}`}>
                                 {item.stockStatus === "OUT_OF_STOCK" ? "Out" : "Low"}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-center w-[12%]">
+                            <td className="px-4 py-3 text-center w-[10%]">
                               <div className="flex justify-center">
                                 <input 
                                   type="number" 
@@ -338,7 +408,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                 />
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center w-[12%]">
+                            <td className="px-4 py-3 text-center w-[11%]">
                               <div className="flex justify-center">
                                 <input 
                                   type="number" 
@@ -351,7 +421,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                 />
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center w-[12%]">
+                            <td className="px-4 py-3 text-center w-[11%]">
                               <div className="flex justify-center">
                                 <input 
                                   type="number" 
@@ -364,17 +434,18 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                 />
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-center w-[12%]">
+                            <td className="px-4 py-3 text-center w-[10%]">
                               <span className={`text-sm font-medium ${
                                 markup === '0.0' ? 'text-gray-400' :
                                 isNegativeMargin ? 'text-red-600' :
+                                parseFloat(markup) === 0 ? 'text-yellow-600' :
                                 parseFloat(markup) < 20 ? 'text-yellow-600' :
                                 'text-green-600'
                               }`}>
                                 {markup}%
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-center w-[12%]">
+                            <td className="px-4 py-3 text-center w-[11%]">
                               <div className="flex justify-center">
                                 <input 
                                   type="date" 
@@ -384,6 +455,20 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                   className="w-full max-w-[130px] px-2 py-1.5 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" 
                                 />
                               </div>
+                            </td>
+                            <td className="px-4 py-3 text-center w-[13%]">
+                              {item.lastBatchPrices && (
+                                <button
+                                  type="button"
+                                  onClick={() => usePreviousPrices(originalIndex)}
+                                  disabled={importing || loadingPrices}
+                                  className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 mx-auto"
+                                  title={`Use previous prices: Purchase ₱${item.lastBatchPrices.purchase.toFixed(2)}, Selling ₱${item.lastBatchPrices.selling.toFixed(2)}`}
+                                >
+                                  <RefreshCw className="w-3 h-3" />
+                                  Use Previous
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );

@@ -241,15 +241,13 @@ const ForecastingDashboardPage = () => {
         {/* Summary Cards */}
         {summary && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            <button
-              onClick={() => setFilterDemand('High')}
-              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-green-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            <div
+              className="relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Best Sellers</span>
-                  <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-md">
                     <Activity className="w-5 h-5 text-white" />
                   </div>
                 </div>
@@ -257,17 +255,15 @@ const ForecastingDashboardPage = () => {
                   {summary.highDemand}
                 </div>
               </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setFilterTrend('Increasing')}
-              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-blue-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            <div
+              className="relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-cyan-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Growing Sales</span>
-                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl shadow-md">
                     <TrendingUp className="w-5 h-5 text-white" />
                   </div>
                 </div>
@@ -275,17 +271,15 @@ const ForecastingDashboardPage = () => {
                   {summary.trending}
                 </div>
               </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setFilterReorder('needs-reorder')}
-              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-orange-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            <div
+              className="relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Need to Order</span>
-                  <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl shadow-md">
                     <ShoppingCart className="w-5 h-5 text-white" />
                   </div>
                 </div>
@@ -293,17 +287,15 @@ const ForecastingDashboardPage = () => {
                   {summary.needsReorder}
                 </div>
               </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setFilterReorder('critical')}
-              className="group relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg hover:shadow-2xl transition-all duration-300 hover:border-red-400 hover:-translate-y-1 text-left cursor-pointer overflow-hidden"
+            <div
+              className="relative bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-lg overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-red-50 to-rose-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <div className="relative">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Urgent Orders</span>
-                  <div className="p-2.5 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300">
+                  <div className="p-2.5 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl shadow-md">
                     <AlertTriangle className="w-5 h-5 text-white" />
                   </div>
                 </div>
@@ -311,7 +303,7 @@ const ForecastingDashboardPage = () => {
                   {summary.criticalStock}
                 </div>
               </div>
-            </button>
+            </div>
           </div>
         )}
 

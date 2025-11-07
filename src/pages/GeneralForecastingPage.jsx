@@ -66,13 +66,17 @@ const GeneralForecastingPage = () => {
       const { data: salesData, error: salesError } = await supabase
         .from("sale_items")
         .select(`
+          id,
           quantity,
           unit_price,
           created_at,
           product_id,
           sales!inner(
+            id,
             created_at,
-            status
+            status,
+            total_cogs,
+            gross_profit
           )
         `)
         .eq("sales.status", "completed")
@@ -84,8 +88,8 @@ const GeneralForecastingPage = () => {
       // Get all product forecasts
       const summary = await DemandForecastingService.getDemandSummary();
 
-      // Calculate general metrics
-      const metrics = calculateGeneralMetrics(products, salesData, timeRange);
+      // Calculate general metrics (including profit)
+      const metrics = await calculateGeneralMetrics(products, salesData, timeRange);
 
       setData({
         products,
@@ -108,7 +112,7 @@ const GeneralForecastingPage = () => {
     }
   };
 
-  const calculateGeneralMetrics = (products, salesData, days) => {
+  const calculateGeneralMetrics = async (products, salesData, days) => {
     // Total products
     const totalProducts = products.length;
 
@@ -116,9 +120,79 @@ const GeneralForecastingPage = () => {
     const totalUnits = salesData.reduce((sum, sale) => sum + (sale.quantity || 0), 0);
     const totalRevenue = salesData.reduce((sum, sale) => sum + (sale.quantity * sale.unit_price || 0), 0);
 
+    // Calculate COGS and Profit
+    let totalCOGS = 0;
+    let totalProfit = 0;
+    let profitMargin = 0;
+
+    // Get unique sale IDs
+    const saleIds = [...new Set(salesData.map(item => item.sales?.id).filter(Boolean))];
+    
+    if (saleIds.length > 0) {
+      // Try to get from sale_batch_allocations first (most accurate)
+      const { data: batchAllocations } = await supabase
+        .from("sale_batch_allocations")
+        .select("item_cogs, item_profit")
+        .in("sale_id", saleIds);
+
+      if (batchAllocations && batchAllocations.length > 0) {
+        totalCOGS = batchAllocations.reduce((sum, alloc) => sum + (parseFloat(alloc.item_cogs) || 0), 0);
+        totalProfit = batchAllocations.reduce((sum, alloc) => sum + (parseFloat(alloc.item_profit) || 0), 0);
+      } else {
+        // Fallback: get from sales table if it has COGS
+        const { data: salesWithCOGS } = await supabase
+          .from("sales")
+          .select("total_cogs, gross_profit")
+          .in("id", saleIds)
+          .not("total_cogs", "is", null);
+
+        if (salesWithCOGS && salesWithCOGS.length > 0) {
+          totalCOGS = salesWithCOGS.reduce((sum, sale) => sum + (parseFloat(sale.total_cogs) || 0), 0);
+          totalProfit = salesWithCOGS.reduce((sum, sale) => sum + (parseFloat(sale.gross_profit) || 0), 0);
+        } else {
+          // Last resort: estimate from average batch purchase prices
+          const { data: batchPrices } = await supabase
+            .from("product_batches")
+            .select("product_id, purchase_price")
+            .not("purchase_price", "is", null)
+            .gt("purchase_price", 0);
+          
+          if (batchPrices && batchPrices.length > 0) {
+            const avgPurchasePriceByProduct = {};
+            batchPrices.forEach(bp => {
+              if (!avgPurchasePriceByProduct[bp.product_id]) {
+                avgPurchasePriceByProduct[bp.product_id] = [];
+              }
+              avgPurchasePriceByProduct[bp.product_id].push(parseFloat(bp.purchase_price));
+            });
+            
+            // Calculate average purchase price per product
+            Object.keys(avgPurchasePriceByProduct).forEach(productId => {
+              const prices = avgPurchasePriceByProduct[productId];
+              avgPurchasePriceByProduct[productId] = prices.reduce((a, b) => a + b, 0) / prices.length;
+            });
+            
+            // Estimate COGS from sales
+            salesData.forEach(item => {
+              const avgPurchasePrice = avgPurchasePriceByProduct[item.product_id] || 0;
+              totalCOGS += (item.quantity || 0) * avgPurchasePrice;
+            });
+            
+            totalProfit = totalRevenue - totalCOGS;
+          }
+        }
+      }
+    }
+
+    // Calculate profit margin
+    if (totalRevenue > 0) {
+      profitMargin = (totalProfit / totalRevenue) * 100;
+    }
+
     // Daily averages
     const dailyUnits = totalUnits / days;
     const dailyRevenue = totalRevenue / days;
+    const dailyProfit = totalProfit / days;
 
     // Calculate total inventory value
     const totalInventoryValue = products.reduce((sum, p) => {
@@ -139,6 +213,7 @@ const GeneralForecastingPage = () => {
     // Forecast next period
     const forecastNextPeriod = Math.round(dailyUnits * days);
     const forecastRevenue = Math.round(dailyRevenue * days);
+    const forecastProfit = Math.round(dailyProfit * days);
 
     // Calculate trend (compare first half vs second half)
     const midPoint = Math.floor(salesData.length / 2);
@@ -232,14 +307,19 @@ const GeneralForecastingPage = () => {
       totalProducts,
       totalUnits,
       totalRevenue,
+      totalCOGS: Math.round(totalCOGS),
+      totalProfit: Math.round(totalProfit),
+      profitMargin: Math.round(profitMargin * 10) / 10,
       dailyUnits: Math.round(dailyUnits * 10) / 10,
       dailyRevenue: Math.round(dailyRevenue),
+      dailyProfit: Math.round(dailyProfit),
       totalInventoryValue: Math.round(totalInventoryValue),
       totalInventoryUnits,
       lowStockProducts,
       outOfStockProducts,
       forecastNextPeriod,
       forecastRevenue,
+      forecastProfit: Math.round(forecastProfit),
       trendPercentage: Math.round(trendPercentage),
       trendDirection,
       daysOfInventory,
@@ -349,7 +429,7 @@ const GeneralForecastingPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Main Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {/* Total Sales */}
           <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
@@ -382,6 +462,28 @@ const GeneralForecastingPage = () => {
             <div className="mt-2 text-xs text-green-600">
               ~₱{data.metrics.dailyRevenue.toLocaleString()}/day average
             </div>
+          </div>
+
+          {/* Total Profit */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-600">Total Profit</span>
+              <div className="p-2 bg-emerald-50 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-emerald-600" />
+              </div>
+            </div>
+            <div className={`text-3xl font-bold mb-1 ${data.metrics.totalProfit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              ₱{data.metrics.totalProfit.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-500">in {timeRange} days</div>
+            <div className="mt-2 text-xs text-emerald-600">
+              {data.metrics.profitMargin >= 0 ? '+' : ''}{data.metrics.profitMargin}% margin
+            </div>
+            {data.metrics.totalCOGS > 0 && (
+              <div className="mt-1 text-xs text-gray-500">
+                COGS: ₱{data.metrics.totalCOGS.toLocaleString()}
+              </div>
+            )}
           </div>
 
           {/* Overall Trend */}
@@ -428,7 +530,7 @@ const GeneralForecastingPage = () => {
             <Calendar className="w-8 h-8 text-indigo-600 mt-1" />
             <div className="flex-1">
               <h2 className="text-xl font-bold text-indigo-900 mb-4">Next {timeRange} Days Forecast</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white/70 rounded-lg p-4">
                   <div className="text-sm text-indigo-600 font-medium mb-2">Expected Sales</div>
                   <div className="text-3xl font-bold text-indigo-900 mb-1">
@@ -442,6 +544,13 @@ const GeneralForecastingPage = () => {
                     ₱{data.metrics.forecastRevenue.toLocaleString()}
                   </div>
                   <div className="text-xs text-green-700">estimated income</div>
+                </div>
+                <div className="bg-white/70 rounded-lg p-4">
+                  <div className="text-sm text-emerald-600 font-medium mb-2">Expected Profit</div>
+                  <div className={`text-3xl font-bold mb-1 ${data.metrics.forecastProfit >= 0 ? 'text-emerald-900' : 'text-red-900'}`}>
+                    ₱{data.metrics.forecastProfit.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-emerald-700">estimated profit</div>
                 </div>
                 <div className="bg-white/70 rounded-lg p-4">
                   <div className="text-sm text-orange-600 font-medium mb-2">Inventory Duration</div>

@@ -32,15 +32,17 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
       setLoadingPrices(true);
       const { supabase } = await import("../../config/supabase");
       
+      // Fetch the most recent batch for this product
       const { data, error } = await supabase
         .from("product_batches")
-        .select("purchase_price, selling_price")
+        .select("purchase_price, selling_price, created_at")
         .eq("product_id", product.id)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single() to avoid errors when no batch exists
 
-      if (!error && data) {
+      if (!error && data && (data.purchase_price || data.selling_price)) {
+        // Found previous batch with prices
         const lastPrices = {
           purchase: data.purchase_price || 0,
           selling: data.selling_price || product?.price_per_piece || 0,
@@ -48,30 +50,52 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
         setLastBatchPrices(lastPrices);
         
         // Auto-fill form with last batch prices
-        setFormData({
-          quantity: "",
-          expiryDate: "",
-          purchasePrice: lastPrices.purchase,
-          sellingPrice: lastPrices.selling,
-        });
+        setFormData((prev) => ({
+          ...prev,
+          purchasePrice: lastPrices.purchase || "",
+          sellingPrice: lastPrices.selling || product?.price_per_piece || "",
+        }));
       } else {
-        // No previous batch - use product price only
-        setFormData({
-          quantity: "",
-          expiryDate: "",
-          purchasePrice: "",
+        // No previous batch found - check if product has prices
+        const productPrices = {
+          purchase: product?.cost_price || 0,
+          selling: product?.price_per_piece || 0,
+        };
+        
+        // Only set lastBatchPrices if product has prices
+        if (productPrices.purchase > 0 || productPrices.selling > 0) {
+          setLastBatchPrices(productPrices);
+        } else {
+          setLastBatchPrices(null);
+        }
+        
+        // Auto-fill form with product prices if available
+        setFormData((prev) => ({
+          ...prev,
+          purchasePrice: product?.cost_price || "",
           sellingPrice: product?.price_per_piece || "",
-        });
+        }));
       }
       setError("");
     } catch (err) {
-      console.log("No previous batch prices found");
-      setFormData({
-        quantity: "",
-        expiryDate: "",
-        purchasePrice: "",
+      console.error("Error fetching last batch prices:", err);
+      // Fallback to product prices
+      const productPrices = {
+        purchase: product?.cost_price || 0,
+        selling: product?.price_per_piece || 0,
+      };
+      
+      if (productPrices.purchase > 0 || productPrices.selling > 0) {
+        setLastBatchPrices(productPrices);
+      } else {
+        setLastBatchPrices(null);
+      }
+      
+      setFormData((prev) => ({
+        ...prev,
+        purchasePrice: product?.cost_price || "",
         sellingPrice: product?.price_per_piece || "",
-      });
+      }));
       setError("");
     } finally {
       setLoadingPrices(false);
@@ -343,26 +367,41 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                 </div>
 
                 {/* Use Previous Price Button */}
-                {lastBatchPrices && !loadingPrices && (
+                {lastBatchPrices && !loadingPrices && (lastBatchPrices.purchase > 0 || lastBatchPrices.selling > 0) && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <p className="text-sm font-medium text-blue-900">
-                          Previous Batch Prices
+                          Previous Prices
                         </p>
                         <p className="text-xs text-blue-700 mt-1">
-                          Purchase: ₱{lastBatchPrices.purchase.toFixed(2)} | 
-                          Selling: ₱{lastBatchPrices.selling.toFixed(2)}
+                          {lastBatchPrices.purchase > 0 && (
+                            <>Purchase: ₱{lastBatchPrices.purchase.toFixed(2)}</>
+                          )}
+                          {lastBatchPrices.purchase > 0 && lastBatchPrices.selling > 0 && " | "}
+                          {lastBatchPrices.selling > 0 && (
+                            <>Selling: ₱{lastBatchPrices.selling.toFixed(2)}</>
+                          )}
                         </p>
                       </div>
                       <button
                         type="button"
                         onClick={usePreviousPrices}
-                        disabled={loading}
-                        className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={loading || loadingPrices}
+                        className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                       >
+                        <DollarSign className="w-4 h-4" />
                         Use These
                       </button>
+                    </div>
+                  </div>
+                )}
+                
+                {loadingPrices && (
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <UnifiedSpinner variant="dots" size="xs" color="gray" />
+                      <p className="text-sm text-gray-600">Loading previous prices...</p>
                     </div>
                   </div>
                 )}
