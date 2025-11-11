@@ -391,6 +391,10 @@ export default function InventoryPage() {
                   await updateProduct(selectedProduct.id, productData);
                   setShowEditModal(false);
                   setSelectedProduct(null);
+                  
+                  // 🔧 FIX: Reload products to ensure updated product shows in list
+                  await loadProducts();
+                  
                   // Success feedback
                   showSuccess(
                     `✅ Product "${productData.generic_name}" updated successfully!`,

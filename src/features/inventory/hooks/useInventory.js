@@ -346,13 +346,32 @@ export function useInventory() {
   const updateProduct = async (id, productData) => {
     setIsLoading(true);
     try {
+      console.log('🔄 Updating product:', { id, productData });
+      
       const updatedProduct = await inventoryService.updateProduct(
         id,
         productData
       );
-      setProducts((prev) =>
-        prev.map((product) => (product.id === id ? updatedProduct : product))
-      );
+      
+      console.log('✅ Update response:', updatedProduct);
+      console.log('📊 Product status:', {
+        is_archived: updatedProduct.is_archived,
+        is_active: updatedProduct.is_active,
+        price_per_piece: updatedProduct.price_per_piece,
+        stock_in_pieces: updatedProduct.stock_in_pieces
+      });
+      
+      // 🔧 FIX: Merge with existing product to preserve all fields
+      setProducts((prev) => {
+        const updated = prev.map((product) => 
+          product.id === id 
+            ? { ...product, ...updatedProduct } // Merge to preserve all fields
+            : product
+        );
+        console.log('📦 Products after update:', updated.length);
+        console.log('🔍 Updated product in state:', updated.find(p => p.id === id));
+        return updated;
+      });
     } catch (error) {
       console.error("Error updating product:", error);
       throw error;
