@@ -31,7 +31,7 @@ function InventorySummary({ analytics }) {
         alert={analytics.expiringProducts > 0}
       />
       <SummaryCard
-        title="Total Capital"
+        title="Total Capital (in stock)"
         value={formatCurrency(analytics.totalValue)}
         icon={TrendingUp}
         color="green"

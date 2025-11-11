@@ -84,6 +84,11 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
         // Export products - Filter products based on selected filters
         let filteredProducts = products || [];
 
+        // ✅ CRITICAL FIX: Filter out archived products first
+        console.log("📦 Before filtering archived:", filteredProducts.length);
+        filteredProducts = filteredProducts.filter((product) => !product.is_archived);
+        console.log("📦 After filtering archived:", filteredProducts.length);
+
         if (exportOptions.filters.category !== "all") {
           filteredProducts = filteredProducts.filter(
             (product) => product.category === exportOptions.filters.category
@@ -93,11 +98,12 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
         if (exportOptions.filters.stockStatus !== "all") {
           filteredProducts = filteredProducts.filter((product) => {
             const stockLevel = product.stock_in_pieces || 0;
-            const reorderLevel = product.reorder_level || 0;
+            const reorderLevel = product.reorder_level || 10; // ✅ FIX: Use 10 as default
 
             switch (exportOptions.filters.stockStatus) {
               case "low":
-                return stockLevel <= reorderLevel && stockLevel > 0;
+                // ✅ FIX: Match dashboard logic - include items at or below reorder level
+                return stockLevel <= reorderLevel;
               case "out":
                 return stockLevel === 0;
               case "normal":
@@ -110,6 +116,12 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
 
         if (exportOptions.filters.expiryStatus !== "all") {
           filteredProducts = filteredProducts.filter((product) => {
+            // ✅ FIX: Handle missing expiry_date properly
+            if (!product.expiry_date) {
+              // Products without expiry date are considered "fresh"
+              return exportOptions.filters.expiryStatus === "fresh";
+            }
+
             const expiryDate = new Date(product.expiry_date);
             const today = new Date();
             const daysUntilExpiry = Math.ceil(
@@ -166,8 +178,11 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             row["Sheets per Box"] = product.sheets_per_box || 1;
           }
 
-          // Always include reorder_level for accurate stock calculations (hidden in display)
-          row["_reorder_level"] = product.reorder_level || 10;
+          // ✅ FIX: Store reorder_level in the product object for PDF calculations
+          // Don't add it as a visible column
+          if (product.reorder_level !== undefined) {
+            row._metadata = { reorder_level: product.reorder_level || 10 };
+          }
 
           return row;
         });
@@ -210,10 +225,16 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
       return;
     }
 
+    // ✅ FIX: Clean data by removing metadata and internal fields
+    let processedData = data.map((item) => {
+      const cleanItem = { ...item };
+      delete cleanItem._metadata; // Remove metadata object
+      return cleanItem;
+    });
+
     // Ensure batch_number is included in exports for inventory data
-    let processedData = data;
     if (filename.includes("inventory") || filename.includes("medicine")) {
-      processedData = data.map((item) => ({
+      processedData = processedData.map((item) => ({
         ...item,
         batch_number: item.batch_number || "N/A",
       }));
@@ -261,7 +282,15 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
 
   const downloadJSON = (data, filename = "export") => {
     console.log("📄 Generating JSON with", data.length, "items");
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
+    
+    // ✅ FIX: Clean data by removing metadata and internal fields
+    const cleanData = data.map((item) => {
+      const cleanItem = { ...item };
+      delete cleanItem._metadata; // Remove metadata object
+      return cleanItem;
+    });
+    
+    const blob = new Blob([JSON.stringify(cleanData, null, 2)], {
       type: "application/json;charset=utf-8;",
     });
     const link = document.createElement("a");
@@ -393,23 +422,19 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             0
         );
 
-        // Get reorder level from hidden field or default to 10
-        const reorderLevel = parseInt(
-          item["_reorder_level"] ||
-            item["Reorder Level"] ||
-            item["reorder_level"] ||
-            10
-        );
+        // ✅ FIX: Get reorder level from metadata or default to 10
+        const reorderLevel = item._metadata?.reorder_level || 10;
 
         // Calculate total value
         if (!isNaN(stock) && !isNaN(price)) {
           summary.totalValue += stock * price;
         }
 
-        // Count stock levels accurately using reorder_level
+        // ✅ FIX: Count stock levels accurately - match dashboard logic
         if (stock === 0) {
           summary.outOfStock++;
-        } else if (stock > 0 && stock <= reorderLevel) {
+        } else if (stock <= reorderLevel) {
+          // Include all items at or below reorder level as low stock
           summary.lowStock++;
         }
 
@@ -533,9 +558,9 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
       // DATA TABLE - Responsive Auto-Adjusting Design
       // ============================================
 
-      // Prepare table columns and rows - filter out hidden columns
+      // Prepare table columns and rows - filter out hidden columns and metadata
       const allColumns = Object.keys(data[0]);
-      const visibleColumns = allColumns.filter((key) => !key.startsWith("_"));
+      const visibleColumns = allColumns.filter((key) => !key.startsWith("_") && key !== "_metadata");
       const columns = visibleColumns.map((key) => ({
         header: key,
         dataKey: key,
@@ -1237,8 +1262,11 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
                   <span className="font-semibold text-emerald-700">
                     {exportOptions.exportType === "products"
                       ? (() => {
-                          // Calculate filtered count
+                          // ✅ FIX: Calculate filtered count with same logic as export
                           let filteredProducts = products || [];
+
+                          // Filter out archived products first
+                          filteredProducts = filteredProducts.filter((product) => !product.is_archived);
 
                           if (exportOptions.filters.category !== "all") {
                             filteredProducts = filteredProducts.filter(
@@ -1252,14 +1280,12 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
                             filteredProducts = filteredProducts.filter(
                               (product) => {
                                 const stockLevel = product.stock_in_pieces || 0;
-                                const reorderLevel = product.reorder_level || 0;
+                                const reorderLevel = product.reorder_level || 10; // Match export logic
 
                                 switch (exportOptions.filters.stockStatus) {
                                   case "low":
-                                    return (
-                                      stockLevel <= reorderLevel &&
-                                      stockLevel > 0
-                                    );
+                                    // Match export logic - include all at or below reorder level
+                                    return stockLevel <= reorderLevel;
                                   case "out":
                                     return stockLevel === 0;
                                   case "normal":
@@ -1274,6 +1300,11 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
                           if (exportOptions.filters.expiryStatus !== "all") {
                             filteredProducts = filteredProducts.filter(
                               (product) => {
+                                // Handle missing expiry_date
+                                if (!product.expiry_date) {
+                                  return exportOptions.filters.expiryStatus === "fresh";
+                                }
+
                                 const expiryDate = new Date(
                                   product.expiry_date
                                 );

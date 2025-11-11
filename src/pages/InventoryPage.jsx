@@ -1136,7 +1136,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                   <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                     <h4 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
                       <DollarSign className="w-4 h-4 mr-1 text-green-600" />
-                      Pricing & Margins
+                      Pricing & Markup
                     </h4>
                     <div className="grid grid-cols-3 gap-2">
                       <div>
@@ -1150,12 +1150,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                           onChange={(e) =>
                             handleCostPriceChange(e.target.value)
                           }
-                          readOnly={!!product}
-                          className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 ${
-                            product
-                              ? "bg-gray-50 text-gray-700 cursor-not-allowed"
-                              : ""
-                          }`}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500"
                           placeholder="0.00"
                         />
                       </div>
@@ -1171,18 +1166,13 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                           onChange={(e) =>
                             handleSellPriceChange(e.target.value)
                           }
-                          readOnly={!!product}
-                          className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 ${
-                            product
-                              ? "bg-gray-50 text-gray-700 cursor-not-allowed"
-                              : ""
-                          }`}
+                          className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500"
                           placeholder="0.00"
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Margin %
+                          Markup %
                         </label>
                         <div className="relative">
                           <input
@@ -1190,12 +1180,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                             step="0.01"
                             value={formData.margin_percentage}
                             onChange={(e) => handleMarginChange(e.target.value)}
-                            readOnly={!!product}
-                            className={`w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 pr-6 ${
-                              product
-                                ? "bg-gray-50 text-gray-700 cursor-not-allowed"
-                                : ""
-                            }`}
+                            className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 pr-6"
                             placeholder="0"
                           />
                           <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-500">
@@ -1204,7 +1189,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                         </div>
                       </div>
                     </div>
-                    {/* Margin Calculation Display */}
+                    {/* Markup Calculation Display */}
                     {formData.cost_price && formData.price_per_piece && (
                       <div className="mt-2 p-2 bg-white rounded border text-xs">
                         <div className="flex justify-between">
