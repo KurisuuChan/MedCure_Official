@@ -1,5 +1,5 @@
 import React from "react";
-import { Package, Eye, Edit, Archive } from "lucide-react";
+import { Package, Eye, Edit, Archive, BarChart3, Clock } from "lucide-react";
 import { getStockStatus, getExpiryStatus } from "../../../utils/productUtils";
 import { formatCurrency } from "../../../utils/formatting";
 import { formatDate } from "../../../utils/dateTime";
@@ -13,9 +13,11 @@ import { getStockBreakdown } from "../../../utils/unitConversion";
  * @param {Function} onView - Handler for view details action
  * @param {Function} onEdit - Handler for edit product action
  * @param {Function} onDelete - Handler for archive/delete product action
+ * @param {Function} onViewStatistics - Handler for view statistics action
+ * @param {Function} onViewPriceHistory - Handler for view price history action
  * @param {Object} style - Optional inline styles (for animation delays)
  */
-function ProductRow({ product, onView, onEdit, onDelete, style }) {
+function ProductRow({ product, onView, onEdit, onDelete, onViewStatistics, onViewPriceHistory, style }) {
   const stockStatus = getStockStatus(product);
   const expiryStatus = getExpiryStatus(product);
   const stockBreakdown = getStockBreakdown(product.stock_in_pieces, product);
@@ -186,6 +188,20 @@ function ProductRow({ product, onView, onEdit, onDelete, style }) {
             title="Edit Product"
           >
             <Edit className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+          </button>
+          <button
+            onClick={() => onViewStatistics && onViewStatistics(product)}
+            className="group flex items-center justify-center p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg hover:scale-110 transition-all duration-200"
+            title="View Statistics"
+          >
+            <BarChart3 className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
+          </button>
+          <button
+            onClick={() => onViewPriceHistory && onViewPriceHistory(product)}
+            className="group flex items-center justify-center p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg hover:scale-110 transition-all duration-200"
+            title="View Price History"
+          >
+            <Clock className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />
           </button>
           <button
             onClick={onDelete}

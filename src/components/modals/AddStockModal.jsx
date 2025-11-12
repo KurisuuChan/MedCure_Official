@@ -143,14 +143,14 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
     }
 
     if (sellingPrice !== null && sellingPrice <= 0) {
-      setError("Selling price must be greater than zero");
+      setError("Unit price must be greater than zero");
       return;
     }
 
     // Warn about negative margin
     if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
       const confirmNegativeMargin = window.confirm(
-        `⚠️ Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}).\n\nThis will result in a loss. Continue anyway?`
+        `⚠️ Warning: Unit price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}).\n\nThis will result in a loss. Continue anyway?`
       );
       if (!confirmNegativeMargin) {
         return;
@@ -437,7 +437,7 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                       htmlFor="sellingPrice"
                       className="block text-sm font-medium text-gray-700 mb-1"
                     >
-                      Selling Price ₱
+                      Unit Price ₱
                     </label>
                     <div className="relative">
                       <TrendingUp className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />

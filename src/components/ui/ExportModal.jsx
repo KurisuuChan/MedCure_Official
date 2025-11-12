@@ -24,7 +24,7 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
       stock: true,
       price: true,
       costPrice: false,
-      marginPercentage: false,
+      markupPercentage: false,
       expiry: true,
       supplier: false,
       batchNumber: false,
@@ -159,24 +159,30 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             row["Dosage Form"] = product.dosage_form || "";
           if (exportOptions.columns.drugClassification)
             row["Drug Classification"] = product.drug_classification || "";
+          
+          // Stock and Unit Conversion (grouped together)
           if (exportOptions.columns.stock)
             row["Stock (Pieces)"] = product.stock_in_pieces;
-          if (exportOptions.columns.price)
-            row["Price per Piece"] = product.price_per_piece;
+          if (exportOptions.columns.unitConversion) {
+            row["Pieces per Sheet"] = product.pieces_per_sheet || 1;
+            row["Sheets per Box"] = product.sheets_per_box || 1;
+          }
+          
+          // Pricing (grouped together in logical order)
           if (exportOptions.columns.costPrice)
             row["Cost Price"] = product.cost_price || "";
-          if (exportOptions.columns.marginPercentage)
-            row["Margin Percentage"] = product.margin_percentage || "";
+          if (exportOptions.columns.price)
+            row["Unit Price"] = product.price_per_piece;
+          if (exportOptions.columns.markupPercentage)
+            row["Markup %"] = product.markup_percentage || "";
+          
+          // Other fields
           if (exportOptions.columns.expiry)
             row["Expiry Date"] = product.expiry_date?.split("T")[0];
           if (exportOptions.columns.supplier)
             row["Supplier"] = product.supplier;
           if (exportOptions.columns.batchNumber)
             row["Batch Number"] = product.batch_number;
-          if (exportOptions.columns.unitConversion) {
-            row["Pieces per Sheet"] = product.pieces_per_sheet || 1;
-            row["Sheets per Box"] = product.sheets_per_box || 1;
-          }
 
           // ✅ FIX: Store reorder_level in the product object for PDF calculations
           // Don't add it as a visible column
@@ -416,7 +422,8 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
 
         // Handle different possible field names for price
         const price = parseFloat(
-          item["Price per Piece"] ||
+          item["Unit Price"] ||
+            item["Price per Piece"] ||
             item["price"] ||
             item["price_per_piece"] ||
             0
@@ -445,7 +452,7 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             price,
             reorderLevel,
             stockField: item["Stock (Pieces)"],
-            priceField: item["Price per Piece"],
+            priceField: item["Unit Price"] || item["Price per Piece"],
             reorderField: item["Reorder Level"],
             allKeys: Object.keys(item),
           });
@@ -594,9 +601,12 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             "Dosage Form": { weight: 2.0, minBase: 16, maxBase: 25 },
             "Drug Classification": { weight: 3.0, minBase: 25, maxBase: 45 },
             "Stock (Pieces)": { weight: 2.0, minBase: 16, maxBase: 24 },
-            "Price per Piece": { weight: 2.2, minBase: 18, maxBase: 28 },
+            "Unit Price": { weight: 2.2, minBase: 18, maxBase: 28 },
+            "Price per Piece": { weight: 2.2, minBase: 18, maxBase: 28 }, // Backward compatibility
             "Cost Price": { weight: 2.2, minBase: 18, maxBase: 28 },
-            "Margin Percentage": { weight: 2.0, minBase: 16, maxBase: 24 },
+            "Markup %": { weight: 2.0, minBase: 16, maxBase: 24 },
+            "Markup Percentage": { weight: 2.0, minBase: 16, maxBase: 24 }, // Backward compatibility
+            "Margin Percentage": { weight: 2.0, minBase: 16, maxBase: 24 }, // Backward compatibility
             "Expiry Date": { weight: 2.5, minBase: 22, maxBase: 30 },
             Supplier: { weight: 3.0, minBase: 25, maxBase: 45 },
             "Batch Number": { weight: 2.3, minBase: 20, maxBase: 30 },
@@ -832,7 +842,7 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
 
           // Price highlighting for high-value items
           if (
-            data.column.dataKey === "Price per Piece" &&
+            (data.column.dataKey === "Unit Price" || data.column.dataKey === "Price per Piece") &&
             data.cell.section === "body"
           ) {
             const price = parseFloat(data.cell.raw || 0);
@@ -1150,9 +1160,10 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
                     dosageForm: "Dosage Form",
                     drugClassification: "Drug Classification",
                     stock: "Stock Level",
-                    price: "Price per Piece",
+                    unitConversion: "Unit Conversion",
                     costPrice: "Cost Price",
-                    marginPercentage: "Margin %",
+                    price: "Unit Price",
+                    markupPercentage: "Markup %",
                     expiry: "Expiry Date",
                     supplier: "Supplier",
                     batchNumber: "Batch Number",

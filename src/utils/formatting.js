@@ -42,7 +42,10 @@ export function calculatePercentage(value, total) {
 }
 
 /**
- * Calculate profit margin
+ * Calculate profit margin percentage
+ * Formula: (Selling Price - Cost Price) / Selling Price * 100
+ * Note: This is different from markup. Margin shows profit as % of selling price.
+ * Example: If cost is ₱80 and selling is ₱100, margin is 20%
  */
 export function calculateProfitMargin(sellingPrice, costPrice) {
   if (!sellingPrice || !costPrice) return 0;
@@ -50,7 +53,10 @@ export function calculateProfitMargin(sellingPrice, costPrice) {
 }
 
 /**
- * Calculate markup
+ * Calculate markup percentage
+ * Formula: (Selling Price - Cost Price) / Cost Price * 100
+ * Note: This is different from profit margin. Markup shows profit as % of cost.
+ * Example: If cost is ₱80 and selling is ₱100, markup is 25%
  */
 export function calculateMarkup(sellingPrice, costPrice) {
   if (!costPrice || costPrice === 0) return 0;

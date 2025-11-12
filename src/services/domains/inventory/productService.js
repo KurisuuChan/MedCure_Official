@@ -128,7 +128,7 @@ export class ProductService {
           archived_by,
           cost_price,
           base_price,
-          margin_percentage,
+          markup_percentage,
           category_id,
           archive_reason,
           import_metadata,
@@ -248,7 +248,7 @@ export class ProductService {
           archived_by,
           cost_price,
           base_price,
-          margin_percentage,
+          markup_percentage,
           category_id,
           archive_reason,
           import_metadata,
@@ -282,6 +282,13 @@ export class ProductService {
     try {
       logDebug(`Updating product ${id} with enhanced medicine schema`, updates);
 
+      // Fetch the current product data first to check for price changes
+      const { data: currentProduct } = await supabase
+        .from("products")
+        .select("price_per_piece, cost_price, markup_percentage")
+        .eq("id", id)
+        .single();
+
       // Ensure proper data structure for updates
       const updateData = {
         ...updates,
@@ -309,6 +316,29 @@ export class ProductService {
         data[0]
       );
       
+      // Record price change history if prices changed
+      if (currentProduct) {
+        const priceChanged = updates.price_per_piece !== undefined && 
+                            updates.price_per_piece !== currentProduct.price_per_piece;
+        const costChanged = updates.cost_price !== undefined && 
+                           updates.cost_price !== currentProduct.cost_price;
+        const markupChanged = updates.markup_percentage !== undefined && 
+                             updates.markup_percentage !== currentProduct.markup_percentage;
+
+        if (priceChanged || costChanged || markupChanged) {
+          await this.recordPriceChange(
+            id,
+            currentProduct.price_per_piece,
+            updates.price_per_piece !== undefined ? updates.price_per_piece : currentProduct.price_per_piece,
+            currentProduct.cost_price,
+            updates.cost_price !== undefined ? updates.cost_price : currentProduct.cost_price,
+            currentProduct.markup_percentage,
+            updates.markup_percentage !== undefined ? updates.markup_percentage : currentProduct.markup_percentage,
+            updates.price_change_reason || null
+          );
+        }
+      }
+      
       // Log the product update to audit log
       try {
         const currentUser = await supabase.auth.getUser();
@@ -329,6 +359,42 @@ export class ProductService {
       console.error("❌ ProductService.updateProduct() failed:", error);
       handleError(error, "Update product");
       throw error;
+    }
+  }
+
+  /**
+   * Record price change history
+   */
+  static async recordPriceChange(
+    productId,
+    oldPrice,
+    newPrice,
+    oldCostPrice,
+    newCostPrice,
+    oldMarkup,
+    newMarkup,
+    reason = null
+  ) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { error } = await supabase.from("price_history").insert({
+        product_id: productId,
+        old_price: oldPrice,
+        new_price: newPrice,
+        old_cost_price: oldCostPrice,
+        new_cost_price: newCostPrice,
+        old_markup_percentage: oldMarkup,
+        new_markup_percentage: newMarkup,
+        changed_by: user?.id || null,
+        reason: reason,
+      });
+
+      if (error) throw error;
+      logDebug("Price change recorded successfully");
+    } catch (error) {
+      console.error("Failed to record price change:", error);
+      // Don't throw - price history is not critical
     }
   }
 

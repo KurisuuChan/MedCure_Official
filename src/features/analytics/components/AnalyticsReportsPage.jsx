@@ -351,7 +351,7 @@ const AnalyticsReportsPage = () => {
             txtContent += `   Current Stock:   ${currentStock} pieces\n`;
             txtContent += `   Reorder Level:   ${reorderLevel} pieces\n`;
             txtContent += `   Shortage:        ${shortage} pieces\n`;
-            txtContent += `   Price per Piece: ₱${pricePerPiece.toFixed(2)}\n`;
+            txtContent += `   Unit Price: ₱${pricePerPiece.toFixed(2)}\n`;
             txtContent += `   Stock Value:     ₱${stockValue.toFixed(2)}\n`;
             txtContent += `   Supplier:        ${item.supplier || "N/A"}\n`;
             txtContent += `   Batch Number:    ${item.batch_number || "N/A"}\n`;

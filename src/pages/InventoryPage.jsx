@@ -44,6 +44,8 @@ import { ProductService } from "../services/domains/inventory/productService";
 import AddStockModal from "../components/modals/AddStockModal";
 import CategoryManagement from "../features/inventory/components/CategoryManagement";
 import ArchivedProductsManagement from "../features/inventory/components/ArchivedProductsManagement";
+import ProductStatisticsModal from "../components/analytics/ProductStatisticsModal";
+import PriceHistoryModal from "../components/analytics/PriceHistoryModal";
 
 // Extracted Components
 import InventoryHeader from "../features/inventory/components/InventoryHeader";
@@ -115,6 +117,14 @@ export default function InventoryPage() {
   const [isArchiving, setIsArchiving] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showArchivedModal, setShowArchivedModal] = useState(false);
+  
+  // Statistics modal state
+  const [showStatisticsModal, setShowStatisticsModal] = useState(false);
+  const [statisticsProduct, setStatisticsProduct] = useState(null);
+
+  // Price history modal state
+  const [showPriceHistoryModal, setShowPriceHistoryModal] = useState(false);
+  const [priceHistoryProduct, setPriceHistoryProduct] = useState(null);
 
   // Dynamic categories state
   const [dynamicCategories, setDynamicCategories] = useState([]);
@@ -231,6 +241,16 @@ export default function InventoryPage() {
     setShowEditModal(true);
   };
 
+  const handleViewStatistics = (product) => {
+    setStatisticsProduct(product);
+    setShowStatisticsModal(true);
+  };
+
+  const handleViewPriceHistory = (product) => {
+    setPriceHistoryProduct(product);
+    setShowPriceHistoryModal(true);
+  };
+
   const handleArchiveProduct = (product) => {
     setProductToArchive(product);
     setShowArchiveModal(true);
@@ -335,6 +355,8 @@ export default function InventoryPage() {
             handleViewProduct={handleViewProduct}
             handleEditProduct={handleEditProduct}
             handleArchiveProduct={handleArchiveProduct}
+            handleViewStatistics={handleViewStatistics}
+            handleViewPriceHistory={handleViewPriceHistory}
             loadProducts={loadProducts}
           />
 
@@ -437,6 +459,28 @@ export default function InventoryPage() {
             product={productToArchive}
             isLoading={isArchiving}
           />
+
+          {/* Product Statistics Modal */}
+          {showStatisticsModal && statisticsProduct && (
+            <ProductStatisticsModal
+              product={statisticsProduct}
+              onClose={() => {
+                setShowStatisticsModal(false);
+                setStatisticsProduct(null);
+              }}
+            />
+          )}
+
+          {/* Price History Modal */}
+          {showPriceHistoryModal && priceHistoryProduct && (
+            <PriceHistoryModal
+              product={priceHistoryProduct}
+              onClose={() => {
+                setShowPriceHistoryModal(false);
+                setPriceHistoryProduct(null);
+              }}
+            />
+          )}
         </>
       ) : activeTab === "dashboard" ? (
         // Analytics & Reports Tab
@@ -624,7 +668,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
     drug_classification: product?.drug_classification || "",
     cost_price: product?.cost_price || "",
     price_per_piece: product?.price_per_piece || "",
-    margin_percentage: product?.margin_percentage || "",
+    markup_percentage: product?.markup_percentage || "",
     pieces_per_sheet: product?.pieces_per_sheet || 1,
     sheets_per_box: product?.sheets_per_box || 1,
     stock_in_pieces: product?.stock_in_pieces || "",
@@ -676,12 +720,12 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
               console.warn("   Expected format: BT-{MMDDYY}-{HHMMSS}-{Sequence}");
             }
             
-            // Calculate margin if we have both prices
-            let margin = "";
+            // Calculate markup if we have both prices
+            let markup = "";
             if (activeBatch.purchase_price && activeBatch.selling_price && activeBatch.purchase_price > 0) {
-              margin = (((activeBatch.selling_price - activeBatch.purchase_price) / activeBatch.purchase_price) * 100).toFixed(2);
+              markup = (((activeBatch.selling_price - activeBatch.purchase_price) / activeBatch.purchase_price) * 100).toFixed(2);
             } else if (activeBatch.markup_percentage) {
-              margin = activeBatch.markup_percentage.toString();
+              markup = activeBatch.markup_percentage.toString();
             }
             
             // ✅ CRITICAL: Always use active batch number from product_batches table (new format)
@@ -694,7 +738,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                 : prev.expiry_date,
               cost_price: activeBatch.purchase_price ? activeBatch.purchase_price.toString() : prev.cost_price || "",
               price_per_piece: activeBatch.selling_price ? activeBatch.selling_price.toString() : prev.price_per_piece || "",
-              margin_percentage: margin || prev.margin_percentage || "",
+              markup_percentage: markup || prev.markup_percentage || "",
             }));
             
             console.log("✅ Form data updated with active batch number:", activeBatch.batch_number);
@@ -734,16 +778,16 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
     fetchCurrentBatch();
   }, [product?.id]);
 
-  // Calculate margin percentage when cost price or selling price changes
-  const calculateMargin = (cost, sell) => {
+  // Calculate markup percentage when cost price or unit price changes
+  const calculateMarkup = (cost, sell) => {
     if (!cost || cost <= 0 || !sell || sell <= 0) return 0;
     return (((sell - cost) / cost) * 100).toFixed(2);
   };
 
-  // Calculate selling price from cost price and margin
-  const calculateSellPrice = (cost, margin) => {
-    if (!cost || cost <= 0 || !margin || margin <= 0) return 0;
-    return (cost * (1 + margin / 100)).toFixed(2);
+  // Calculate selling price from cost price and markup
+  const calculateSellPrice = (cost, markup) => {
+    if (!cost || cost <= 0 || !markup || markup <= 0) return 0;
+    return (cost * (1 + markup / 100)).toFixed(2);
   };
 
   // Handle cost price change
@@ -752,48 +796,48 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
     const sellPrice = parseFloat(formData.price_per_piece) || 0;
 
     if (costPrice > 0 && sellPrice > 0) {
-      const margin = calculateMargin(costPrice, sellPrice);
+      const markup = calculateMarkup(costPrice, sellPrice);
       setFormData({
         ...formData,
         cost_price: value,
-        margin_percentage: margin,
+        markup_percentage: markup,
       });
     } else {
       setFormData({ ...formData, cost_price: value });
     }
   };
 
-  // Handle selling price change
+  // Handle unit price change
   const handleSellPriceChange = (value) => {
     const sellPrice = parseFloat(value) || 0;
     const costPrice = parseFloat(formData.cost_price) || 0;
 
     if (costPrice > 0 && sellPrice > 0) {
-      const margin = calculateMargin(costPrice, sellPrice);
+      const markup = calculateMarkup(costPrice, sellPrice);
       setFormData({
         ...formData,
         price_per_piece: value,
-        margin_percentage: margin,
+        markup_percentage: markup,
       });
     } else {
       setFormData({ ...formData, price_per_piece: value });
     }
   };
 
-  // Handle margin change
-  const handleMarginChange = (value) => {
-    const margin = parseFloat(value) || 0;
+  // Handle markup change
+  const handleMarkupChange = (value) => {
+    const markup = parseFloat(value) || 0;
     const costPrice = parseFloat(formData.cost_price) || 0;
 
-    if (costPrice > 0 && margin > 0) {
-      const sellPrice = calculateSellPrice(costPrice, margin);
+    if (costPrice > 0 && markup > 0) {
+      const sellPrice = calculateSellPrice(costPrice, markup);
       setFormData({
         ...formData,
-        margin_percentage: value,
+        markup_percentage: value,
         price_per_piece: sellPrice,
       });
     } else {
-      setFormData({ ...formData, margin_percentage: value });
+      setFormData({ ...formData, markup_percentage: value });
     }
   };
 
@@ -812,7 +856,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
       !formData.price_per_piece ||
       parseFloat(formData.price_per_piece) <= 0
     ) {
-      showError("Valid selling price is required", { duration: 4000 });
+      showError("Valid unit price is required", { duration: 4000 });
       return;
     }
 
@@ -828,10 +872,10 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
         formData.price_per_piece === ""
           ? null
           : parseFloat(formData.price_per_piece) || null,
-      margin_percentage:
-        formData.margin_percentage === ""
+      markup_percentage:
+        formData.markup_percentage === ""
           ? null
-          : parseFloat(formData.margin_percentage) || null,
+          : parseFloat(formData.markup_percentage) || null,
       pieces_per_sheet:
         formData.pieces_per_sheet === ""
           ? 1
@@ -1160,7 +1204,7 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-gray-700 mb-1">
-                          Selling Price *
+                          Unit Price *
                         </label>
                         <input
                           type="number"
@@ -1182,8 +1226,8 @@ function ProductModal({ title, product, categories, onClose, onSave }) {
                           <input
                             type="number"
                             step="0.01"
-                            value={formData.margin_percentage}
-                            onChange={(e) => handleMarginChange(e.target.value)}
+                            value={formData.markup_percentage}
+                            onChange={(e) => handleMarkupChange(e.target.value)}
                             className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 pr-6"
                             placeholder="0"
                           />
@@ -1495,10 +1539,10 @@ function ProductDetailsModal({ product, onClose, onEdit }) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-500">
-                  Price per Piece
+                  Unit Price
                 </label>
                 <p className="text-lg font-semibold text-green-600">
-                  ?{product.price_per_piece || "0.00"}
+                  ₱{product.price_per_piece || "0.00"}
                 </p>
               </div>
 
@@ -1743,7 +1787,7 @@ function ProductDetailsModalNew({ product, onClose, onEdit }) {
                     </div>
                     <div className="bg-white rounded p-2">
                       <dt className="text-xs font-semibold text-gray-600">
-                        Selling Price
+                        Unit Price
                       </dt>
                       <dd className="text-sm font-bold text-emerald-900">
                         ₱{product.price_per_piece || "0.00"}
@@ -1751,10 +1795,10 @@ function ProductDetailsModalNew({ product, onClose, onEdit }) {
                     </div>
                     <div className="bg-white rounded p-2">
                       <dt className="text-xs font-semibold text-gray-600">
-                        Margin
+                        Markup
                       </dt>
                       <dd className="text-sm font-bold text-emerald-900">
-                        {product.margin_percentage || "0"}%
+                        {product.markup_percentage || "0"}%
                       </dd>
                     </div>
                     <div className="bg-white rounded p-2">

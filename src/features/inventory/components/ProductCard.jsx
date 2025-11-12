@@ -11,6 +11,8 @@ import {
   ShieldCheck,
   ShieldAlert,
   Pill,
+  BarChart3,
+  Clock,
 } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatting";
 import { formatDate } from "../../../utils/dateTime";
@@ -24,6 +26,8 @@ export default function ProductCard({
   onEdit,
   onView,
   onDelete,
+  onViewStatistics,
+  onViewPriceHistory,
   showActions = true,
 }) {
   // 🔍 DEBUG: Log product stock data
@@ -145,6 +149,20 @@ export default function ProductCard({
                 title="Edit Product"
               >
                 <Edit className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onViewStatistics && onViewStatistics(product)}
+                className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-md hover:scale-110 transition-all duration-200"
+                title="View Statistics"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onViewPriceHistory && onViewPriceHistory(product)}
+                className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-md hover:scale-110 transition-all duration-200"
+                title="View Price History"
+              >
+                <Clock className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onDelete(product)}

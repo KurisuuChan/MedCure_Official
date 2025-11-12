@@ -38,7 +38,7 @@ export class CSVImportService {
     supplier_name: ["supplier_name", "Supplier", "supplier"],
 
     // Pricing fields
-    price_per_piece: ["price_per_piece", "Price per Piece", "price"],
+    price_per_piece: ["price_per_piece", "Unit Price", "Price per Piece", "price"],
     cost_price: ["cost_price", "Cost Price"],
     base_price: ["base_price", "Base Price"],
 
@@ -689,11 +689,11 @@ export class CSVImportService {
     const costPrice = safeParseFloat(row.cost_price, null);
     const basePrice = safeParseFloat(row.base_price, null);
 
-    // Calculate margin if cost_price and price_per_piece are available
-    let marginPercentage = null;
+    // Calculate markup if cost_price and price_per_piece are available
+    let markupPercentage = null;
     if (costPrice && pricePerPiece && costPrice > 0) {
-      marginPercentage = ((pricePerPiece - costPrice) / costPrice) * 100;
-      marginPercentage = Math.round(marginPercentage * 100) / 100; // Round to 2 decimals
+      markupPercentage = ((pricePerPiece - costPrice) / costPrice) * 100;
+      markupPercentage = Math.round(markupPercentage * 100) / 100; // Round to 2 decimals
     }
 
     // 🎯 SMART PACKAGE STRUCTURE - Use detected unit config or CSV values
@@ -742,7 +742,7 @@ export class CSVImportService {
       price_per_piece: Math.max(pricePerPiece, 0.01), // Minimum 1 centavo
       cost_price: costPrice,
       base_price: basePrice,
-      margin_percentage: marginPercentage,
+      markup_percentage: markupPercentage,
 
       // 🎯 SMART PACKAGE STRUCTURE - Based on intelligent unit detection
       pieces_per_sheet: Math.max(pieces_per_sheet, 1),

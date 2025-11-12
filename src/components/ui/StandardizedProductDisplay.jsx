@@ -138,7 +138,7 @@ const StandardizedProductDisplay = ({
       {/* SECONDARY: Price (if enabled) */}
       {showPrice && product.price_per_piece && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-2">
-          <div className="text-green-600 text-xs font-medium">Price per piece</div>
+          <div className="text-green-600 text-xs font-medium">Unit price</div>
           <div className={`text-green-700 ${styles.priceText}`}>
             {formatCurrency(product.price_per_piece)}
           </div>

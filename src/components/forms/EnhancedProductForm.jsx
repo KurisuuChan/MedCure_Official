@@ -142,7 +142,7 @@ export default function EnhancedProductForm({
       !formData.price_per_piece ||
       parseFloat(formData.price_per_piece) <= 0
     ) {
-      newErrors.price_per_piece = "Valid price per piece is required";
+      newErrors.price_per_piece = "Valid unit price is required";
     }
     if (!formData.dosage_form) {
       newErrors.dosage_form = "Dosage form is required";
@@ -165,7 +165,7 @@ export default function EnhancedProductForm({
       const cost = parseFloat(formData.cost_price);
       const price = parseFloat(formData.price_per_piece);
       if (cost > price) {
-        newErrors.cost_price = "Cost price should not exceed selling price";
+        newErrors.cost_price = "Cost price should not exceed unit price";
       }
     }
 
@@ -580,7 +580,7 @@ export default function EnhancedProductForm({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price per Piece *
+                    Unit Price *
                   </label>
                   <input
                     type="number"

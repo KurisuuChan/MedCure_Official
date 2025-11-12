@@ -201,18 +201,18 @@ export const validateBatchPricing = (purchasePrice, sellingPrice) => {
   }
   
   if (purchasePrice && sellingPrice && sellingPrice < purchasePrice) {
-    warnings.push('⚠️ Selling price is below purchase price (negative margin)');
+    warnings.push('⚠️ Selling price is below purchase price (negative markup)');
   }
   
   const markup = calculateMarkup(purchasePrice, sellingPrice);
   if (markup < 0) {
-    warnings.push(`⚠️ Loss: ${Math.abs(markup).toFixed(2)}% margin`);
+    warnings.push(`⚠️ Loss: ${Math.abs(markup).toFixed(2)}% markup`);
   } else if (markup < 10) {
-    warnings.push(`⚠️ Low margin: ${markup.toFixed(2)}%`);
+    warnings.push(`⚠️ Low markup: ${markup.toFixed(2)}%`);
   }
   
   return {
-    isValid: warnings.length === 0 || (warnings.length === 1 && warnings[0].includes('Low margin')),
+    isValid: warnings.length === 0 || (warnings.length === 1 && warnings[0].includes('Low markup')),
     warnings
   };
 };

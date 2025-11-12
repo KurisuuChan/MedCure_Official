@@ -72,7 +72,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           currentStock: product.stock_in_pieces || product.stock_quantity || 0,
           reorderLevel: product.reorder_level || 10,
           stockStatus: (product.stock_in_pieces || product.stock_quantity || 0) === 0 ? "OUT_OF_STOCK" : "LOW_STOCK",
-          currentPrice: product.price_per_piece || 0, // Current selling price
+          currentPrice: product.price_per_piece || 0, // Current unit price
           quantityToAdd: "",
           purchasePrice: "", // Cost from supplier
           sellingPrice: "", // Price to customer
@@ -211,13 +211,13 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           }
           
           if (sellingPrice !== null && sellingPrice <= 0) {
-            throw new Error("Selling price must be greater than zero");
+            throw new Error("Unit price must be greater than zero");
           }
           
           // Warn about negative margin (same as AddStockModal)
           if (purchasePrice !== null && sellingPrice !== null && sellingPrice < purchasePrice) {
             const confirmNegativeMargin = window.confirm(
-              `⚠️ Warning: Selling price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}) for ${item.genericName}.\n\nThis will result in a loss. Continue anyway?`
+              `⚠️ Warning: Unit price (₱${sellingPrice}) is less than purchase price (₱${purchasePrice}) for ${item.genericName}.\n\nThis will result in a loss. Continue anyway?`
             );
             if (!confirmNegativeMargin) {
               importResults.failed++;
@@ -293,7 +293,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                 <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-blue-900 mb-1">Quick Restock with Batch Pricing ({lowStockItems.length} items)</h4>
-                  <p className="text-sm text-blue-800">Fill in quantity and expiry date (required). Purchase price and selling price are optional but recommended. The system will automatically calculate your markup percentage. Previous batch prices are auto-filled when available.</p>
+                  <p className="text-sm text-blue-800">Fill in quantity and expiry date (required). Purchase price and unit price are optional but recommended. The system will automatically calculate your markup percentage. Previous batch prices are auto-filled when available.</p>
                 </div>
               </div>
             </div>

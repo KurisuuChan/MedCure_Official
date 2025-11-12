@@ -1908,7 +1908,10 @@ export class UnifiedCategoryService {
   }
 
   /**
-   * Calculate profit margin
+   * Calculate profit margin percentage
+   * Formula: (Value - Cost) / Value * 100
+   * Note: This calculates profit margin (profit as % of selling price), not markup (profit as % of cost)
+   * Used for category-level profitability analysis in sales/analytics context
    */
   static calculateMargin(valueData) {
     if (valueData.total_value === 0) return 0;

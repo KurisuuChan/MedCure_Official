@@ -26,6 +26,8 @@ function ProductListSection({
   handleViewProduct,
   handleEditProduct,
   handleArchiveProduct,
+  handleViewStatistics,
+  handleViewPriceHistory,
   loadProducts,
 }) {
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -112,6 +114,8 @@ function ProductListSection({
                 onEdit={handleEditProduct}
                 onView={handleViewProduct}
                 onDelete={handleArchiveProduct}
+                onViewStatistics={handleViewStatistics}
+                onViewPriceHistory={handleViewPriceHistory}
               />
             </div>
           ))}
@@ -160,6 +164,8 @@ function ProductListSection({
                     onView={() => handleViewProduct(product)}
                     onEdit={() => handleEditProduct(product)}
                     onDelete={() => handleArchiveProduct(product)}
+                    onViewStatistics={handleViewStatistics}
+                    onViewPriceHistory={handleViewPriceHistory}
                     style={{ animationDelay: `${Math.min(index, 10) * 0.03}s` }}
                   />
                 ))}
