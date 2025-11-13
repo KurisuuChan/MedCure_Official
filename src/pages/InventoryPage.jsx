@@ -468,6 +468,7 @@ export default function InventoryPage() {
                 setShowStatisticsModal(false);
                 setStatisticsProduct(null);
               }}
+              onViewPriceHistory={handleViewPriceHistory}
             />
           )}
 

@@ -12,7 +12,6 @@ import {
   ShieldAlert,
   Pill,
   BarChart3,
-  Clock,
 } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatting";
 import { formatDate } from "../../../utils/dateTime";
@@ -27,7 +26,6 @@ export default function ProductCard({
   onView,
   onDelete,
   onViewStatistics,
-  onViewPriceHistory,
   showActions = true,
 }) {
   // 🔍 DEBUG: Log product stock data
@@ -116,9 +114,9 @@ export default function ProductCard({
     <div className={`rounded-lg border shadow-sm hover:shadow-lg hover:border-blue-200 transition-all duration-200 overflow-hidden ${getCardBackgroundColor()}`}>
       {/* Header with Status Badge */}
       <div className="p-4 border-b border-gray-100">
-        <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center justify-between gap-3 mb-3">
           {/* Status Badge */}
-          <div className="flex items-center gap-2 flex-wrap flex-1">
+          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
             {product.is_archived && (
               <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
                 <Archive className="h-3 w-3 mr-1" />
@@ -129,13 +127,13 @@ export default function ProductCard({
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold border ${classificationBadge.bgColor} ${classificationBadge.textColor} ${classificationBadge.borderColor}`}
             >
-              <classificationBadge.icon className="h-3 w-3 mr-1.5" />
+              <classificationBadge.icon className="h-3 w-3 mr-1.5 flex-shrink-0" />
               {classificationBadge.label}
             </span>
           </div>
 
           {showActions && (
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <button
                 onClick={() => onView(product)}
                 className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md hover:scale-110 transition-all duration-200"
@@ -156,13 +154,6 @@ export default function ProductCard({
                 title="View Statistics"
               >
                 <BarChart3 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => onViewPriceHistory && onViewPriceHistory(product)}
-                className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-md hover:scale-110 transition-all duration-200"
-                title="View Price History"
-              >
-                <Clock className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onDelete(product)}

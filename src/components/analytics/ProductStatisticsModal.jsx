@@ -12,12 +12,13 @@ import {
   AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
+  History,
+  Printer,
 } from 'lucide-react';
 import { supabase } from '../../config/supabase';
 import { formatCurrency } from '../../utils/formatting';
 
-export default function ProductStatisticsModal({ product, onClose }) {
+export default function ProductStatisticsModal({ product, onClose, onViewPriceHistory }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30'); // 7, 30, 90, 365, 'all'
@@ -155,30 +156,94 @@ export default function ProductStatisticsModal({ product, onClose }) {
     }
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="relative w-full max-w-6xl bg-white rounded-xl shadow-2xl max-h-[95vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
+    <>
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-content, .print-content * {
+            visibility: visible;
+          }
+          .print-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white;
+            padding: 20px;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #000;
+          }
+          .print-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+          }
+          .print-subtitle {
+            font-size: 14px;
+            color: #666;
+          }
+          .print-date {
+            text-align: right;
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+          }
+          .print-section {
+            page-break-inside: avoid;
+            margin-bottom: 20px;
+          }
+        }
+      `}</style>
+      
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 print-content">
+        <div className="relative w-full max-w-6xl bg-white rounded-xl shadow-2xl max-h-[95vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 print-header">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center no-print">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 print-title">Product Statistics & Analytics</h3>
+                <p className="text-sm text-gray-600 print-subtitle">{product.generic_name} - {getTimeRangeLabel()}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Product Statistics & Analytics</h3>
-              <p className="text-sm text-gray-600">{product.generic_name}</p>
+            <div className="flex items-center gap-2 no-print">
+              <button
+                onClick={handlePrint}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
+                title="Print"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="print-date hidden print:block">
+              Printed on: {new Date().toLocaleString()}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
 
         {/* Time Range Selector */}
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className="p-4 bg-gray-50 border-b border-gray-200 no-print">
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Time Period:</span>
@@ -201,7 +266,7 @@ export default function ProductStatisticsModal({ product, onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(95vh-180px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(95vh-180px)] print:p-0 print:max-h-none">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -321,10 +386,25 @@ export default function ProductStatisticsModal({ product, onClose }) {
 
               {/* Pricing & Cost Breakdown */}
               <div className="bg-white border border-gray-200 rounded-xl p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <DollarSign className="w-5 h-5 mr-2 text-green-600" />
-                  Pricing & Cost Analysis
-                </h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <DollarSign className="w-5 h-5 mr-2 text-green-600" />
+                    Pricing & Cost Analysis
+                  </h4>
+                  {onViewPriceHistory && (
+                    <button
+                      onClick={() => {
+                        onViewPriceHistory(product);
+                        onClose();
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                      title="View Price Change History"
+                    >
+                      <History className="w-4 h-4" />
+                      Price History
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Unit Price</p>
@@ -391,6 +471,7 @@ export default function ProductStatisticsModal({ product, onClose }) {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
