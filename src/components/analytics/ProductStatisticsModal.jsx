@@ -21,7 +21,7 @@ import { formatCurrency } from '../../utils/formatting';
 export default function ProductStatisticsModal({ product, onClose, onViewPriceHistory }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('30'); // 7, 30, 90, 365, 'all'
+  const [timeRange, setTimeRange] = useState('all'); // 7, 30, 90, 365, 'all'
 
   const fetchProductStatistics = async () => {
     setLoading(true);
