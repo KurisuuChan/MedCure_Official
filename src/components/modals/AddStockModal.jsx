@@ -1,5 +1,5 @@
 ﻿import React, { useState, useContext } from "react";
-import { X, Package, Calendar, AlertCircle, DollarSign, TrendingUp } from "lucide-react";
+import { X, Package, Calendar, AlertCircle, DollarSign, TrendingUp, Percent } from "lucide-react";
 import StandardizedProductDisplay from "../ui/StandardizedProductDisplay";
 import { useToast } from "../ui/Toast";
 import { UnifiedSpinner } from "../ui/loading/UnifiedSpinner";
@@ -14,6 +14,7 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
     expiryDate: "",
     purchasePrice: "",
     sellingPrice: "",
+    markupPercentage: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -406,7 +407,7 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label
                       htmlFor="purchasePrice"
@@ -421,7 +422,21 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                         id="purchasePrice"
                         name="purchasePrice"
                         value={formData.purchasePrice}
-                        onChange={handleInputChange}
+                        onChange={(e) => {
+                          handleInputChange(e);
+                          
+                          // Auto-calculate selling price if markup is set
+                          const purchase = parseFloat(e.target.value) || 0;
+                          const markupPercent = parseFloat(formData.markupPercentage) || 0;
+                          if (purchase > 0 && markupPercent > 0) {
+                            const calculatedSelling = purchase * (1 + markupPercent / 100);
+                            setFormData(prev => ({
+                              ...prev,
+                              purchasePrice: e.target.value,
+                              sellingPrice: calculatedSelling.toFixed(2)
+                            }));
+                          }
+                        }}
                         placeholder="0.00"
                         min="0"
                         step="0.01"
@@ -430,6 +445,48 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                       />
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Cost from supplier</p>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="markupPercentage"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Markup %
+                    </label>
+                    <div className="relative">
+                      <Percent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="number"
+                        id="markupPercentage"
+                        name="markupPercentage"
+                        value={formData.markupPercentage || ''}
+                        onChange={(e) => {
+                          const markup = parseFloat(e.target.value) || 0;
+                          setFormData(prev => ({
+                            ...prev,
+                            markupPercentage: e.target.value
+                          }));
+                          
+                          // Auto-calculate selling price from purchase price and markup
+                          const purchase = parseFloat(formData.purchasePrice) || 0;
+                          if (purchase > 0) {
+                            const calculatedSelling = purchase * (1 + markup / 100);
+                            setFormData(prev => ({
+                              ...prev,
+                              markupPercentage: e.target.value,
+                              sellingPrice: calculatedSelling.toFixed(2)
+                            }));
+                          }
+                        }}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        disabled={loading}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                    <p className="text-xs text-blue-600 mt-1 font-medium">Auto-calculates price</p>
                   </div>
 
                   <div>
@@ -464,11 +521,11 @@ const AddStockModal = ({ isOpen, onClose, product, onSuccess }) => {
                   </div>
                 </div>
 
-                {/* Markup Display */}
+                {/* Markup Display - Now shows calculated markup */}
                 {formData.purchasePrice && formData.sellingPrice && (
                   <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Markup:</span>
+                      <span className="text-sm font-medium text-gray-700">Calculated Markup:</span>
                       <span className={`text-lg font-bold ${
                         parseFloat(formData.sellingPrice) < parseFloat(formData.purchasePrice)
                           ? 'text-red-600'

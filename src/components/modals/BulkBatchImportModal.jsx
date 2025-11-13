@@ -75,6 +75,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
           currentPrice: product.price_per_piece || 0, // Current unit price
           quantityToAdd: "",
           purchasePrice: "", // Cost from supplier
+          markupPercentage: "", // Markup percentage
           sellingPrice: "", // Price to customer
           expiryDate: "",
           lastBatchPrices: null, // Store last batch prices
@@ -293,7 +294,7 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                 <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <h4 className="font-semibold text-blue-900 mb-1">Quick Restock with Batch Pricing ({lowStockItems.length} items)</h4>
-                  <p className="text-sm text-blue-800">Fill in quantity and expiry date (required). Purchase price and unit price are optional but recommended. The system will automatically calculate your markup percentage. Previous batch prices are auto-filled when available.</p>
+                  <p className="text-sm text-blue-800">Fill in quantity and expiry date (required). Enter purchase price and markup % to auto-calculate unit price, or enter unit price directly. Previous batch prices are auto-filled when available.</p>
                 </div>
               </div>
             </div>
@@ -360,9 +361,9 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[8%]">Current Stock</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[8%]">Status</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Quantity *</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Purchase ₱</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Selling ₱</th>
-                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[10%]">Markup</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Cost</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[8%]">Markup %</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Unit Price ₱</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[11%]">Expiry Date *</th>
                         <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-[13%]">Actions</th>
                       </tr>
@@ -416,8 +417,39 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                   step="0.01"
                                   placeholder="0.00" 
                                   value={item.purchasePrice} 
-                                  onChange={(e) => updateItemField(originalIndex, "purchasePrice", e.target.value)} 
+                                  onChange={(e) => {
+                                    updateItemField(originalIndex, "purchasePrice", e.target.value);
+                                    // Auto-calculate selling price if markup is set
+                                    const purchase = parseFloat(e.target.value) || 0;
+                                    const markupPercent = parseFloat(item.markupPercentage) || 0;
+                                    if (purchase > 0 && markupPercent > 0) {
+                                      const calculatedSelling = purchase * (1 + markupPercent / 100);
+                                      updateItemField(originalIndex, "sellingPrice", calculatedSelling.toFixed(2));
+                                    }
+                                  }}
                                   className="w-full max-w-[90px] px-2 py-1.5 text-sm border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                                />
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center w-[8%]">
+                              <div className="flex justify-center">
+                                <input 
+                                  type="number" 
+                                  min="0" 
+                                  step="0.01"
+                                  placeholder="%" 
+                                  value={item.markupPercentage} 
+                                  onChange={(e) => {
+                                    updateItemField(originalIndex, "markupPercentage", e.target.value);
+                                    // Auto-calculate selling price from purchase price and markup
+                                    const purchase = parseFloat(item.purchasePrice) || 0;
+                                    const markup = parseFloat(e.target.value) || 0;
+                                    if (purchase > 0) {
+                                      const calculatedSelling = purchase * (1 + markup / 100);
+                                      updateItemField(originalIndex, "sellingPrice", calculatedSelling.toFixed(2));
+                                    }
+                                  }}
+                                  className="w-full max-w-[70px] px-2 py-1.5 text-sm border border-blue-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50" 
                                 />
                               </div>
                             </td>
@@ -433,17 +465,6 @@ const BulkBatchImportModal = ({ isOpen, onClose, onSuccess }) => {
                                   className={`w-full max-w-[90px] px-2 py-1.5 text-sm border rounded-lg text-center focus:ring-2 focus:ring-green-500 focus:border-transparent ${isNegativeMargin ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                                 />
                               </div>
-                            </td>
-                            <td className="px-4 py-3 text-center w-[10%]">
-                              <span className={`text-sm font-medium ${
-                                markup === '0.0' ? 'text-gray-400' :
-                                isNegativeMargin ? 'text-red-600' :
-                                parseFloat(markup) === 0 ? 'text-yellow-600' :
-                                parseFloat(markup) < 20 ? 'text-yellow-600' :
-                                'text-green-600'
-                              }`}>
-                                {markup}%
-                              </span>
                             </td>
                             <td className="px-4 py-3 text-center w-[11%]">
                               <div className="flex justify-center">
