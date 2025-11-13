@@ -64,15 +64,100 @@ export default function ProductStatisticsModal({ product, onClose, onViewPriceHi
 
       if (salesError) throw salesError;
 
+      console.log('📊 ProductStatisticsModal - Sales Data:', {
+        totalRecords: salesData.length,
+        sampleData: salesData.slice(0, 3),
+        product: {
+          id: product.id,
+          name: product.generic_name,
+          cost_price: product.cost_price,
+          price_per_piece: product.price_per_piece
+        }
+      });
+
       // Calculate statistics
       const totalUnitsSold = salesData.reduce((sum, item) => sum + item.quantity, 0);
       const totalRevenue = salesData.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
       
-      // Calculate cost (using current cost_price as baseline)
-      const costPrice = product.cost_price || 0;
-      const totalCost = totalUnitsSold * costPrice;
-      const totalProfit = totalRevenue - totalCost;
+      // ✅ Calculate ACTUAL cost and profit from sales data
+      // Use actual COGS if available, otherwise use current cost_price
+      let totalCostAccumulated = 0;
+      let totalProfitAccumulated = 0;
+      let salesWithActualCogs = 0;
+      let salesWithFallback = 0;
+      
+      salesData.forEach(item => {
+        const itemRevenue = item.quantity * item.unit_price;
+        
+        // Check if we have gross_profit and total_cogs from the sale
+        if (item.sales && 
+            item.sales.gross_profit !== null && 
+            item.sales.total_cogs !== null &&
+            item.sales.total_cogs > 0 &&
+            item.sales.gross_profit !== undefined) {
+          // Calculate this item's proportion of the sale's COGS
+          const saleTotalAmount = item.sales.total_amount || itemRevenue;
+          const itemProportionOfSale = saleTotalAmount > 0 ? itemRevenue / saleTotalAmount : 1;
+          const itemCost = item.sales.total_cogs * itemProportionOfSale;
+          const itemProfit = item.sales.gross_profit * itemProportionOfSale;
+          
+          totalCostAccumulated += itemCost;
+          totalProfitAccumulated += itemProfit;
+          salesWithActualCogs++;
+          
+          console.log('💰 Using actual sale COGS:', {
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            itemRevenue,
+            itemCost: itemCost.toFixed(2),
+            itemProfit: itemProfit.toFixed(2),
+            proportion: (itemProportionOfSale * 100).toFixed(1) + '%',
+            sale_total_cogs: item.sales.total_cogs,
+            sale_gross_profit: item.sales.gross_profit
+          });
+        } else {
+          // Fallback: calculate from current cost_price
+          const costPrice = product.cost_price || 0;
+          const itemCost = item.quantity * costPrice;
+          const itemProfit = itemRevenue - itemCost;
+          
+          totalCostAccumulated += itemCost;
+          totalProfitAccumulated += itemProfit;
+          salesWithFallback++;
+          
+          console.log('⚠️ Using fallback (current cost_price):', {
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            cost_price: costPrice,
+            itemRevenue: itemRevenue.toFixed(2),
+            itemCost: itemCost.toFixed(2),
+            itemProfit: itemProfit.toFixed(2),
+            reason: !item.sales ? 'No sale data' : 
+                   item.sales.total_cogs === null ? 'COGS is null' :
+                   item.sales.total_cogs === 0 ? 'COGS is zero' : 'Unknown'
+          });
+        }
+      });
+      
+      const totalCost = totalCostAccumulated;
+      const totalProfit = totalProfitAccumulated;
       const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+      const costPrice = product.cost_price || 0;
+      
+      console.log('📈 Final Calculations:', {
+        totalUnitsSold,
+        totalRevenue: totalRevenue.toFixed(2),
+        totalCost: totalCost.toFixed(2),
+        totalProfit: totalProfit.toFixed(2),
+        profitMargin: profitMargin.toFixed(2) + '%',
+        salesWithActualCogs,
+        salesWithFallback,
+        verification: {
+          calculatedProfit: (totalRevenue - totalCost).toFixed(2),
+          accumulatedProfit: totalProfit.toFixed(2),
+          matchesProfit: Math.abs((totalRevenue - totalCost) - totalProfit) < 0.01
+        }
+      });
 
       // Group by date for trend analysis
       const salesByDate = {};
