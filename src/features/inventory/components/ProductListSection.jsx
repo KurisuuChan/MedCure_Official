@@ -115,7 +115,6 @@ function ProductListSection({
                 onView={handleViewProduct}
                 onDelete={handleArchiveProduct}
                 onViewStatistics={handleViewStatistics}
-                onViewPriceHistory={handleViewPriceHistory}
               />
             </div>
           ))}

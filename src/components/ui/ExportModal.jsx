@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { X, Download, FileText, Database } from "lucide-react";
 import { UnifiedCategoryService } from "../../services/domains/inventory/unifiedCategoryService";
 import { UnifiedSpinner } from "./loading/UnifiedSpinner";
+import { supabase } from "../../config/supabase";
 
 const ExportModal = ({ isOpen, onClose, products, categories }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -29,6 +30,14 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
       supplier: false,
       batchNumber: false,
       unitConversion: false,
+      // Price Change History
+      priceChangeCount: false,
+      lastPriceChange: false,
+      // Product Statistics & Analytics
+      totalSales: false,
+      totalRevenue: false,
+      profit: false,
+      profitMargin: false,
     },
   });
 
@@ -143,6 +152,73 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
 
         console.log("📊 Filtered Products:", filteredProducts.length);
 
+        // Fetch additional data if needed (price history and statistics)
+        const needsPriceHistory = exportOptions.columns.priceChangeCount || exportOptions.columns.lastPriceChange;
+        const needsStatistics = exportOptions.columns.totalSales || exportOptions.columns.totalRevenue || exportOptions.columns.profit || exportOptions.columns.profitMargin;
+        
+        let priceHistoryData = {};
+        let statisticsData = {};
+
+        if (needsPriceHistory || needsStatistics) {
+          const productIds = filteredProducts.map(p => p.id);
+          
+          // Fetch price history data
+          if (needsPriceHistory && productIds.length > 0) {
+            console.log("📈 Fetching price history data...");
+            const { data: priceHistory, error: priceError } = await supabase
+              .from('price_history')
+              .select('product_id, created_at')
+              .in('product_id', productIds)
+              .order('created_at', { ascending: false });
+            
+            if (!priceError && priceHistory) {
+              // Group by product_id
+              priceHistory.forEach(entry => {
+                if (!priceHistoryData[entry.product_id]) {
+                  priceHistoryData[entry.product_id] = {
+                    count: 0,
+                    lastChange: null
+                  };
+                }
+                priceHistoryData[entry.product_id].count++;
+                if (!priceHistoryData[entry.product_id].lastChange) {
+                  priceHistoryData[entry.product_id].lastChange = entry.created_at;
+                }
+              });
+            }
+          }
+
+          // Fetch statistics data
+          if (needsStatistics && productIds.length > 0) {
+            console.log("📊 Fetching product statistics...");
+            const { data: salesData, error: salesError } = await supabase
+              .from('sale_items')
+              .select(`
+                product_id,
+                quantity,
+                unit_price,
+                sales:sale_id (
+                  created_at
+                )
+              `)
+              .in('product_id', productIds);
+            
+            if (!salesError && salesData) {
+              // Calculate statistics by product
+              salesData.forEach(item => {
+                if (!statisticsData[item.product_id]) {
+                  statisticsData[item.product_id] = {
+                    totalSales: 0,
+                    totalRevenue: 0
+                  };
+                }
+                statisticsData[item.product_id].totalSales += item.quantity;
+                statisticsData[item.product_id].totalRevenue += item.quantity * item.unit_price;
+              });
+            }
+          }
+        }
+
         // Prepare data for export
         const dataToExport = filteredProducts.map((product) => {
           const row = {};
@@ -183,6 +259,51 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
             row["Supplier"] = product.supplier;
           if (exportOptions.columns.batchNumber)
             row["Batch Number"] = product.batch_number;
+
+          // Price Change History
+          if (exportOptions.columns.priceChangeCount) {
+            const historyData = priceHistoryData[product.id];
+            row["Price Change Count"] = historyData?.count || 0;
+          }
+          if (exportOptions.columns.lastPriceChange) {
+            const historyData = priceHistoryData[product.id];
+            row["Last Price Change Date"] = historyData?.lastChange 
+              ? new Date(historyData.lastChange).toISOString().split("T")[0]
+              : "N/A";
+          }
+
+          // Product Statistics & Analytics
+          if (exportOptions.columns.totalSales) {
+            const stats = statisticsData[product.id];
+            row["Total Units Sold"] = stats?.totalSales || 0;
+          }
+          if (exportOptions.columns.totalRevenue) {
+            const stats = statisticsData[product.id];
+            row["Total Revenue"] = stats?.totalRevenue ? stats.totalRevenue.toFixed(2) : "0.00";
+          }
+          if (exportOptions.columns.profit) {
+            const stats = statisticsData[product.id];
+            if (stats?.totalRevenue && stats.totalSales) {
+              const costPrice = product.cost_price || 0;
+              const totalCost = stats.totalSales * costPrice;
+              const profit = stats.totalRevenue - totalCost;
+              row["Profit"] = profit.toFixed(2);
+            } else {
+              row["Profit"] = "0.00";
+            }
+          }
+          if (exportOptions.columns.profitMargin) {
+            const stats = statisticsData[product.id];
+            if (stats?.totalRevenue && stats.totalRevenue > 0) {
+              const costPrice = product.cost_price || 0;
+              const totalCost = stats.totalSales * costPrice;
+              const profit = stats.totalRevenue - totalCost;
+              const margin = (profit / stats.totalRevenue) * 100;
+              row["Profit Margin %"] = margin.toFixed(2);
+            } else {
+              row["Profit Margin %"] = "0.00";
+            }
+          }
 
           // ✅ FIX: Store reorder_level in the product object for PDF calculations
           // Don't add it as a visible column
@@ -1167,7 +1288,12 @@ const ExportModal = ({ isOpen, onClose, products, categories }) => {
                     expiry: "Expiry Date",
                     supplier: "Supplier",
                     batchNumber: "Batch Number",
-                    unitConversion: "Unit Conversion",
+                    priceChangeCount: "Price Change Count",
+                    lastPriceChange: "Last Price Change Date",
+                    totalSales: "Total Units Sold",
+                    totalRevenue: "Total Revenue",
+                    profit: "Profit",
+                    profitMargin: "Profit Margin %",
                   }).map(([key, label]) => (
                     <label
                       key={key}
