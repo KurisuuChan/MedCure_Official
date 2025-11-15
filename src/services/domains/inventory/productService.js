@@ -146,6 +146,7 @@ export class ProductService {
           supplier_id
         `
         )
+        .eq("is_archived", false)
         .order("generic_name");
 
       // Also check total count without filters for debugging
