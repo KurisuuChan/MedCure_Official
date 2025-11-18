@@ -9,14 +9,16 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node src/selenium/check-app.js && mocha src/selenium/tests/**/*.test.js --timeout 30000",
-    "test:headless": "set HEADLESS=true&& node src/selenium/check-app.js && mocha src/selenium/tests/**/*.test.js --timeout 30000",
+    "test:all": "node src/selenium/check-app.js && mocha src/selenium/tests/**/*.test.js --timeout 60000",
     "test:login": "node src/selenium/check-app.js && mocha src/selenium/tests/login.test.js --timeout 30000",
     "test:dashboard": "node src/selenium/check-app.js && mocha src/selenium/tests/dashboard.test.js --timeout 30000",
     "test:inventory": "node src/selenium/check-app.js && mocha src/selenium/tests/inventory.test.js --timeout 30000",
     "test:pos": "node src/selenium/check-app.js && mocha src/selenium/tests/pos.test.js --timeout 30000",
-    "test:verify": "node src/selenium/verify-setup.js",
-    "test:check": "node src/selenium/check-app.js",
-    "test:inspect": "node src/selenium/inspect-app.js"
+    "test:customers": "node src/selenium/check-app.js && mocha src/selenium/tests/customers.test.js --timeout 30000",
+    "test:transactions": "node src/selenium/check-app.js && mocha src/selenium/tests/transaction-history.test.js --timeout 30000",
+    "test:e2e": "node src/selenium/check-app.js && mocha src/selenium/tests/e2e-workflow.test.js --timeout 120000",
+    "test:workflow": "node src/selenium/check-app.js && mocha src/selenium/tests/e2e-workflow.test.js --timeout 120000",
+    "test:check": "node src/selenium/check-app.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

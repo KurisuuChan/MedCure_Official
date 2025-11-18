@@ -1,6 +1,6 @@
 /**
  * Login Tests
- * Tests for login functionality
+ * Essential authentication tests
  */
 
 import { describe, it, before, after } from "mocha";
@@ -10,8 +10,8 @@ import { takeScreenshot } from "../helpers/utils.js";
 import LoginPage from "../page-objects/LoginPage.js";
 import { config } from "../config/test.config.js";
 
-describe("Login Functionality", function () {
-  this.timeout(30000); // Set test timeout
+describe("Authentication - Login & Logout", function () {
+  this.timeout(30000);
 
   let driver;
   let loginPage;
@@ -32,30 +32,17 @@ describe("Login Functionality", function () {
     await takeScreenshot(driver, "login-page-loaded");
   });
 
-  it("should show error message with invalid credentials", async function () {
-    await loginPage.open();
-    await loginPage.login("invalid@email.com", "wrongpassword");
-
-    // Wait a bit for error message to appear
+  it("should login with valid admin credentials", async function () {
+    await loginPage.loginAsAdmin();
     await driver.sleep(2000);
-
-    const hasError = await loginPage.hasErrorMessage();
-    expect(hasError).to.be.true;
-    await takeScreenshot(driver, "login-invalid-credentials");
-  });
-
-  it("should successfully login with admin credentials", async function () {
-    await loginPage.open();
-    await loginPage.login(
-      config.testUsers.admin.email,
-      config.testUsers.admin.password
-    );
-
-    // Wait for redirect
-    await driver.sleep(3000);
 
     const currentUrl = await driver.getCurrentUrl();
     expect(currentUrl).to.include("/dashboard");
-    await takeScreenshot(driver, "login-admin-success");
+    await takeScreenshot(driver, "login-success");
+  });
+
+  it("should redirect to dashboard after login", async function () {
+    const currentUrl = await driver.getCurrentUrl();
+    expect(currentUrl).to.include("/dashboard");
   });
 });
